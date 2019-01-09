@@ -29,7 +29,7 @@ contract BTCRelay {
 
     bytes32 public _heaviestBlock; // block with the highest chainWork, i.e., blockchain tip
     uint256 public _highScore; // highest chainWork, i.e., accumulated PoW at current blockchain tip
-    bytes32 public _lastDifficultyAdjustmentBlock; // block of last difficulty adjustment blockHeight (blockHeight mod DIFFICULTY_ADJUSTMENT_INVETVAL = 0)
+    uint256 public _lastDiffAdjustmentTime; // timestamp of the block of last difficulty adjustment (blockHeight mod DIFFICULTY_ADJUSTMENT_INVETVAL = 0)
 
     // CONSTANTS
     /**
@@ -71,32 +71,63 @@ contract BTCRelay {
     /**
     * @notice Initialized BTCRelay with provided block, i.e., defined the first block of the stored chain. 
     * @dev TODO: check issue with "blockHeight mod 2016 = 2015" requirement (old btc relay!). Alexei: IMHO should be called with "blockHeight mod 2016 = 0"
-    * @param blockHeaderHash block hedaer hash 
+    * @param blockHeaderBytes Raw Bitcoin block headers
     * @param blockHeight block blockHeight
-    * @param target target of block  header (necessary for difficulty target validation of next block)
     * @param chainWork total accumulated PoW at given block blockHeight/hash 
+    * @param lastDiffAdjustmentTime timestamp of the block of the last diff. adjustment. Note: diff. target of that block MUST be equal to @param target 
     */
-    constructor(bytes32 blockHeaderHash, uint32 blockHeight, uint32 time, bytes32 merkleRoot, uint256 target, uint256 chainWork) public {
+    function setInitialParent(
+        bytes memory blockHeaderBytes, 
+        uint32 blockHeight, 
+        uint256 chainWork,
+        uint256 lastDiffAdjustmentTime) 
+        public {
+        require(_heaviestBlock == 0, "Initial parent has already been set");
+        
+        uint32 version;
+        uint32 time;
+        uint32 nonce;
+        bytes32 prevBlockHash;
+        bytes32 merkleRoot;
+        uint256 target;
+
+        (version, time, nonce, prevBlockHash, merkleRoot, target) = parseBlockHeader(blockHeaderBytes);
+        bytes32 blockHeaderHash = dblShaFlip(blockHeaderBytes).toBytes32();
+        
         _heaviestBlock = blockHeaderHash;
-        _lastDifficultyAdjustmentBlock = blockHeaderHash;
         _highScore = chainWork;
+        _lastDiffAdjustmentTime = lastDiffAdjustmentTime;
         
         _headers[blockHeaderHash].blockHeight = blockHeight;
-        _headers[blockHeaderHash].target = target;
-        _headers[blockHeaderHash].chainWork = chainWork;
-        _headers[blockHeaderHash].time = time;
-        _headers[blockHeaderHash].merkleRoot = merkleRoot;
+        _headers[blockHeaderHash] = Header({
+            version: version, 
+            time: time, 
+            nonce: nonce,
+            blockHeight: blockHeight, 
+            prevBlockHash: prevBlockHash,
+            merkleRoot: merkleRoot,
+            target: target,
+            chainWork: chainWork
+        });
+
     }
 
-    
-    function storeBlockHeader(bytes memory blockHeaderBytes) public {
+    /**
+    * @notice Parses, validates and stores Bitcoin block header to mapping
+    * @param blockHeaderBytes Raw Bitcoin block header bytes (80 bytes)
+    * 
+    */  
+    function storeBlockHeader(bytes memory blockHeaderBytes) public returns (bytes32) {
+        
+        require(blockHeaderBytes.length == 80, "Invalid block header size");
+
         bytes32 hashPrevBlock = blockHeaderBytes.slice(4, 32).flipBytes().toBytes32();
         bytes memory hashCurrentBlockBytes = dblShaFlip(blockHeaderBytes);
         bytes32 hashCurrentBlock = hashCurrentBlockBytes.toBytes32();
 
                 
         // Block hash must be greated 0        
-        require(hashCurrentBlock > 0, "Submitted block has invalid hash");
+        //require(hashCurrentBlock > 0, "Submitted block has invalid hash");
         // Fail if previous block hash not in current state of main chain
         require(_headers[hashPrevBlock].prevBlockHash != 0, "Previous block hash not in found current state of main chain");
 
@@ -136,7 +167,27 @@ contract BTCRelay {
 
     // HELPER FUNCTIONS
 
-
+    /**
+    * @notice Given a 80 byte Bitcoin block header, parses and returns all inluded fields
+    * @param blockHeaderBytes Raw Bitcoin block headers
+    * @return Bitcoin block header parameters (as defined here: https://bitcoin.org/en/developer-reference#block-headers)
+    */
+    function parseBlockHeader(bytes memory blockHeaderBytes) private pure returns (
+        uint32 version,
+        uint32 time,
+        uint32 nonce,
+        bytes32 prevBlockHash,
+        bytes32 merkleRoot,
+        uint256 target
+    ){
+        version = uint32(blockHeaderBytes.slice(0,4).flipBytes().bytesToUint());
+        time = uint32(blockHeaderBytes.slice(68,4).bytesToUint());
+        nonce = uint32(blockHeaderBytes.slice(76, 4).flipBytes().bytesToUint());
+        prevBlockHash = blockHeaderBytes.slice(4, 32).flipBytes().toBytes32();
+        merkleRoot = blockHeaderBytes.slice(36,32).toBytes32();
+        target = nBitsToTarget(blockHeaderBytes.slice(72, 4).flipBytes().bytesToUint());
+        return(version, time, nonce, prevBlockHash, merkleRoot, target);
+    }
     /**
     * @notice Performns Bitcoin-like double sha256 (LE!)
     * @param data Bytes to be flipped and double hashed 
@@ -184,7 +235,7 @@ contract BTCRelay {
         } else {
             // Difficulty should be adjusted at this block blockHeight => check if adjusted correctly!
             uint256 prevTime = _headers[hashPrevBlock].time;
-            uint256 startTime = _headers[_lastDifficultyAdjustmentBlock].time;
+            uint256 startTime = _lastDiffAdjustmentTime;
             uint256 newTarget = computeNewTarget(prevTime, startTime, prevTarget);
             return target == newTarget;
         }

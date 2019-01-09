@@ -2,7 +2,7 @@ pragma solidity >=0.4.22 <0.6.0;
 
 library Utils{
 
-    function slice(bytes memory _bytes, uint _start, uint _length) internal  pure returns (bytes memory) {
+    function slice(bytes memory _bytes, uint _start, uint _length) public pure returns (bytes memory) {
         require(_bytes.length >= (_start + _length), 'Slice out of bounds');
 
         bytes memory tempBytes;
@@ -60,7 +60,7 @@ library Utils{
     }
 
 
-    function toBytes32(bytes memory _source) internal pure returns (bytes32 result) {
+    function toBytes32(bytes memory _source) public pure returns (bytes32 result) {
         bytes memory tempEmptyStringTest = bytes(_source);
         if (tempEmptyStringTest.length == 0) {
             return 0x0;
@@ -77,7 +77,7 @@ library Utils{
     * @param b Dynamic byte array in BE
     * @return Integer representation of b
     */
-    function bytesToUint(bytes memory b) internal pure returns (uint256){
+    function bytesToUint(bytes memory b) public pure returns (uint256){
         uint256 number;
         for(uint i = 0;i < b.length; i++){
             number = number + uint256(uint8(b[i])) * (2 ** (8 * (b.length - (i + 1))));
@@ -91,7 +91,7 @@ library Utils{
     * @param bytesLE To be flipped LE byte array 
     * @return bytes32 BE representation of parsed bytesLE
     */
-    function flipBytes(bytes memory bytesLE) internal pure returns (bytes memory) {
+    function flipBytes(bytes memory bytesLE) public pure returns (bytes memory) {
         bytes memory bytesBE = new bytes(bytesLE.length);
         for (uint i = 0; i < bytesLE.length; i++){
             bytesBE[bytesLE.length - i - 1] = bytesLE[i];
