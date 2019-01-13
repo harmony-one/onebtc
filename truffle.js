@@ -10,7 +10,7 @@ module.exports = {
     development: {
       host: "localhost",
       port: 8545,
-      network_id: "*" // Match any network id
+      network_id: "*" // M,atch any network id
     },
     ropsten: {
       network_id: 3,
