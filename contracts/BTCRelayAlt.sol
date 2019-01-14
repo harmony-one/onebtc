@@ -255,4 +255,8 @@ contract BTCRelayAlt {
         target = nBitsToTarget(blockHeaderBytes.slice(72, 4).flipBytes().bytesToUint());
         return(version, time, nonce, prevBlockHash, merkleRoot, target);
     }
+
+    function getDifficulty(uint256 target) public pure returns(uint256){
+        return 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target;
+    }
 }

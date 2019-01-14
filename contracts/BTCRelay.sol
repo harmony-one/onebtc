@@ -151,7 +151,7 @@ contract BTCRelay {
         
         // https://en.bitcoin.it/wiki/Difficulty
         // TODO: check correct conversion here
-        uint256 difficulty = 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target;
+        uint256 difficulty = getDifficulty(target);
         uint256 chainWork = chainWorkPrevBlock + difficulty;
         _headers[hashCurrentBlock].chainWork = chainWork;
 
@@ -307,5 +307,9 @@ contract BTCRelay {
 
     function getTargetFromHeader(bytes memory blockHeaderBytes) public pure returns(uint256){
         return nBitsToTarget(getNBitsFromHeader(blockHeaderBytes));
+    }
+
+    function getDifficulty(uint256 target) public pure returns(uint256){
+        return 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target;
     }
 }
