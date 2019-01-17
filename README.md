@@ -51,19 +51,12 @@ ganache-cli
 Migrate contracts:
 
 ```
-truffle console
+truffle migrate
 ```
 
-From your truffle console:
+Run tests: 
 
 ```
-migrate
+truffle test
 ```
-
-From your truffle console:
-
-```
-test
-```
-
-Tests will execute locally.
+This will also re-run migration scripts. 
