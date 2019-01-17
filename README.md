@@ -32,3 +32,38 @@ We make note of the following libraries/implementations, which specifically may 
 + https://github.com/tjade273/BTCRelay-tools
 + https://github.com/rainbreak/solidity-btc-parser
 
+## Installation
+
+Make sure ganache-cli and truffle are installed as global packages. Then, install the required packages with:
+
+```
+npm install
+```
+
+## Testing
+
+Start ganache:
+
+```
+ganache-cli
+```
+
+Migrate contracts:
+
+```
+truffle console
+```
+
+From your truffle console:
+
+```
+migrate
+```
+
+From your truffle console:
+
+```
+test
+```
+
+Tests will execute locally.
