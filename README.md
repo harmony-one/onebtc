@@ -31,7 +31,9 @@ We make note of the following libraries/implementations, which specifically may 
 + https://github.com/summa-tx/bitcoin-spv
 + https://github.com/tjade273/BTCRelay-tools
 + https://github.com/rainbreak/solidity-btc-parser
-
++ https://github.com/ethers/bitcoin-proof
++ https://github.com/ethers/EthereumBitcoinSwap 
++ 
 ## Installation
 
 Make sure ganache-cli and truffle are installed as global packages. Then, install the required packages with:
