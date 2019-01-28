@@ -10,30 +10,34 @@ contract BTCRelay {
     using SafeMath for uint256;
     using Utils for bytes;
     
-    struct Header {
-        uint32 version; // block version (4 bytes)
-        uint32 time; // Unix epoch timestamp (4 bytes) - in BE!
-        //uint32 nBits; // encoded diff. target (4 bytes)
-        uint32 nonce; // PoW solution nonce (4 bytes)
-        uint32 blockHeight; // position of block - not part of header
-        bytes32 prevBlockHash; // previous block hash (32 bytes)
-        bytes32 merkleRoot; // root hash of transaction merkle tree (32 bytes)
-        uint256 target; // diff. target - decoded from compressed 4 byte nBits
-        uint256 chainWork; // accumulated PoW at the eight of this block - not part of header
+    // Data structure representing a Bitcoin block header
+    struct HeaderInfo {
+        uint256 blockHeight; // height of this block header
+        uint256 chainWork; // accumulated PoW at this height
+        bytes header; // 80 bytes block header
+        uint256 lastDiffAdjustment; // necessary to track, should a fork include a diff. adjustment block
     }
-    mapping(bytes32 => Header) public _headers;
-    
-    // Potentially more optimal - need to add chainWork and blockHeight though...
-    //mapping(bytes32 => bytes) public _headers;
 
+    // Temporary data structure used for fork submissions. 
+    // Will be deleted upon success. Reasing in case of failure has no benefit to caller(!)
+    struct Fork {
+        uint256 startHeight; // start height of a fork
+        uint256 length; // number of block in fork
+        uint256 chainWork; // accumulated PoW on the fork branch
+        bytes32[] forkHeaders; // references to submitted block headers
+    }
+
+    mapping(bytes32 => HeaderInfo) public _headers; // mapping of block hashes to block headers (ALL ever submitted, i.e., incl. forks)
+    mapping(uint256 => bytes32) public _mainChain; // mapping of block heights to block hashes of the MAIN CHAIN
     bytes32 public _heaviestBlock; // block with the highest chainWork, i.e., blockchain tip
-    uint256 public _highScore; // highest chainWork, i.e., accumulated PoW at current blockchain tip
-    uint256 public _lastDiffAdjustmentTime; // timestamp of the block of last difficulty adjustment (blockHeight mod DIFFICULTY_ADJUSTMENT_INVETVAL = 0)
-
+    uint256 public _highScore; // highest chainWork, i.e., accumulated PoW at current blockchain tip    
+    uint256 public _lastDiffAdjustmentTime; // timestamp of the block of last difficulty adjustment (blockHeight % 2016 == 0)
+    mapping(uint256 => Fork) public _ongoingForks; // mapping of currently onoing fork submissions
+    uint256 public _forkCounter = 1; // incremental counter for tracking fork submission. 0 used to indicate a main chain submission
+    
     // CONSTANTS
     /**
     * Bitcoin difficulty constants
-    * TODO: move this to constructor before deployment
     */ 
     uint256 public constant DIFFICULTY_ADJUSTMENT_INVETVAL = 2016;
     uint256 public constant TARGET_TIMESPAN = 14 * 24 * 60 * 60; // 2 weeks 
@@ -41,26 +45,24 @@ contract BTCRelay {
     uint256 public constant TARGET_TIMESPAN_DIV_4 = TARGET_TIMESPAN / 4; // store division as constant to save costs
     uint256 public constant TARGET_TIMESPAN_MUL_4 = TARGET_TIMESPAN * 4; // store multiplucation as constant to save costs
 
-    // ERROR CODES
-    // error codes for storeBlockHeader
-    uint256 public constant ERR_DIFFICULTY = 10010;  // difficulty didn't match current difficulty
-    uint256 public constant ERR_RETARGET = 10020;  // difficulty didn't match retarget
-    uint256 public constant ERR_NO_PREV_BLOCK = 10030;
-    uint256 public constant ERR_BLOCK_ALREADY_EXISTS = 10040;
-    uint256 public constant ERR_PROOF_OF_WORK = 10090;
-    // error codes for verifyTx
-    uint256 public constant ERR_BAD_FEE = 20010;
-    uint256 public constant ERR_CONFIRMATIONS = 20020;
-    uint256 public constant ERR_CHAIN = 20030;
-    uint256 public constant ERR_MERKLE_ROOT = 20040;
-    uint256 public constant ERR_TX_64BYTE = 20050;
-
     // EVENTS
     /**
     * @param blockHash block header hash of block header submitted for storage
     * @param blockHeight blockHeight
     */
     event StoreHeader(bytes32 indexed blockHash, uint256 indexed blockHeight);
+    /**
+    * @param blockHash block header hash of block header submitted for storage
+    * @param blockHeight blockHeight
+    * @param forkId identifier of fork in the contract
+    */
+    event StoreFork(bytes32 indexed blockHash, uint256 indexed blockHeight, uint256 indexed forkId);
+    /**
+    * @param newChainTip new tip of the blockchain after a triggered chain reorg. 
+    * @param startHeight start blockHeight of fork
+    * @param forkId identifier of the fork triggering the reorg.
+    */
+    event ChainReorg(bytes32 indexed newChainTip, uint256 indexed startHeight, uint256 indexed forkId);
     /**
     * @param txid block header hash of block header submitted for storage
     */
@@ -82,109 +84,135 @@ contract BTCRelay {
         public {
         require(_heaviestBlock == 0, "Initial parent has already been set");
         
-        uint32 version;
-        uint32 time;
-        uint32 nonce;
-        bytes32 prevBlockHash;
-        bytes32 merkleRoot;
-        uint256 target;
-
-        (version, time, nonce, prevBlockHash, merkleRoot, target) = parseBlockHeader(blockHeaderBytes);
-        bytes32 blockHeaderHash = dblShaFlip(blockHeaderBytes).toBytes32();
-        
+       
+        bytes32 blockHeaderHash = dblShaFlip(blockHeaderBytes).toBytes32(); 
         _heaviestBlock = blockHeaderHash;
         _highScore = chainWork;
         _lastDiffAdjustmentTime = lastDiffAdjustmentTime;
         
+        _headers[blockHeaderHash].header = blockHeaderBytes;
         _headers[blockHeaderHash].blockHeight = blockHeight;
-        _headers[blockHeaderHash] = Header({
-            version: version,
-            time: time,
-            nonce: nonce,
-            blockHeight: blockHeight,
-            prevBlockHash: prevBlockHash,
-            merkleRoot: merkleRoot,
-            target: target,
-            chainWork: chainWork
-        });
-        emit StoreHeader(blockHeaderHash, blockHeight);
+        _headers[blockHeaderHash].chainWork = chainWork;
 
+        emit StoreHeader(blockHeaderHash, blockHeight);
+    }
+
+    /**
+    * @notice Submit block header to current main chain in relay
+    * @dev Will revert if fork is submitted! Use submitNewForkChainHeader for fork submissions.
+    */
+    function submitMainChainHeader(bytes memory blockHeaderBytes) public returns (bytes32){
+        return submitBlockHeader(blockHeaderBytes, 0);
+    }
+    
+    /**
+    * @notice Submit block header to start a NEW FORK
+    * @dev Increments _forkCounter and uses this as forkId
+    */
+    function submitNewForkChainHeader(bytes memory blockHeaderBytes) public returns (bytes23){
+        _forkCounter++;
+        return submitBlockHeader(blockHeaderBytes, _forkCounter);    
+    }
+    
+    /**
+    * @notice Submit block header to existing fork
+    * @dev Will revert if previos block is not in the specified fork!
+    */
+    function submitForkChainHeader(bytes memory blockHeaderBytes, uint256 forkId) public returns (bytes23){
+        require(forkId > 0, "Incorrect fork identifier: id 0 is no available");
+        return submitBlockHeader(blockHeaderBytes, forkId);   
     }
 
     /**
     * @notice Parses, validates and stores Bitcoin block header to mapping
+    * @dev Can only be called interlally - use submitXXXHeader for public access 
     * @param blockHeaderBytes Raw Bitcoin block header bytes (80 bytes)
+    * @param forkId when submitting a fork, pass forkId to reference existing fork submission (Problem: submitting to fork even if not in fork?)
     * 
     */  
-    function storeBlockHeader(bytes memory blockHeaderBytes) public returns (bytes32) {
+    function submitBlockHeader(bytes memory blockHeaderBytes, uint256 forkId) internal returns (bytes32) {
         
         require(blockHeaderBytes.length == 80, "Invalid block header size");
 
-        bytes32 hashPrevBlock = getPrevBlockHashFromHeader(blockHeaderBytes);
-        bytes memory hashCurrentBlockBytes = dblShaFlip(blockHeaderBytes);
-        bytes32 hashCurrentBlock = hashCurrentBlockBytes.toBytes32();
+        bytes32 hashPrevBlock = blockHeaderBytes.slice(4, 32).flipBytes().toBytes32();
+        bytes32 hashCurrentBlock = dblShaFlip(blockHeaderBytes).toBytes32();
 
         // Fail if previous block hash not in current state of main chain
         // Time is always set in block header struct (prevBlockHash and height can be 0 for Genesis block)
-        require(_headers[hashPrevBlock].time > 0, "Previous block hash not found in current state of main chain");
+        require(_headers[hashPrevBlock].header.length > 0, "Previous block hash not found!");
 
         // Fails if previous block header is not stored
-        uint256 chainWorkPrevBlock = getChainWork(hashPrevBlock);
-        uint256 target = nBitsToTarget(blockHeaderBytes.slice(72, 4).flipBytes().bytesToUint());
-        uint32 blockHeight = 1 + _headers[hashPrevBlock].blockHeight;
+        uint256 chainWorkPrevBlock = _headers[hashPrevBlock].chainWork;
+        uint256 target = getTargetFromHeader(blockHeaderBytes);
+        uint256 blockHeight = 1 + _headers[hashPrevBlock].blockHeight;
         
         // Check the PoW solution matches the target specified in the block header
-        require(hashCurrentBlockBytes.bytesToUint() < target, "PoW solution hash does not match difficulty target specified in block header!");
+        require(hashCurrentBlock <= bytes32(target), "PoW solution hash does not match difficulty target specified in block header!");
         // Check the specified difficulty target is correct:
         // If retarget: according to Bitcoin's difficulty adjustment mechanism;
         // Else: same as last block. 
+        // TODO: return more detailed error messages here (i.e., move require into cocorrectDifficultyTarget function)
         require(correctDifficultyTarget(hashPrevBlock, blockHeight, target), "Incorrect difficulty target specified in block header!");
 
-
-        _headers[hashCurrentBlock].version = uint32(blockHeaderBytes.slice(0,4).flipBytes().bytesToUint());
-        _headers[hashCurrentBlock].time = uint32(blockHeaderBytes.slice(68,4).bytesToUint());
-        _headers[hashCurrentBlock].nonce =  uint32(blockHeaderBytes.slice(76, 4).flipBytes().bytesToUint());
-        _headers[hashCurrentBlock].blockHeight = blockHeight;
-        _headers[hashCurrentBlock].prevBlockHash = hashPrevBlock;
-        _headers[hashCurrentBlock].merkleRoot = blockHeaderBytes.slice(36,32).toBytes32();
-        _headers[hashCurrentBlock].target = target;
-        
         // https://en.bitcoin.it/wiki/Difficulty
         // TODO: check correct conversion here
         uint256 difficulty = getDifficulty(target);
         uint256 chainWork = chainWorkPrevBlock + difficulty;
-        _headers[hashCurrentBlock].chainWork = chainWork;
 
-        if(chainWork > _highScore){
-            _heaviestBlock = hashCurrentBlock;
-            _highScore = chainWork;
+        // Fork handling
+        if(forkId == 0){
+            // Main chain submission
+            if(chainWork > _highScore){
+                _heaviestBlock = hashCurrentBlock;
+                _highScore = chainWork;
+                storeBlockHeader(hashCurrentBlock);
+            } else {  
+                revert("Main chain submission indicated, but submitted block is on a fork!");
+            }
+        } else if(_ongoingForks[forkId].length != 0){
+            // Submission to ongoing fork
+            // TODO:
+            // get Fork by forkId
+            // check that prev. block hash of current block is indeed in the fork
+            if(chainWork > _highScore){
+                // TODO: handle successful fork
+                /* Pseudocode:
+                * for each height in range(startHeight, startHeight + len(forkHeaders)):
+                *     delete old block header reference using height
+                *     update main chain height pointer to corresponding fork header
+                * delete Fork from fork mapping (releases gas: max. 15.000 * len(forkHeaders))
+                */
+            } else {
+                // TODO: append block to fork
+            }
+        } else {
+            // Submission to new fork
+            // Check that block is indeed a fork
+            require(hashPrevBlock != _heaviestBlock, "Indicated fork submission, but block is in main chain!");
+            // TODO: 
+            // create and initialize new Fork struct
         }
+
         emit StoreHeader(hashCurrentBlock, blockHeight);
     }
 
-    // HELPER FUNCTIONS
+    /**
+    * @notice Stores parsed block header and meta information
+    */
+    function storeBlockHeader(bytes32 hashCurrentBlock, bytes memory blockHeaderBytes, uint256 blockHeight, uint256 chainWork) public{
+        // potentially externalize this call
+        _headers[hashCurrentBlock].header = blockHeaderBytes;
+        _headers[hashCurrentBlock].blockHeight = blockHeight;
+        _headers[hashCurrentBlock].chainWork = chainWork;
+    }
 
     /**
-    * @notice Given a 80 byte Bitcoin block header, parses and returns all inluded fields
-    * @param blockHeaderBytes Raw Bitcoin block headers
-    * @return Bitcoin block header parameters (as defined here: https://bitcoin.org/en/developer-reference#block-headers)
+    * @notice Stores and handles fork submission.
     */
-    function parseBlockHeader(bytes memory blockHeaderBytes) public pure returns (
-        uint32 version,
-        uint32 time,
-        uint32 nonce,
-        bytes32 prevBlockHash,
-        bytes32 merkleRoot,
-        uint256 target
-    ){
-        version = uint32(blockHeaderBytes.slice(0,4).flipBytes().bytesToUint());
-        time = uint32(blockHeaderBytes.slice(68,4).flipBytes().bytesToUint());
-        nonce = uint32(blockHeaderBytes.slice(76, 4).flipBytes().bytesToUint());
-        prevBlockHash = blockHeaderBytes.slice(4, 32).flipBytes().toBytes32();
-        merkleRoot = blockHeaderBytes.slice(36,32).toBytes32();
-        target = nBitsToTarget(blockHeaderBytes.slice(72, 4).flipBytes().bytesToUint());
-        return(version, time, nonce, prevBlockHash, merkleRoot, target);
+    function storeForkHeader(bytes32 hashCurrentBlock, bytes memory blockHeaderBytes, uint256 blockHeight, uint256 chainWork) public {
+        
     }
+    // HELPER FUNCTIONS
     /**
     * @notice Performns Bitcoin-like double sha256 (LE!)
     * @param data Bytes to be flipped and double hashed 
@@ -218,11 +246,12 @@ contract BTCRelay {
 
     /**
     * @notice Verifies the currently submitted block header has the correct difficutly target, based on contract parameters
-    * @dev Called from storeBlockHeader. TODO: think about emitting events in this function to identify the reason for failures
+    * @dev Called from submitBlockHeader. TODO: think about emitting events in this function to identify the reason for failures
     * @param hashPrevBlock Previous block hash (necessary to retrieve previous target)
     */
     function correctDifficultyTarget(bytes32 hashPrevBlock, uint256 blockHeight, uint256 target) private view returns(bool) {
-        uint256 prevTarget = _headers[hashPrevBlock].target;
+        bytes memory prevBlockHeader = _headers[hashPrevBlock].header;
+        uint256 prevTarget = getTargetFromHeader(prevBlockHeader);
         
         if(!difficultyShouldBeAdjusted(blockHeight)){
             // Difficulty not adjusted at this block blockHeight
@@ -231,7 +260,7 @@ contract BTCRelay {
             }
         } else {
             // Difficulty should be adjusted at this block blockHeight => check if adjusted correctly!
-            uint256 prevTime = _headers[hashPrevBlock].time;
+            uint256 prevTime = getTimeFromHeader(prevBlockHeader);
             uint256 startTime = _lastDiffAdjustmentTime;
             uint256 newTarget = computeNewTarget(prevTime, startTime, prevTarget);
             return target == newTarget;
@@ -262,33 +291,7 @@ contract BTCRelay {
         return newTarget;
     }
 
-    // GETTERS
-
-    function getChainWork(bytes32 blockHeaderHash) public view returns(uint256){
-        return(
-            _headers[blockHeaderHash].chainWork
-        );
-    }
-
-
-    function getBlockHeader(bytes32 blockHeaderHash) public view returns(
-        uint32 version,
-        uint32 time,
-        uint32 nonce,
-        bytes32 prevBlockHash,
-        bytes32 merkleRoot,
-        uint256 target
-    ){
-        _headers[blockHeaderHash];
-        return(
-            _headers[blockHeaderHash].version, 
-            _headers[blockHeaderHash].time,
-            _headers[blockHeaderHash].nonce, 
-            _headers[blockHeaderHash].prevBlockHash,
-            _headers[blockHeaderHash].merkleRoot,
-            _headers[blockHeaderHash].target);
-    }
-
+    // Parser functions
     function getTimeFromHeader(bytes memory blockHeaderBytes) public pure returns(uint32){
         return uint32(blockHeaderBytes.slice(68,4).flipBytes().bytesToUint()); 
     }
@@ -311,5 +314,26 @@ contract BTCRelay {
 
     function getDifficulty(uint256 target) public pure returns(uint256){
         return 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target;
+    }
+
+
+    // Getters
+
+    function getBlockHeader(bytes32 blockHeaderHash) public view returns(
+        uint32 version,
+        uint32 time,
+        uint32 nonce,
+        bytes32 prevBlockHash,
+        bytes32 merkleRoot,
+        uint256 target
+    ){
+        bytes memory blockHeaderBytes = _headers[blockHeaderHash].header;
+        version = uint32(blockHeaderBytes.slice(0,4).flipBytes().bytesToUint());
+        time = uint32(blockHeaderBytes.slice(68,4).flipBytes().bytesToUint());
+        nonce = uint32(blockHeaderBytes.slice(76, 4).flipBytes().bytesToUint());
+        prevBlockHash = blockHeaderBytes.slice(4, 32).flipBytes().toBytes32();
+        merkleRoot = blockHeaderBytes.slice(36,32).toBytes32();
+        target = nBitsToTarget(blockHeaderBytes.slice(72, 4).flipBytes().bytesToUint());
+        return(version, time, nonce, prevBlockHash, merkleRoot, target);
     }
 }
