@@ -24,7 +24,7 @@ contract BTCRelay {
         uint256 startHeight; // start height of a fork
         uint256 length; // number of block in fork
         uint256 chainWork; // accumulated PoW on the fork branch
-        bytes32[] forkHeaders; // references to submitted block headers
+        bytes32[] forkHeaderHashes; // references to submitted block headers
     }
 
     mapping(bytes32 => HeaderInfo) public _headers; // mapping of block hashes to block headers (ALL ever submitted, i.e., incl. forks)
@@ -109,9 +109,10 @@ contract BTCRelay {
     * @notice Submit block header to start a NEW FORK
     * @dev Increments _forkCounter and uses this as forkId
     */
-    function submitNewForkChainHeader(bytes memory blockHeaderBytes) public returns (bytes23){
+    function submitNewForkChainHeader(bytes memory blockHeaderBytes) public returns (bytes23 blockHeaderHash){
+        blockHeaderHash = submitBlockHeader(blockHeaderBytes, _forkCounter);    
         _forkCounter++;
-        return submitBlockHeader(blockHeaderBytes, _forkCounter);    
+        return blockHeaderHash;
     }
     
     /**
@@ -162,38 +163,59 @@ contract BTCRelay {
         // Fork handling
         if(forkId == 0){
             // Main chain submission
-            if(chainWork > _highScore){
-                _heaviestBlock = hashCurrentBlock;
-                _highScore = chainWork;
-                storeBlockHeader(hashCurrentBlock);
-            } else {  
-                revert("Main chain submission indicated, but submitted block is on a fork!");
-            }
+            require(chainWork > _highScore, "Main chain submission indicated, but submitted block is on a fork!");
+            _heaviestBlock = hashCurrentBlock;
+            _highScore = chainWork;
+            storeBlockHeader(hashCurrentBlock);
+            emit StoreHeader(hashCurrentBlock, blockHeight);
+            
         } else if(_ongoingForks[forkId].length != 0){
             // Submission to ongoing fork
-            // TODO:
-            // get Fork by forkId
             // check that prev. block hash of current block is indeed in the fork
+            require(getLatestForkHeader(forkId) == hashPrevBlock, "Previous block hash does not match last block in fork submission!");
             if(chainWork > _highScore){
-                // TODO: handle successful fork
-                /* Pseudocode:
-                * for each height in range(startHeight, startHeight + len(forkHeaders)):
-                *     delete old block header reference using height
-                *     update main chain height pointer to corresponding fork header
-                * delete Fork from fork mapping (releases gas: max. 15.000 * len(forkHeaders))
-                */
+                // Handle successful fork: remove old block header and update main chain reference
+                uint256 currentHeight = _ongoingForks[forkId].startHeight;
+                for (uint i=0; i < _ongoingForks[forkId].forkHeaderHashes.length; i++) {                    
+                    // Delete old block header data. 
+                    // Note: This refunds gas!
+                    // TODO: optimze such that users do not get cut-off by tx.gasUsed / 2
+                    delete _headers[_mainChain[currentHeight]];
+                    // Update main chain height pointer to new header from fork
+                    _mainChain[currentHeight] =  _ongoingForks[forkId].forkHeaderHashes[i];
+                    currentHeight++;
+                }
+                emit ChainReorg(
+                    _ongoingForks[forkId].forkHeaderHashes[i], 
+                    _ongoingForks[forkId].startHeight,
+                    forkId);
+                // Delet successful fork submission
+                // This refunds gas!
+                delete _ongoingForks[forkId];
+            
             } else {
-                // TODO: append block to fork
+                // Fork still being extended: append block
+                storeForkHeader(
+                    forkId,
+                    blockHeaderHash,
+                    _ongoingForks[forkId].chainWork + difficulty
+                );
+                emit StoreFork(blockHeaderHash, blockHeight, forkId);
             }
         } else {
-            // Submission to new fork
+            // Submission of new fork
+            // This should never fail
+            assert(forkId == _forkCounter); 
             // Check that block is indeed a fork
             require(hashPrevBlock != _heaviestBlock, "Indicated fork submission, but block is in main chain!");
-            // TODO: 
-            // create and initialize new Fork struct
+            storeForkHeader(
+                forkId,
+                blockHeaderHash,
+                chainWorkPrevBlock + difficulty
+            );
+            _ongoingForks[forkId].startHeight = blockHeight;
+            emit StoreFork(blockHeaderHash, blockHeight, forkId);
         }
-
-        emit StoreHeader(hashCurrentBlock, blockHeight);
     }
 
     /**
@@ -204,14 +226,18 @@ contract BTCRelay {
         _headers[hashCurrentBlock].header = blockHeaderBytes;
         _headers[hashCurrentBlock].blockHeight = blockHeight;
         _headers[hashCurrentBlock].chainWork = chainWork;
+        _mainChain[blockHeight] = hashCurrentBlock;
     }
 
     /**
     * @notice Stores and handles fork submission.
     */
-    function storeForkHeader(bytes32 hashCurrentBlock, bytes memory blockHeaderBytes, uint256 blockHeight, uint256 chainWork) public {
-        
+    function storeForkHeader(uint256 forkId, bytes32 blockHeaderHash, uint256 chainWork) public {
+        _ongoingForks[forkId].chainWork = chainWork;
+        _ongoingForks[forkId].length += 1;
+        _ongoingForks[forkId].forkHeaders.push(blockHeaderHash);
     }
+
     // HELPER FUNCTIONS
     /**
     * @notice Performns Bitcoin-like double sha256 (LE!)
@@ -335,5 +361,9 @@ contract BTCRelay {
         merkleRoot = blockHeaderBytes.slice(36,32).toBytes32();
         target = nBitsToTarget(blockHeaderBytes.slice(72, 4).flipBytes().bytesToUint());
         return(version, time, nonce, prevBlockHash, merkleRoot, target);
+    }
+
+    function getLatestForkHeader(uint256 forkId) public view returns(bytes memory){
+        return _headers[_ongoingForks[forkId].forkHeaderHashes[forkHeaderHashes.length - 1]]
     }
 }
