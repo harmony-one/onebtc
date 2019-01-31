@@ -10,7 +10,7 @@ Read more about chain relays in the <a href="https://eprint.iacr.org/2018/643.pd
 
 ## BTCRelay-Sol
 BTCRelay-Sol is an implementation of a chain relay for Bitcoin on Ethereum. The first implementation of BTCRelay was implemented in Serpent and can be found <a href="https://github.com/ethereum/btcrelay">here</a>. 
-However, as Serpent is outdated (last commit: December 2017), this projects aims to implement an updated version in Solidity. 
+However, as Serpent is outdated (last commit: December 2017), this project aims to implement an updated version in Solidity. 
 
 ### Design
 The current implementation is based on the existing Serpent implementation, specifically with regards for fork handling. 
