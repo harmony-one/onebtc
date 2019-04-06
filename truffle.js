@@ -10,7 +10,7 @@ module.exports = {
     development: {
       host: "localhost",
       port: 8545,
-      network_id: "*" // M,atch any network id
+      network_id: "*" // Match any network id
     },
     ropsten: {
       network_id: 3,
@@ -26,5 +26,11 @@ module.exports = {
   mocha: {
     enableTimeouts: false,
     useColors: true
+  },
+  solc: {
+    optimizer: {
+      enabled: true,
+      runs: 200
+    }
   }
 };

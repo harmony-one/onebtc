@@ -36,7 +36,7 @@ contract BTCRelay {
     uint256 public _forkCounter = 1; // incremental counter for tracking fork submission. 0 used to indicate a main chain submission
     
     // CONSTANTS
-    /**
+    /*
     * Bitcoin difficulty constants
     */ 
     uint256 public constant DIFFICULTY_ADJUSTMENT_INVETVAL = 2016;
@@ -46,29 +46,29 @@ contract BTCRelay {
     uint256 public constant TARGET_TIMESPAN_MUL_4 = TARGET_TIMESPAN * 4; // store multiplucation as constant to save costs
 
     // EVENTS
-    /**
+    /*
     * @param blockHash block header hash of block header submitted for storage
     * @param blockHeight blockHeight
     */
     event StoreHeader(bytes32 indexed blockHash, uint256 indexed blockHeight);
-    /**
+    /*
     * @param blockHash block header hash of block header submitted for storage
     * @param blockHeight blockHeight
     * @param forkId identifier of fork in the contract
     */
     event StoreFork(bytes32 indexed blockHash, uint256 indexed blockHeight, uint256 indexed forkId);
-    /**
+    /*
     * @param newChainTip new tip of the blockchain after a triggered chain reorg. 
     * @param startHeight start blockHeight of fork
     * @param forkId identifier of the fork triggering the reorg.
     */
     event ChainReorg(bytes32 indexed newChainTip, uint256 indexed startHeight, uint256 indexed forkId);
-    /**
+    /*
     * @param txid block header hash of block header submitted for storage
     */
-    event VerityTransaction(bytes32 indexed txid);
+    event VerityTransaction(bytes32 indexed txid, uint256 indexed blockHeight);
 
-    /**
+    /*
     * @notice Initialized BTCRelay with provided block, i.e., defined the first block of the stored chain. 
     * @dev TODO: check issue with "blockHeight mod 2016 = 2015" requirement (old btc relay!). Alexei: IMHO should be called with "blockHeight mod 2016 = 0"
     * @param blockHeaderBytes Raw Bitcoin block headers
@@ -97,7 +97,7 @@ contract BTCRelay {
         emit StoreHeader(blockHeaderHash, blockHeight);
     }
 
-    /**
+    /*
     * @notice Submit block header to current main chain in relay
     * @dev Will revert if fork is submitted! Use submitNewForkChainHeader for fork submissions.
     */
@@ -105,26 +105,26 @@ contract BTCRelay {
         return submitBlockHeader(blockHeaderBytes, 0);
     }
     
-    /**
+    /*
     * @notice Submit block header to start a NEW FORK
     * @dev Increments _forkCounter and uses this as forkId
     */
-    function submitNewForkChainHeader(bytes memory blockHeaderBytes) public returns (bytes23 blockHeaderHash){
+    function submitNewForkChainHeader(bytes memory blockHeaderBytes) public returns (bytes32 blockHeaderHash){
         blockHeaderHash = submitBlockHeader(blockHeaderBytes, _forkCounter);    
         _forkCounter++;
         return blockHeaderHash;
     }
     
-    /**
+    /*
     * @notice Submit block header to existing fork
     * @dev Will revert if previos block is not in the specified fork!
     */
-    function submitForkChainHeader(bytes memory blockHeaderBytes, uint256 forkId) public returns (bytes23){
+    function submitForkChainHeader(bytes memory blockHeaderBytes, uint256 forkId) public returns (bytes32){
         require(forkId > 0, "Incorrect fork identifier: id 0 is no available");
         return submitBlockHeader(blockHeaderBytes, forkId);   
     }
 
-    /**
+    /*
     * @notice Parses, validates and stores Bitcoin block header to mapping
     * @dev Can only be called interlally - use submitXXXHeader for public access 
     * @param blockHeaderBytes Raw Bitcoin block header bytes (80 bytes)
@@ -166,41 +166,34 @@ contract BTCRelay {
             require(chainWork > _highScore, "Main chain submission indicated, but submitted block is on a fork!");
             _heaviestBlock = hashCurrentBlock;
             _highScore = chainWork;
-            storeBlockHeader(hashCurrentBlock);
+            storeBlockHeader(hashCurrentBlock, blockHeaderBytes, blockHeight, chainWork);
             emit StoreHeader(hashCurrentBlock, blockHeight);
             
         } else if(_ongoingForks[forkId].length != 0){
             // Submission to ongoing fork
             // check that prev. block hash of current block is indeed in the fork
-            require(getLatestForkHeader(forkId) == hashPrevBlock, "Previous block hash does not match last block in fork submission!");
+            require(getLatestForkHash(forkId) == hashPrevBlock, "Previous block hash does not match last block in fork submission!");
             if(chainWork > _highScore){
                 // Handle successful fork: remove old block header and update main chain reference
                 uint256 currentHeight = _ongoingForks[forkId].startHeight;
-                for (uint i=0; i < _ongoingForks[forkId].forkHeaderHashes.length; i++) {                    
+                for (uint i = 0; i < _ongoingForks[forkId].forkHeaderHashes.length; i++) {                    
                     // Delete old block header data. 
                     // Note: This refunds gas!
                     // TODO: optimze such that users do not get cut-off by tx.gasUsed / 2
                     delete _headers[_mainChain[currentHeight]];
                     // Update main chain height pointer to new header from fork
-                    _mainChain[currentHeight] =  _ongoingForks[forkId].forkHeaderHashes[i];
+                    _mainChain[currentHeight] = _ongoingForks[forkId].forkHeaderHashes[i];
                     currentHeight++;
                 }
-                emit ChainReorg(
-                    _ongoingForks[forkId].forkHeaderHashes[i], 
-                    _ongoingForks[forkId].startHeight,
-                    forkId);
-                // Delet successful fork submission
+                emit ChainReorg(_mainChain[currentHeight-1], _ongoingForks[forkId].startHeight, forkId);
+                // Delete successful fork submission
                 // This refunds gas!
                 delete _ongoingForks[forkId];
             
             } else {
                 // Fork still being extended: append block
-                storeForkHeader(
-                    forkId,
-                    blockHeaderHash,
-                    _ongoingForks[forkId].chainWork + difficulty
-                );
-                emit StoreFork(blockHeaderHash, blockHeight, forkId);
+                storeForkHeader(forkId, hashCurrentBlock, _ongoingForks[forkId].chainWork + difficulty);
+                emit StoreFork(hashCurrentBlock, blockHeight, forkId);
             }
         } else {
             // Submission of new fork
@@ -210,18 +203,18 @@ contract BTCRelay {
             require(hashPrevBlock != _heaviestBlock, "Indicated fork submission, but block is in main chain!");
             storeForkHeader(
                 forkId,
-                blockHeaderHash,
+                hashCurrentBlock,
                 chainWorkPrevBlock + difficulty
             );
             _ongoingForks[forkId].startHeight = blockHeight;
-            emit StoreFork(blockHeaderHash, blockHeight, forkId);
+            emit StoreFork(hashCurrentBlock, blockHeight, forkId);
         }
     }
 
-    /**
+    /*
     * @notice Stores parsed block header and meta information
     */
-    function storeBlockHeader(bytes32 hashCurrentBlock, bytes memory blockHeaderBytes, uint256 blockHeight, uint256 chainWork) public{
+    function storeBlockHeader(bytes32 hashCurrentBlock, bytes memory blockHeaderBytes, uint256 blockHeight, uint256 chainWork) internal {
         // potentially externalize this call
         _headers[hashCurrentBlock].header = blockHeaderBytes;
         _headers[hashCurrentBlock].blockHeight = blockHeight;
@@ -229,26 +222,57 @@ contract BTCRelay {
         _mainChain[blockHeight] = hashCurrentBlock;
     }
 
-    /**
+    /*
     * @notice Stores and handles fork submission.
     */
-    function storeForkHeader(uint256 forkId, bytes32 blockHeaderHash, uint256 chainWork) public {
+    function storeForkHeader(uint256 forkId, bytes32 blockHeaderHash, uint256 chainWork) internal {
         _ongoingForks[forkId].chainWork = chainWork;
         _ongoingForks[forkId].length += 1;
-        _ongoingForks[forkId].forkHeaders.push(blockHeaderHash);
+        _ongoingForks[forkId].forkHeaderHashes.push(blockHeaderHash);
+    }
+
+    /*
+    * @notice Verifies that a transaction is included in a block at a given blockheight
+    * @param txid transaction identifier
+    * @param txBlockHeight block height at which transacton is supposedly included
+    * @param txIndex index of transaction in the block's tx merkle tree
+    * @param merkleProof  merkle tree path (concatenated LE sha256 hashes)
+    * @return True if txid is at the claimed position in the block at the given blockheight, False otherwise
+    */
+    function verifxTX(bytes32 txid, uint256 txBlockHeight, uint256 txIndex, bytes memory merkleProof, uint256 confirmations) public returns(bool) {
+        // txid must not be 0
+        require(txid != bytes32(0x0), "Invalid transaction identiier");
+        
+        // check requrested confirmations. No need to compute proof if insufficient confs.
+        require(_headers[_heaviestBlock].blockHeight - txBlockHeight >= confirmations, "TX has lass confirmations than requested!");
+
+        bytes32 blockHeaderHash = _mainChain[txBlockHeight];
+        bytes32 merkleRoot = getMerkleRoot(_headers[blockHeaderHash].header);
+        // Check merkle proof structure: 1st hash == txid and last hash == merkleRoot
+        require(merkleProof.slice(0, 32).toBytes32() == txid, "Invalid Merkle Proof structure!");
+        require(merkleProof.slice(merkleRoot.length, 32).toBytes32() == merkleRoot, "Invalid Merkle Proof structure!");
+        
+        // compute merkle tree root and check if it matches block's original merkle tree root
+        if(computeMerkle(txid, txIndex, merkleProof) == merkleRoot){
+            emit VerityTransaction(txid, txBlockHeight);
+            return true;
+        }
+        return false;
+
+
     }
 
     // HELPER FUNCTIONS
-    /**
+    /*
     * @notice Performns Bitcoin-like double sha256 (LE!)
-    * @param data Bytes to be flipped and double hashed 
+    * @param data Bytes to be flipped and double hashed s
     * @return Reversed and double hashed representation of parsed data
     */
     function dblShaFlip(bytes memory data) public pure returns (bytes memory){
         return abi.encodePacked(sha256(abi.encodePacked(sha256(data)))).flipBytes();
     }
 
-    /**
+    /*
     * @notice Calculates the PoW difficulty target from compressed nBits representation, 
     * according to https://bitcoin.org/en/developer-reference#target-nbits
     * @param nBits Compressed PoW target representation
@@ -261,7 +285,7 @@ contract BTCRelay {
         return target;
     }
 
-    /**
+    /*
     * @notice Checks if the difficulty target should be adjusted at this block blockHeight
     * @param blockHeight block blockHeight to be checked
     * @return true, if block blockHeight is at difficulty adjustment interval, otherwise false
@@ -270,7 +294,7 @@ contract BTCRelay {
         return blockHeight % DIFFICULTY_ADJUSTMENT_INVETVAL == 0;
     }
 
-    /**
+    /*
     * @notice Verifies the currently submitted block header has the correct difficutly target, based on contract parameters
     * @dev Called from submitBlockHeader. TODO: think about emitting events in this function to identify the reason for failures
     * @param hashPrevBlock Previous block hash (necessary to retrieve previous target)
@@ -294,7 +318,7 @@ contract BTCRelay {
         return true;
     }
 
-    /**
+    /*
     * @notice Computes the new difficulty target based on the given parameters, 
     * according to: https://github.com/bitcoin/bitcoin/blob/78dae8caccd82cfbfd76557f1fb7d7557c7b5edb/src/pow.cpp 
     * @param prevTime timestamp of previous block 
@@ -315,11 +339,63 @@ contract BTCRelay {
             newTarget = UNROUNDED_MAX_TARGET;
         }
         return newTarget;
+    }   
+
+    /*
+    * @notice Reconstructs merkle tree root given a transaction hash, index in block and merkle tree path
+    * @param txHash hash of to be verified transaction
+    * @param txIndex index of transaction given by hash in the corresponding block's merkle tree 
+    * @param merkleProof merkle tree path to transaction hash from block's merkle tree root
+    * @return merkle tree root of the block containing the transaction, meaningless hash otherwise
+    */
+    function computeMerkle(bytes32 txHash, uint256 txIndex, bytes memory merkleProof) internal pure returns(bytes32) {
+    
+        //  Special case: only coinbase tx in block. Root == proof
+        if(merkleProof.length == 32) return merkleProof.toBytes32();
+
+        // Merkle proof length must be greater than 64 and power of 2. Case length == 32 covered above.
+        require(merkleProof.length > 64 && (merkleProof.length & (merkleProof.length - 1)) == 0, "Incorrect format of Merkle Proof");
+        
+        bytes32 resultHash = txHash;
+
+        for(uint i = 1; i < merkleProof.length / 32; i++) {
+            if(txIndex % 2 == 1){
+                resultHash = concatSHA256Hash(merkleProof.slice(i * 32, 32), abi.encodePacked(resultHash));
+            } else {
+                resultHash = concatSHA256Hash(abi.encodePacked(resultHash), merkleProof.slice(i * 32, 32));
+            }
+            txIndex /= 2;
+        }
+        return resultHash;
+    }
+
+    /*
+    * @notice Concatenates and re-hashes two SHA256 hashes
+    * @param left left side of the concatenation
+    * @param right right side of the concatenation
+    * @return sha256 hash of the concatenation of left and right
+    */
+    function concatSHA256Hash(bytes memory left, bytes memory right) public pure returns (bytes32) {
+        return dblShaFlip(abi.encodePacked(left, right)).toBytes32();
+    }
+
+    /*
+    * @notice Checks if given block hash has the requested number of confirmations
+    * @dev: Will fail in txBlockHash is not in _headers
+    * @param blockHeaderHash Block header hash to be verified
+    * @param confirmations Requested number of confirmations
+    */
+    function withinXConfirms(bytes32 blockHeaderHash, uint256 confirmations) public view returns(bool){
+        return _headers[_heaviestBlock].blockHeight - _headers[blockHeaderHash].blockHeight >= confirmations;
     }
 
     // Parser functions
     function getTimeFromHeader(bytes memory blockHeaderBytes) public pure returns(uint32){
         return uint32(blockHeaderBytes.slice(68,4).flipBytes().bytesToUint()); 
+    }
+
+    function getMerkleRoot(bytes memory blockHeaderBytes) public pure returns(bytes32){
+        return blockHeaderBytes.slice(36, 32).flipBytes().toBytes32();
     }
 
     function getPrevBlockHashFromHeader(bytes memory blockHeaderBytes) public pure returns(bytes32){
@@ -363,7 +439,7 @@ contract BTCRelay {
         return(version, time, nonce, prevBlockHash, merkleRoot, target);
     }
 
-    function getLatestForkHeader(uint256 forkId) public view returns(bytes memory){
-        return _headers[_ongoingForks[forkId].forkHeaderHashes[forkHeaderHashes.length - 1]]
+    function getLatestForkHash(uint256 forkId) public view returns(bytes32){
+        return _ongoingForks[forkId].forkHeaderHashes[_ongoingForks[forkId].forkHeaderHashes.length - 1]; 
     }
 }
