@@ -68,6 +68,22 @@ contract BTCRelay {
     */
     event VerityTransaction(bytes32 indexed txid, uint256 indexed blockHeight);
 
+
+    // EXCEPTION MESSAGES
+    string ERR_GENESIS_SET = "Initial parent has already been set";
+    string ERR_INVALID_FORK_ID = "Incorrect fork identifier: id 0 is no available";
+    string ERR_INVALID_HEADER_SIZE = "Invalid block header size";
+    string ERR_DUPLICATE_BLOCK = "Block already stored";
+    string ERR_PREV_BLOCK = "Previous block hash not found"; 
+    string ERR_LOW_DIFF = "PoW hash does not meet difficulty target of header";
+    string ERR_DIFF_TARGET_HEADER = "Incorrect difficulty target specified in block header";
+    string ERR_NOT_MAIN_CHAIN = "Main chain submission indicated, but submitted block is on a fork";
+    string ERR_FORK_PREV_BLOCK = "Previous block hash does not match last block in fork submission";
+    string ERR_NOT_FORK = "Indicated fork submission, but block is in main chain";
+    string ERR_INVALID_TXID = "Invalid transaction identifier";
+    string ERR_CONFIRMS = "Transaction has less confirmations than requested"; 
+    string ERR_MERKLE_PROOF = "Invalid Merkle Proof structure";
+    
     /*
     * @notice Initialized BTCRelay with provided block, i.e., defined the first block of the stored chain. 
     * @dev TODO: check issue with "blockHeight mod 2016 = 2015" requirement (old btc relay!). Alexei: IMHO should be called with "blockHeight mod 2016 = 0"
@@ -82,7 +98,7 @@ contract BTCRelay {
         uint256 chainWork,
         uint256 lastDiffAdjustmentTime) 
         public {
-        require(_heaviestBlock == 0, "Initial parent has already been set");
+        require(_heaviestBlock == 0, ERR_GENESIS_SET);
         
        
         bytes32 blockHeaderHash = dblShaFlip(blockHeaderBytes).toBytes32(); 
@@ -120,7 +136,7 @@ contract BTCRelay {
     * @dev Will revert if previos block is not in the specified fork!
     */
     function submitForkChainHeader(bytes memory blockHeaderBytes, uint256 forkId) public returns (bytes32){
-        require(forkId > 0, "Incorrect fork identifier: id 0 is no available");
+        require(forkId > 0, ERR_INVALID_FORK_ID);
         return submitBlockHeader(blockHeaderBytes, forkId);   
     }
 
@@ -133,14 +149,16 @@ contract BTCRelay {
     */  
     function submitBlockHeader(bytes memory blockHeaderBytes, uint256 forkId) internal returns (bytes32) {
         
-        require(blockHeaderBytes.length == 80, "Invalid block header size");
+        require(blockHeaderBytes.length == 80, ERR_INVALID_HEADER_SIZE);
 
         bytes32 hashPrevBlock = blockHeaderBytes.slice(4, 32).flipBytes().toBytes32();
         bytes32 hashCurrentBlock = dblShaFlip(blockHeaderBytes).toBytes32();
 
-        // Fail if previous block hash not in current state of main chain
+        // Fail if block already exists
         // Time is always set in block header struct (prevBlockHash and height can be 0 for Genesis block)
-        require(_headers[hashPrevBlock].header.length > 0, "Previous block hash not found!");
+        require(_headers[hashCurrentBlock].header.length <= 0, ERR_DUPLICATE_BLOCK);
+        // Fail if previous block hash not in current state of main chain
+        require(_headers[hashPrevBlock].header.length > 0, ERR_PREV_BLOCK);
 
         // Fails if previous block header is not stored
         uint256 chainWorkPrevBlock = _headers[hashPrevBlock].chainWork;
@@ -148,12 +166,12 @@ contract BTCRelay {
         uint256 blockHeight = 1 + _headers[hashPrevBlock].blockHeight;
         
         // Check the PoW solution matches the target specified in the block header
-        require(hashCurrentBlock <= bytes32(target), "PoW solution hash does not match difficulty target specified in block header!");
+        require(hashCurrentBlock <= bytes32(target), ERR_LOW_DIFF);
         // Check the specified difficulty target is correct:
         // If retarget: according to Bitcoin's difficulty adjustment mechanism;
         // Else: same as last block. 
         // TODO: return more detailed error messages here (i.e., move require into cocorrectDifficultyTarget function)
-        require(correctDifficultyTarget(hashPrevBlock, blockHeight, target), "Incorrect difficulty target specified in block header!");
+        require(correctDifficultyTarget(hashPrevBlock, blockHeight, target), ERR_DIFF_TARGET_HEADER);
 
         // https://en.bitcoin.it/wiki/Difficulty
         // TODO: check correct conversion here
@@ -163,7 +181,7 @@ contract BTCRelay {
         // Fork handling
         if(forkId == 0){
             // Main chain submission
-            require(chainWork > _highScore, "Main chain submission indicated, but submitted block is on a fork!");
+            require(chainWork > _highScore, ERR_NOT_MAIN_CHAIN);
             _heaviestBlock = hashCurrentBlock;
             _highScore = chainWork;
             storeBlockHeader(hashCurrentBlock, blockHeaderBytes, blockHeight, chainWork);
@@ -172,7 +190,7 @@ contract BTCRelay {
         } else if(_ongoingForks[forkId].length != 0){
             // Submission to ongoing fork
             // check that prev. block hash of current block is indeed in the fork
-            require(getLatestForkHash(forkId) == hashPrevBlock, "Previous block hash does not match last block in fork submission!");
+            require(getLatestForkHash(forkId) == hashPrevBlock, ERR_FORK_PREV_BLOCK);
             if(chainWork > _highScore){
                 // Handle successful fork: remove old block header and update main chain reference
                 uint256 currentHeight = _ongoingForks[forkId].startHeight;
@@ -200,7 +218,7 @@ contract BTCRelay {
             // This should never fail
             assert(forkId == _forkCounter); 
             // Check that block is indeed a fork
-            require(hashPrevBlock != _heaviestBlock, "Indicated fork submission, but block is in main chain!");
+            require(hashPrevBlock != _heaviestBlock, ERR_NOT_FORK);
             storeForkHeader(
                 forkId,
                 hashCurrentBlock,
@@ -241,16 +259,16 @@ contract BTCRelay {
     */
     function verifxTX(bytes32 txid, uint256 txBlockHeight, uint256 txIndex, bytes memory merkleProof, uint256 confirmations) public returns(bool) {
         // txid must not be 0
-        require(txid != bytes32(0x0), "Invalid transaction identiier");
+        require(txid != bytes32(0x0), ERR_INVALID_TXID);
         
         // check requrested confirmations. No need to compute proof if insufficient confs.
-        require(_headers[_heaviestBlock].blockHeight - txBlockHeight >= confirmations, "TX has lass confirmations than requested!");
+        require(_headers[_heaviestBlock].blockHeight - txBlockHeight >= confirmations, ERR_CONFIRMS);
 
         bytes32 blockHeaderHash = _mainChain[txBlockHeight];
         bytes32 merkleRoot = getMerkleRoot(_headers[blockHeaderHash].header);
         // Check merkle proof structure: 1st hash == txid and last hash == merkleRoot
-        require(merkleProof.slice(0, 32).toBytes32() == txid, "Invalid Merkle Proof structure!");
-        require(merkleProof.slice(merkleRoot.length, 32).toBytes32() == merkleRoot, "Invalid Merkle Proof structure!");
+        require(merkleProof.slice(0, 32).toBytes32() == txid, ERR_MERKLE_PROOF);
+        require(merkleProof.slice(merkleRoot.length, 32).toBytes32() == merkleRoot, ERR_MERKLE_PROOF);
         
         // compute merkle tree root and check if it matches block's original merkle tree root
         if(computeMerkle(txid, txIndex, merkleProof) == merkleRoot){
@@ -348,13 +366,13 @@ contract BTCRelay {
     * @param merkleProof merkle tree path to transaction hash from block's merkle tree root
     * @return merkle tree root of the block containing the transaction, meaningless hash otherwise
     */
-    function computeMerkle(bytes32 txHash, uint256 txIndex, bytes memory merkleProof) internal pure returns(bytes32) {
+    function computeMerkle(bytes32 txHash, uint256 txIndex, bytes memory merkleProof) internal view returns(bytes32) {
     
         //  Special case: only coinbase tx in block. Root == proof
         if(merkleProof.length == 32) return merkleProof.toBytes32();
 
         // Merkle proof length must be greater than 64 and power of 2. Case length == 32 covered above.
-        require(merkleProof.length > 64 && (merkleProof.length & (merkleProof.length - 1)) == 0, "Incorrect format of Merkle Proof");
+        require(merkleProof.length > 64 && (merkleProof.length & (merkleProof.length - 1)) == 0, ERR_MERKLE_PROOF);
         
         bytes32 resultHash = txHash;
 
