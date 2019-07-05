@@ -101,7 +101,7 @@ contract BTCRelay {
         require(_heaviestBlock == 0, ERR_GENESIS_SET);
         
        
-        bytes32 blockHeaderHash = dblShaFlip(blockHeaderBytes).toBytes32(); 
+        bytes32 blockHeaderHash = dblSha(blockHeaderBytes).flipBytes().toBytes32(); 
         _heaviestBlock = blockHeaderHash;
         _highScore = chainWork;
         _lastDiffAdjustmentTime = lastDiffAdjustmentTime;
@@ -152,7 +152,7 @@ contract BTCRelay {
         require(blockHeaderBytes.length == 80, ERR_INVALID_HEADER_SIZE);
 
         bytes32 hashPrevBlock = blockHeaderBytes.slice(4, 32).flipBytes().toBytes32();
-        bytes32 hashCurrentBlock = dblShaFlip(blockHeaderBytes).toBytes32();
+        bytes32 hashCurrentBlock = dblSha(blockHeaderBytes).flipBytes().toBytes32();
 
         // Fail if block already exists
         // Time is always set in block header struct (prevBlockHash and height can be 0 for Genesis block)
@@ -282,13 +282,13 @@ contract BTCRelay {
 
     // HELPER FUNCTIONS
     /*
-    * @notice Performns Bitcoin-like double sha256 (LE!)
+    * @notice Performs Bitcoin-like double sha256 
     * @param data Bytes to be flipped and double hashed s
-    * @return Reversed and double hashed representation of parsed data
     */
-    function dblShaFlip(bytes memory data) public pure returns (bytes memory){
-        return abi.encodePacked(sha256(abi.encodePacked(sha256(data)))).flipBytes();
+    function dblSha(bytes memory data) public pure returns (bytes memory){
+        return abi.encodePacked(sha256(abi.encodePacked(sha256(data))));
     }
+
 
     /*
     * @notice Calculates the PoW difficulty target from compressed nBits representation, 
@@ -394,7 +394,7 @@ contract BTCRelay {
     * @return sha256 hash of the concatenation of left and right
     */
     function concatSHA256Hash(bytes memory left, bytes memory right) public pure returns (bytes32) {
-        return dblShaFlip(abi.encodePacked(left, right)).toBytes32();
+        return dblSha(abi.encodePacked(left, right)).toBytes32();
     }
 
     /*

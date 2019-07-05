@@ -30,11 +30,4 @@ contract('BTCRelay helper functions', async(accounts) => {
         let convert_le_be = await utils.flipBytes('0x0123456789abcdef');
         assert.equal(convert_le_be, '0xefcdab8967452301');
     });
-
-    
-    it('dblShaFlip', async() => {
-        let blockHash = await relay.dblShaFlip(constants.GENESIS.HEADER)
-        assert.equal(blockHash, "0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f") 
-        assert.equal(blockHash, dblSha256Flip(constants.GENESIS.HEADER))
-    });
 })
