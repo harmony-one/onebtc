@@ -2,6 +2,11 @@
 
 **Disclaimer: this project is still under development and not safe to use!** 
 
+## Requirements
+```
+npm install openzeppelin-solidity truffle-assertions buffer-reverse truffle-hdwallet-provider big-number
+```
+
 ## Chain Relays
 Chain relays are on-chain programs or <i>smart contracts</i> deployed on a blockchain <i>A</i> capable of reading and verifying the state of another blockchain <i>B</i>. 
 The underlying technical design and functionality is comparable to that of SPV-Clients. That is, a chain relay stores and maintains block headers of chain B on chain A and allows to verify transaction inclusion proofs. Summarizing, the two main functionalities a chain relay must/should provide are: <i>consensus verification</i> and <i>transaction inclusion verification</i>.
@@ -46,8 +51,9 @@ npm install
 
 Start ganache:
 
+Note - due to contract size, we need to pass additional options to Ganache!
 ```
-ganache-cli
+ganache-cli --gasLimit 800000000 --allowUnlimitedContractSize
 ```
 
 Migrate contracts:
