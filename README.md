@@ -4,7 +4,7 @@
 
 ## Requirements
 ```
-npm install openzeppelin-solidity truffle-assertions buffer-reverse truffle-hdwallet-provider bin-number
+npm install openzeppelin-solidity truffle-assertions buffer-reverse truffle-hdwallet-provider big-number
 ```
 
 ## Chain Relays
@@ -51,8 +51,9 @@ npm install
 
 Start ganache:
 
+Note - due to contract size, we need to pass additional options to Ganache!
 ```
-ganache-cli
+ganache-cli --gasLimit 800000000 --allowUnlimitedContractSize
 ```
 
 Migrate contracts:
