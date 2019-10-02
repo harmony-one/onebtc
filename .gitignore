@@ -2,6 +2,7 @@
 # Created by https://www.gitignore.io/api/node,solidity,soliditytruffle
 # Edit at https://www.gitignore.io/?templates=node,solidity,soliditytruffle
 
+venv/
 
 ## Pytest
 */__pycache__
