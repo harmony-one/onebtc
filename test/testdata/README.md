@@ -15,6 +15,6 @@ Follow the instructions [on from the Bitcoin website](https://bitcoin.org/en/ful
 Configure an rpc password with `vim ~/.bitcoin/bitcoin.conf` and add your password like `rpcpassword=change_this_to_a_long_random_password`.
 Then change access rights to the conf file via `chmod 0600 bitcoin.conf`.
 
-Start the regtest server with `bitcoind -regtest -daemon`.
+Start the regtest server with `bitcoind -regtest -daemon -txindex`.
 
 
