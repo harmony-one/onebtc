@@ -17,4 +17,6 @@ Then change access rights to the conf file via `chmod 0600 bitcoin.conf`.
 
 Start the regtest server with `bitcoind -regtest -daemon -txindex`.
 
+## Generate testdata
 
+Execute `python test/testdata/testdata.py`.
