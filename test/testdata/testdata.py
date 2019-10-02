@@ -30,7 +30,7 @@ def generateBlocks(number):
 
     # mine a number of blocks that include transactions
     blockhashes = []
-    for i in range(number-1):
+    for i in range(number):
         # generate some transactions
         proxy.sendtoaddress(address_2, 10)
         # mine block with transaction and append to block hashes
