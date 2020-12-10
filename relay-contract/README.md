@@ -1,6 +1,6 @@
 # BTCRelay implementation in Solidity
 
-**Disclaimer: this project is still under development and not safe to use!** 
+This contract was based of crossclain's BTC relay implementation [here](https://github.com/crossclaim/btcrelay-sol).
 
 ## Requirements
 ```
@@ -38,23 +38,15 @@ We make note of the following libraries/implementations, which specifically may 
 + https://github.com/rainbreak/solidity-btc-parser
 + https://github.com/ethers/bitcoin-proof
 + https://github.com/ethers/EthereumBitcoinSwap 
-+ 
 ## Installation
 
-Make sure ganache-cli and truffle are installed as global packages. Then, install the required packages with:
+TODO: Finish installation process & docs with harmony truffle provider.
 
 ```
 npm install
 ```
 
 ## Testing
-
-Start ganache:
-
-Note - due to contract size, we need to pass additional options to Ganache!
-```
-ganache-cli --gasLimit 800000000 --allowUnlimitedContractSize
-```
 
 Migrate contracts:
 
