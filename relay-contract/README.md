@@ -1,6 +1,6 @@
 # BTCRelay implementation in Solidity
 
-This contract was based of crossclain's BTC relay implementation [here](https://github.com/crossclaim/btcrelay-sol).
+This contract was based of crossclaim's BTC relay implementation [here](https://github.com/crossclaim/btcrelay-sol).
 
 ## Requirements
 ```
