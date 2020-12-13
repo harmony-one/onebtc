@@ -27,7 +27,7 @@ func printVersion(me string) {
 }
 
 func main() {
-	block := flag.Int64("block", -1, "bitcoin block number (-1: latest block)")
+	blockNum := flag.Int64("block", -1, "bitcoin block number (-1: latest block)")
 	ip := flag.String("ip", "127.0.0.1", "IP of the bitcoin node")
 	port := flag.String("port", "8332", "RPC port of the bitcoin node")
 	user := flag.String("user", "", "user name to access the bitcoin rpc")
@@ -62,13 +62,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	blockNum := *block
-	if *block == -1 {
-		blockNum = blockCount
+	theBlockNum := *blockNum
+	if *blockNum == -1 {
+		theBlockNum = blockCount
 	}
-	log.Printf("Get block: %d", blockNum)
+	log.Printf("Get block: %d", theBlockNum)
 
-	blockHash, err := client.GetBlockHash(blockNum)
+	blockHash, err := client.GetBlockHash(theBlockNum)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -77,5 +77,38 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Block: %v", blockHeader)
+	log.Printf("Block header: %v", blockHeader)
+	log.Printf("version: %d", blockHeader.Version)
+	log.Printf("hashPrevBlock: %v", blockHeader.PrevBlock)
+	log.Printf("merkleRoot: %v", blockHeader.MerkleRoot)
+	log.Printf("time: %v", blockHeader.Timestamp)
+	log.Printf("nBits: %d", blockHeader.Bits)
+	log.Printf("Nonce: %d", blockHeader.Nonce)
+
+	theBlock, err := client.GetBlock(blockHash)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Header: %v", theBlock.Header)
+	log.Printf("Num Tx: %d", len(theBlock.Transactions))
+
+	for i, tx := range theBlock.Transactions {
+		log.Printf("tx: %d", i)
+		log.Printf("tx ver: %d", tx.Version)
+		log.Printf("tx in: %d", len(tx.TxIn))
+		for _, txi := range tx.TxIn {
+			log.Printf("txi.prev: %v", txi.PreviousOutPoint)
+			log.Printf("txi.signature: %v", txi.SignatureScript)
+			log.Printf("txi.witness: %v", txi.Witness)
+			log.Printf("txi.seq: %v", txi.Sequence)
+		}
+		log.Printf("tx out: %d", len(tx.TxOut))
+		for _, txo := range tx.TxOut {
+			log.Printf("txo.v: %v", txo.Value)
+			log.Printf("txo.size: %d", len(txo.PkScript))
+			log.Printf("txo.script: %v", txo.PkScript)
+		}
+		log.Printf("tx locktime: %v", tx.LockTime)
+	}
 }
