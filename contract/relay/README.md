@@ -99,6 +99,10 @@ There are two primary motivations for our higher cost in block submission:
 ## Deployments
 
 ```bash
+yarn deploy-setup
+```
+
+```bash
 yarn deploy
 ```
 

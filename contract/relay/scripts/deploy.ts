@@ -1,7 +1,5 @@
-// require('dotenv').config()
-import { ethers } from "@nomiclabs/buidler";
 import { DeployTestRelay, Genesis } from "./contracts";
-const Ethers = require('ethers')
+import { HarmonyDeployWallet } from "./config";
 
 // const mainnet: Genesis = {
 //     header: '0x000040202842774747733a4863b6bbb7b4cfb66baa9287d5ce0d13000000000000000000df550e01d02ee37fce8dd2fbf919a47b8b65684bcb48d4da699078916da2f7decbc7905ebc2013178f58d533',
@@ -18,25 +16,8 @@ const testnet: Genesis = {
 //   height: 0,
 // }
 
-// TODO: put deployment vars in config & env file
-const url = "http://localhost:9599"
-const chainId = 1666700000
-const privateKey = ""
-
-/**
- * Setup a client connected to the Harmony network for ethers and returns the Signer.
- */
-function setupHmyClient() {
-  let hmyProvider = new Ethers.providers.JsonRpcProvider(url, {chainId: chainId})
-  let wallet = new Ethers.Wallet(privateKey, hmyProvider)
-  ethers.provider = hmyProvider
-  ethers.Wallet = wallet
-  return wallet
-}
-
 async function main(genesis: Genesis) {
-  let signer = setupHmyClient()
-  let contract = await DeployTestRelay(signer, genesis);
+  let contract = await DeployTestRelay(HarmonyDeployWallet, genesis);
   console.log(`Genesis height: ${genesis.height}`);
   console.log(`Contract address: ${contract.address}`);
   // console.log(await contract.getHashAtHeight(start.height));
