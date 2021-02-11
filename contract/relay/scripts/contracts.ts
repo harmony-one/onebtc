@@ -3,7 +3,7 @@ import { TestRelayFactory } from '../typechain/TestRelayFactory'
 import { RelayFactory } from '../typechain/RelayFactory'
 import { TypedFunctionDescription } from "../typechain";
 import { TransactionReceipt } from "ethers/providers";
-import { HarmonyTransactionOverrides } from "./config"
+import { HarmonyTransactionOverrides } from "./hmy_config"
 
 export type Genesis = {
   header: string,

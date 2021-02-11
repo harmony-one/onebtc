@@ -1,4 +1,4 @@
-import {HarmonyProvider} from "../scripts/config";
+import {HarmonyProvider} from "../scripts/hmy_config";
 
 export const ErrorCode = {
   ERR_INVALID_HEADER_SIZE: "Invalid block header size",

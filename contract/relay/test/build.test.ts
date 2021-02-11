@@ -3,7 +3,7 @@ import { Contract } from "ethers";
 import { solidity } from "ethereum-waffle";
 import { genesis, generate } from "../scripts/builder";
 import { DeployTestRelay } from "../scripts/contracts";
-import { HarmonyDeployWallet } from "../scripts/config";
+import { HarmonyDeployWallet } from "../scripts/hmy_config";
 import { WaitForNextBlocks } from "./util";
 import {beforeEach} from "mocha";
 

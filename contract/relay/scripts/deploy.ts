@@ -1,5 +1,5 @@
 import { DeployTestRelay, Genesis } from "./contracts";
-import { HarmonyDeployWallet } from "./config";
+import { HarmonyDeployWallet } from "./hmy_config";
 
 // const mainnet: Genesis = {
 //     header: '0x000040202842774747733a4863b6bbb7b4cfb66baa9287d5ce0d13000000000000000000df550e01d02ee37fce8dd2fbf919a47b8b65684bcb48d4da699078916da2f7decbc7905ebc2013178f58d533',
