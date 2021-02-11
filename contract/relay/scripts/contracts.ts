@@ -3,8 +3,7 @@ import { TestRelayFactory } from '../typechain/TestRelayFactory'
 import { RelayFactory } from '../typechain/RelayFactory'
 import { TypedFunctionDescription } from "../typechain";
 import { TransactionReceipt } from "ethers/providers";
-
-const deployOverrides = {gasPrice: 0xF4240, gasLimit: 0xffffff}
+import { HarmonyTransactionOverrides } from "./config"
 
 export type Genesis = {
   header: string,
@@ -13,13 +12,13 @@ export type Genesis = {
 
 export async function DeployRelay(signer: Signer, genesis: Genesis) {
     const factory = new RelayFactory(signer);
-    let contract = await factory.deploy(genesis.header, genesis.height, deployOverrides);
+    let contract = await factory.deploy(genesis.header, genesis.height, HarmonyTransactionOverrides);
     return contract.deployed();
 }
 
 export async function DeployTestRelay(signer: Signer, genesis: Genesis) {
     const factory = new TestRelayFactory(signer);
-    let contract = await factory.deploy(genesis.header, genesis.height, deployOverrides);
+    let contract = await factory.deploy(genesis.header, genesis.height, HarmonyTransactionOverrides);
     return contract.deployed();
 }
 

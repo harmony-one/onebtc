@@ -25,7 +25,7 @@ switch (process.env.NETWORK) {
   }
   default: {
     url = "http://localhost:950" + shardId + "/"
-    chainId = 1666700000 + shardId
+    chainId = 1666700000 + shardId  // Testnet chainId, change if deploying using your own node.
     break;
   }
 }
@@ -40,3 +40,4 @@ if (process.env.PRIVATE_KEY != null) {
 
 export let HarmonyProvider = new Ethers.providers.JsonRpcProvider(url, {chainId: chainId})
 export let HarmonyDeployWallet = new Ethers.Wallet(privateKey, HarmonyProvider)
+export let HarmonyTransactionOverrides = {gasPrice: 0xF4240, gasLimit: 0xffffff}
