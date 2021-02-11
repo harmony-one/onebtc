@@ -5,13 +5,12 @@ import { genesis, generate } from "../scripts/builder";
 import { DeployTestRelay } from "../scripts/contracts";
 import { HarmonyDeployWallet } from "../scripts/hmy_config";
 import { WaitForNextBlocks } from "./util";
-import {beforeEach} from "mocha";
 
 chai.use(solidity);
 const { expect } = chai;
 
 describe("Build", () => {
-    beforeEach(async () => {
+    afterEach(async () => {
         await WaitForNextBlocks(1)
     })
 
