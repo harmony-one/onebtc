@@ -1,22 +1,20 @@
-import { ethers } from "@nomiclabs/buidler";
-import { Signer, Wallet } from "ethers";
 import chai from "chai";
 import { deployContract, solidity } from "ethereum-waffle";
 import Artifact from "../artifacts/ParserDelegate.json";
 import { ParserDelegate } from "../typechain/ParserDelegate"
+import { HarmonyDeployWallet, HarmonyTransactionOverrides } from "../scripts/hmy_config";
+import { WaitForNextBlocks } from "./util";
 
 chai.use(solidity);
 const { expect } = chai;
 
 describe("Parser", () => {
-  let signers: Signer[];
-  let parser: ParserDelegate;
-
   beforeEach(async () => {
-    signers = await ethers.signers();
-    parser = await deployContract(<Wallet>signers[0], Artifact, []) as ParserDelegate;
+    parser = await deployContract(HarmonyDeployWallet, Artifact, [], HarmonyTransactionOverrides) as ParserDelegate;
+    await WaitForNextBlocks(1)
   });
-  
+
+  let parser: ParserDelegate;
   let rawTx1 = "0x0200000000010111b6e0460bb810b05744f8d38262f95fbab02b168b070598a6f31fad" +
                "438fced4000000001716001427c106013c0042da165c082b3870c31fb3ab4683feffffff" +
                "0200ca9a3b0000000017a914d8b6fcc85a383261df05423ddf068a8987bf0287873067a3" +
