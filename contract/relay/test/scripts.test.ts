@@ -1,22 +1,23 @@
-import { ethers } from "@nomiclabs/buidler";
-import { Signer, Wallet } from "ethers";
 import chai from "chai";
 import { deployContract, solidity } from "ethereum-waffle";
 import Artifact from "../artifacts/ScriptDelegate.json";
 import { ScriptDelegate } from "../typechain/ScriptDelegate"
 import * as bech32 from 'bech32';
+import { HarmonyDeployWallet, HarmonyTransactionOverrides } from "../scripts/hmy_config";
+import { WaitForNextBlocks } from "./util";
 
 chai.use(solidity);
 const { expect } = chai;
 
 describe("Scripts", () => {
-  let signers: Signer[];
-  let parser: ScriptDelegate;
-
   beforeEach(async () => {
-    signers = await ethers.signers();
-    parser = await deployContract(<Wallet>signers[0], Artifact, []) as ScriptDelegate;
+    parser = await deployContract(
+      HarmonyDeployWallet, Artifact, [], HarmonyTransactionOverrides,
+    ) as ScriptDelegate;
+    await WaitForNextBlocks(1)
   });
+
+  let parser: ScriptDelegate;
   
   it("should accept p2sh script", async () => {
     let result = await parser.isP2SH("0xa914d8b6fcc85a383261df05423ddf068a8987bf028787");
