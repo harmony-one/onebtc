@@ -10,7 +10,9 @@ const { expect } = chai;
 
 describe("Parser", () => {
   beforeEach(async () => {
-    parser = await deployContract(HarmonyDeployWallet, Artifact, [], HarmonyTransactionOverrides) as ParserDelegate;
+    parser = await deployContract(
+      HarmonyDeployWallet, Artifact, [], HarmonyTransactionOverrides,
+    ) as ParserDelegate;
     await WaitForNextBlocks(1)
   });
 
