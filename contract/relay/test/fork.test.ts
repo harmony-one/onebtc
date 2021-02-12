@@ -43,15 +43,15 @@ describe("Forking", () => {
     })
   }
 
-  let oldBestBlockHash = "0x5204b3afd5c0dc010de8eeb28925b97d4b38a16b1d020f000000000000000000";
+  let orphanedBestBlockHash = "0x5204b3afd5c0dc010de8eeb28925b97d4b38a16b1d020f000000000000000000";
 
   it("should submit orphan block 562630", async () => {
     let blockHeader = "0x0000802020ffe4f7a005faa83610adf7e7a52ff5700c222b9b5f0500000000000000000058c8af6bf8e8e00c3d6ff512b2133533ebdcde164de306e6b65e53157fc22b53e7d3615c886f2e17ed205930" // 562630
     await relay.submitBlockHeader(blockHeader);
   })
 
-  it("should still have old best block", async () => {
-    expect(await getBestBlockDigest(relay)).to.eq(oldBestBlockHash);
+  it("should still have orphaned best block", async () => {
+    expect(await getBestBlockDigest(relay)).to.eq(orphanedBestBlockHash);
   })
 
   // Assumes number of confirmations for main chain is 6
@@ -70,8 +70,8 @@ describe("Forking", () => {
     })
   }
 
-  it("should still have old best block", async () => {
-    expect(await getBestBlockDigest(relay)).to.eq(oldBestBlockHash);
+  it("should still have orphaned best block", async () => {
+    expect(await getBestBlockDigest(relay)).to.eq(orphanedBestBlockHash);
   })
 
   let newBestBlockHash = "0x0ed18ffcb751e45471dddab23d34538869d3b2cdd48428000000000000000000";
@@ -79,7 +79,7 @@ describe("Forking", () => {
   it("should submit fork chain block 562636 to trigger reorg", async () => {
     let blockHeader = "0x00e00020f98794c5b71e25f07eb2a31ab31b2e2487e0859abec000000000000000000000c29b14f0fe90ac2173197665d460df45c37ccf0c873276f59d095cbed4bcc7c2fae4615c886f2e178a505d9d" // 562636
     let tx = await relay.submitBlockHeader(blockHeader);
-    let filter = relay.filters.ChainReorg(oldBestBlockHash, newBestBlockHash, 1);
+    let filter = relay.filters.ChainReorg(orphanedBestBlockHash, newBestBlockHash, 1);
     let foundEmittedEvent = false
     await tx.wait(1).then((receipt) => {
       receipt.events?.forEach((event) => {
