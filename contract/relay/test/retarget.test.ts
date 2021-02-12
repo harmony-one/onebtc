@@ -1,24 +1,25 @@
-import { ethers } from "@nomiclabs/buidler";
-import { Signer, Wallet } from "ethers";
 import chai from "chai";
 import { deployContract, solidity } from "ethereum-waffle";
 import RelayArtifact from "../artifacts/Relay.json";
 import { Relay } from "../typechain/Relay"
+import { HarmonyDeployWallet, HarmonyTransactionOverrides } from "../scripts/hmy_config";
+import { WaitForNextBlocks } from "./util";
 
 chai.use(solidity);
 const { expect } = chai;
 
 describe("Retarget", () => {
-  let signers: Signer[];
-  let relay: Relay;
-
   beforeEach(async () => {
-    signers = await ethers.signers();
     let genesis = "0x000040202842774747733a4863b6bbb7b4cfb66baa9287d5ce0d13000000000000000000df550e01d02ee37fce8dd2fbf919a47b8b65684bcb48d4da699078916da2f7decbc7905ebc2013178f58d533";
-    relay = await deployContract(<Wallet>signers[0], RelayArtifact, [genesis, 1]) as Relay;
+    relay = await deployContract(
+      HarmonyDeployWallet, RelayArtifact, [genesis, 1], HarmonyTransactionOverrides,
+    ) as Relay;
+    await WaitForNextBlocks(1)
   });
 
-  it("valid difficulty target", async () => {
+  let relay: Relay;
+
+  it("should find valid difficulty target", async () => {
     let epoch = {
       start: {
         header: "0x02000000dca825543cefd662b3199e02afa13c6aad4b01890180010400000000000000000187743d481db520170f22701f34a1449384446a55575e2c46e183de28b4854701e690539a855d18b189b5e4",
@@ -48,7 +49,7 @@ describe("Retarget", () => {
     expect(result).to.eq(true);
   });
 
-  it("invalid difficulty target", async () => {
+  it("should find invalid difficulty target", async () => {
     let epoch = {
       start: {
         header: "0x02000000dca825543cefd662b3199e02afa13c6aad4b01890180010400000000000000000187743d481db520170f22701f34a1449384446a55575e2c46e183de28b4854701e690539a855d18b189b5e4",
@@ -78,7 +79,7 @@ describe("Retarget", () => {
     expect(result).to.eq(false);
   });
 
-  it("invalid period", async () => {
+  it("should find invalid period", async () => {
     let epoch = {
       start: {
         header: "0x02000000dca825543cefd662b3199e02afa13c6aad4b01890180010400000000000000000187743d481db520170f22701f34a1449384446a55575e2c46e183de28b4854701e690538a855d18b189b5e4",
