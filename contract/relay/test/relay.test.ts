@@ -1,78 +1,77 @@
-import { ethers } from "@nomiclabs/buidler";
-import { Signer } from "ethers";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { Relay } from "../typechain/Relay"
-import { ErrorCode } from './constants';
+import { ErrorCode } from './util';
 import { RelayFactory } from "../typechain/RelayFactory";
 import { Arrayish } from "ethers/utils";
 import * as bitcoin from 'bitcoinjs-lib';
+import { HarmonyDeployWallet, HarmonyTransactionOverrides } from "../scripts/hmy_config";
+import { WaitForNextBlocks } from "./util";
 
 chai.use(solidity);
 const { expect } = chai;
 
-function deploy(signer: Signer, header: Arrayish, height: number) {
-  const factory = new RelayFactory(signer);
-  return factory.deploy(header, height);
+async function deploy(header: Arrayish, height: number) {
+  const factory = new RelayFactory(HarmonyDeployWallet);
+  let relay =  factory.deploy(header, height, HarmonyTransactionOverrides);
+  await WaitForNextBlocks(1)
+  return relay
 }
 
 describe("Relay", () => {
-  let signers: Signer[];
-  let relay: Relay;
+  beforeEach(async () => {
+    relay = await deploy(genesisHeader, genesisHeight);
+    let filter = relay.filters.StoreHeader(genesisHash, genesisHeight);
+    let foundEmittedEvent = false
+    await relay.deployTransaction.wait(1).then((receipt) => {
+      receipt.logs?.forEach((event) => {
+        if (event.address == filter.address && event.topics.sort().join() === filter.topics?.sort().join()){
+          foundEmittedEvent = true
+        }
+      })
+    })
+    if (!foundEmittedEvent) {
+      throw "relay did not emit storage of genesis header"
+    }
+  });
 
+  let relay: Relay;
   let genesisHeader = "0x00000020db62962b5989325f30f357762ae456b2ec340432278e14000000000000000000d1dd4e30908c361dfeabfb1e560281c1a270bde3c8719dbda7c848005317594440bf615c886f2e17bd6b082d";
   let genesisHash = "0x4615614beedb06491a82e78b38eb6650e29116cc9cce21000000000000000000";
   let genesisHeight = 562621;
 
-  beforeEach(async () => {
-    signers = await ethers.signers();
-    relay = await deploy(signers[0], genesisHeader, genesisHeight);
-  });
-
   it("should store genesis header", async () => {
-    let filter = relay.filters.StoreHeader(genesisHash, genesisHeight);
-    await new Promise((resolve, reject) => {
-      relay.once(filter, () => {
-        // event emitted
-        resolve()
-      })  
-    })
-
-    // check header was stored correctly
     const height = await relay.getBlockHeight(genesisHash);
     expect(height).to.eq(genesisHeight);
-    // expect(header.merkle).to.eq("0xd1dd4e30908c361dfeabfb1e560281c1a270bde3c8719dbda7c8480053175944");
   });
 
-  it("should fail with duplicate (genesis)", async () => {
+  it("should fail with duplicate genesis header submission", async () => {
     let result = relay.submitBlockHeader(genesisHeader);
     await expect(result).to.be.revertedWith(ErrorCode.ERR_DUPLICATE_BLOCK);
   });
 
-  // 562622
-  let header1 = "0x000000204615614beedb06491a82e78b38eb6650e29116cc9cce21000000000000000000b034884fc285ff1acc861af67be0d87f5a610daa459d75a58503a01febcc287a34c0615c886f2e17046e7325";
+  let header562622 = "0x000000204615614beedb06491a82e78b38eb6650e29116cc9cce21000000000000000000b034884fc285ff1acc861af67be0d87f5a610daa459d75a58503a01febcc287a34c0615c886f2e17046e7325";
 
-  it("should store and fail on resubmission", async () => {
-    await relay.submitBlockHeader(header1);
-    await expect(relay.submitBlockHeader(header1))
-      .to.be.revertedWith(ErrorCode.ERR_DUPLICATE_BLOCK);
+  it("should store next header (562622) & reject duplicate", async () => {
+    await relay.submitBlockHeader(header562622);
+    await WaitForNextBlocks(1)
+    await expect(relay.submitBlockHeader(header562622)).to.be.revertedWith(ErrorCode.ERR_DUPLICATE_BLOCK);
   });
 
-  it("should fail with block header > 80", async () => {
-    let result = relay.submitBlockHeader(header1 + "123");
+  it("should fail with block header size > 80", async () => {
+    let result = relay.submitBlockHeader(header562622 + "123");
     await expect(result).to.be.revertedWith(ErrorCode.ERR_INVALID_HEADER_SIZE);
   });
 
-  it("should fail with block header < 80", async () => {
-    let result = relay.submitBlockHeader(header1.substring(0,28));
+  it("should fail with block header size < 80", async () => {
+    let result = relay.submitBlockHeader(header562622.substring(0,28));
     await expect(result).to.be.revertedWith(ErrorCode.ERR_INVALID_HEADER_SIZE);
   });
 
-  // 562623
-  let header2 = "0x00000020b8b580a399f4b15078b28c0d0bba705a6894833b8a490f000000000000000000b16c32aa36d3b70749e7febbb9e733321530cc9a390ccb62dfb78e3955859d4c44c0615c886f2e1744ea7cc4";
+  let header562623 = "0x00000020b8b580a399f4b15078b28c0d0bba705a6894833b8a490f000000000000000000b16c32aa36d3b70749e7febbb9e733321530cc9a390ccb62dfb78e3955859d4c44c0615c886f2e1744ea7cc4";
 
   it("should fail because prev block not stored", async () => {
-    let result = relay.submitBlockHeader(header2);
+    let result = relay.submitBlockHeader(header562623);
     await expect(result).to.be.revertedWith(ErrorCode.ERR_PREVIOUS_BLOCK);
   });
 
@@ -89,19 +88,21 @@ describe("Relay", () => {
       "merkleroot": "0xc090099a4b0b7245724be6c7d58a64e0bd7718866a5afa81aa3e63ffa8acd69d",
       "header" : "0x0000002093ca64158287d362f3304f8279a9a40c51cfac9466af120000000000000000009dd6aca8ff633eaa81fa5a6a861877bde0648ad5c7e64b7245720b4b9a0990c07745955d240f16171c168c88"
     }
-    relay = await deploy(signers[0], fakeGenesis.header, fakeGenesis.height);
-  
+    relay = await deploy(fakeGenesis.header, fakeGenesis.height);
+    await WaitForNextBlocks(1)
     let result = relay.submitBlockHeader(fakeBlock.header);
     await expect(result).to.be.revertedWith(ErrorCode.ERR_LOW_DIFFICULTY);
   });
 });
 
 describe("Relay (Batch)", () => {
-  let signers: Signer[];
-  let relay: Relay;
+  beforeEach(async () => {
+    relay = await deploy('0x' + headers[0], genesisHeight);
+  });
 
-  // testnet: 1780500..1780600
-  let headers = [
+  let relay: Relay;
+  let genesisHeight = 1780500;
+  let headers = [   // testnet: 1780500..1780600
     "00000020626148e2b1dcddb0c1627b80828ad15b82938fa75c685b98c7499880000000009299e7d2ad1c49f128157f547a67bb77a62c98be495be5e6cd987437c4b721df83cf0a5f107e0e193122a605",
     "000000202853c5b4973950d61ce2f48285a6c29334d9e1925a18fc310200000000000000d7d2a2e673b2f50a711224802c590e48c0b7e44489339a14fbb121b8b70e998635d40a5fffff001d0e4a958c",
     "00000020d359a65227e5a2026ed62bb8b64b9c3d0dda958bbe4f32860a3b65f800000000709524e20ca410fa467cd9f2a02bee6ae408d49d8b1e2e2364034687b1f47ca8d7d40a5f107e0e1996a3fdee",
@@ -204,18 +205,10 @@ describe("Relay (Batch)", () => {
     "000000206f3dcf3a5b9d26250a8d985eb2fa8850bdbd8390dad9c1fa000000000000000028c9f071e3d6966bce8788d428c0c0cbe3114bf3f27fa2ffd2057a68f872766b32520c5fffff001d06f4fa04",
     "0000002071588ebb39e550a42baf80d4c850d7246933c8ffb0f533ce26d3a3a9000000001247ccb2ed4d424f28cd39d325ae4b82dc3a33d79570ec364b235e07261ec5b3e4560c5fffff001d1ba4e6d7",
   ];
-  let genesisHeight = 1780500;
-
-  beforeEach(async () => {
-    signers = await ethers.signers();
-    relay = await deploy(signers[0], '0x' + headers[0], genesisHeight);
-  });
 
   it("should store genesis", async () => {
-    // check header was stored correctly
     let hash = bitcoin.crypto.hash256(Buffer.from(headers[0], 'hex')).toString('hex');
-    // expect(hash).to.eq("000000000000000231fc185a92e1d93493c2a68582f4e21cd6503997b4c55328");
-    const height = await relay.getBlockHeight('0x' + hash);
+    let height = await relay.getBlockHeight('0x' + hash);
     expect(height).to.eq(genesisHeight);
   });
 
@@ -267,7 +260,7 @@ describe("Relay (Batch)", () => {
     }, Buffer.alloc(0));
 
     await relay.submitBlockHeaderBatch(rawHeaders);
-
+    await WaitForNextBlocks(1)
     let result = relay.submitBlockHeaderBatch(rawHeaders);
     await expect(result).to.be.revertedWith(ErrorCode.ERR_DUPLICATE_BLOCK);
   });
