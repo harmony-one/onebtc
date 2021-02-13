@@ -35,7 +35,7 @@
     "build": "npm run compile && npx buidler typechain",
     "compile": "npx buidler compile",
     "test": "npx buidler test",
-    "deploy-setup": "bash ./scripts/setup_deploy.sh",
+    "deploy-setup": "bash scripts/setup_hmy.sh",
     "deploy": "npx buidler run scripts/deploy.ts",
     "ganache": "npx buidler run scripts/ganache.ts",
     "clean": "npx buidler clean"
