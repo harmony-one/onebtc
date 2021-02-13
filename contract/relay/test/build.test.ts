@@ -17,26 +17,26 @@ describe("Build", () => {
     let block = genesis();
     let contract : Contract
 
-    it("relay should deploy with genesis init", async () => {
+    it("should deploy relay with genesis init", async () => {
         block = genesis();
         contract = await DeployTestRelay(HarmonyDeployWallet, {
             header: '0x' + block.toHex(true),
             height: 1,
         });
     })
-    it("block 1 should submit", async () => {
+    it("should submit block 1", async () => {
         block = generate("bcrt1qu96jmjrfgpdynvqvljgszzm9vtzp7czquzcu6q", block.getHash());
         contract.submitBlockHeader('0x' + block.toHex(true))
     })
-    it("best block should be block 1 hash", async () => {
+    it("should have best block be block 1", async () => {
         let best = await contract.getBestBlock();
         expect(best.digest).to.eq("0x9588627a4b509674b5ed7180cb2f9c8679fe5f1c8a6378069af0f2b8c2ff831f");
     })
-    it("block 2 should submit", async () => {
+    it("should submit block 2", async () => {
         block = generate("bcrt1qu96jmjrfgpdynvqvljgszzm9vtzp7czquzcu6q", block.getHash());
         contract.submitBlockHeader('0x' + block.toHex(true))
     })
-    it("best block should be block 2 hash", async () => {
+    it("should have best block be block 2", async () => {
         let best = await contract.getBestBlock();
         expect(best.digest).to.eq("0x7b02735fdcd34c70e65d1442949bd0a0fae69aedabfc05503f3ae5998a8f4348");
     })
