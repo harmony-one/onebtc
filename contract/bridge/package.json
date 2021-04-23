@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@interlay/bitcoin-spv-sol": "^3.2.2",
+    "@openzeppelin/contracts": "3.1.0"
+  }
+}
