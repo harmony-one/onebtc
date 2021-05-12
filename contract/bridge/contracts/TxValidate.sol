@@ -28,9 +28,9 @@ library TxValidate {
                 }
             }
         }
-        require(btc_address == recipient_btc_address, "wrong btc_address");
-        require(OP_RETURN_DATA.length > 0, "no op_return");
-        op_return = OP_RETURN_DATA.toUint(0);
+        require(btc_address == recipient_btc_address, "InvalidRecipient");
+        require(OP_RETURN_DATA.length > 0, "NoOpRetrun");
+        op_return = OP_RETURN_DATA.bytesToUint();
     }
     function validate_transaction(bytes memory tx_vout, uint256 minimum_btc, address recipient_btc_address, uint256 op_return_id) internal pure returns(uint256) {
         (uint256 extr_payment_value, uint256 extr_op_return) = extract_payment_value_and_op_return(tx_vout, recipient_btc_address);

@@ -31,7 +31,7 @@ struct S_RedeemRequest{
     uint256 premium_one;
     address requester;
     address btc_address;
-    /// The latest Bitcoin height as reported by the BTC-Relay at time of opening.
+    // The latest Bitcoin height as reported by the BTC-Relay at time of opening.
     uint256 btc_height;
     RequestStatus status;
 }
