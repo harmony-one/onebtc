@@ -5,11 +5,11 @@ import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import {S_RedeemRequest, RequestStatus} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
+import {ICollateral} from "./Collateral.sol";
 
-abstract contract Redeem {
+abstract contract Redeem is ICollateral {
     using BTCUtils for bytes;
     using BytesLib for bytes;
-
 
     mapping(address=>mapping(uint256=>S_RedeemRequest)) public redeemRequests;
 
@@ -28,6 +28,10 @@ abstract contract Redeem {
         return uint256(keccak256(abi.encodePacked(user, blockhash(block.number-1))));
     }
 
+    function get_redeem_collateral(uint256 amount_btc) private returns(uint256) {
+        return amount_btc;
+    }
+
     function _request_redeem(address requester, uint256 amount_one_btc, address btc_address, address vault_id) internal {
         lockOneBTC(requester, amount_one_btc);
         uint256 fee_one_btc = get_redeem_fee(amount_one_btc);
@@ -43,11 +47,13 @@ abstract contract Redeem {
             request.fee = fee_one_btc;
             request.amount_btc = redeem_amount_one_btc;
             //request.premium_one
+            request.amount_one = get_redeem_collateral(redeem_amount_one_btc);
             request.requester = requester;
             request.btc_address = btc_address;
             //request.btc_height
             request.status = RequestStatus.Pending;
         }
+        ICollateral.use_collateral_inc(vault_id, request.amount_one);
         emit RedeemRequest(redeem_id, requester, vault_id, request.amount_btc, request.fee, request.btc_address);
     }
 
@@ -58,6 +64,7 @@ abstract contract Redeem {
         burnLockedOneBTC(request.amount_btc);
         releaseLockedOneBTC(request.vault, request.fee);
         request.status = RequestStatus.Completed;
+        ICollateral.use_collateral_dec(request.vault, request.amount_one);
         emit RedeemComplete(redeem_id, requester, request.vault, request.amount_btc, request.fee, request.btc_address);
     }
 
@@ -67,6 +74,9 @@ abstract contract Redeem {
         require(block.timestamp > request.opentime + request.period, "TimeNotExpired");
         request.status = RequestStatus.Cancelled;
         releaseLockedOneBTC(request.requester, request.amount_btc + request.fee);
+
+        ICollateral.use_collateral_dec(request.vault, request.amount_one);
+        ICollateral.slash_collateral(request.vault, request.requester, request.amount_one);
         emit RedeemCancel(redeem_id, requester, request.vault, request.amount_btc, request.fee, request.btc_address);
     }
 }

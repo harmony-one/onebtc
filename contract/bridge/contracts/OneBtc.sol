@@ -14,7 +14,7 @@ contract OneBtc is ERC20,Issue,Redeem,VaultRegistry {
 
     IRelay public realy;
     constructor(IRelay _relay) ERC20("OneBtc", "OneBtc") public {
-        _setupDecimals(18);
+        _setupDecimals(8);
         realy = _relay;
     }
 

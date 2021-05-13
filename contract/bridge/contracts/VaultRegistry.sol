@@ -2,7 +2,9 @@
 
 pragma solidity ^0.6.12;
 
-abstract contract VaultRegistry {
+import {ICollateral} from "./Collateral.sol";
+
+abstract contract VaultRegistry is ICollateral {
     struct Vault {
         address btc_address;
         bytes btc_public_key;
@@ -18,8 +20,8 @@ abstract contract VaultRegistry {
         require(vault.btc_address == address(0), "vaultExist");
         vault.btc_address = btc_address;
         vault.btc_public_key = btc_public_key;
-        vault.collateral = msg.value;
-        emit RegisterVault(vault_id, btc_address, vault.collateral, btc_public_key);
+        lock_additional_collateral();
+        emit RegisterVault(vault_id, btc_address, msg.value, btc_public_key);
     }
 
     function _register_deposit_address(address vault_id, uint256 /*issue_id*/) internal view returns(address) {
@@ -28,12 +30,16 @@ abstract contract VaultRegistry {
     function update_public_key(bytes calldata btc_public_key) external {
         revert("TODO");
     }
-    function lock_additional_collateral() external payable {
-        Vault storage vault = vaults[msg.sender];
+    function lock_additional_collateral() public payable {
+        address vault_id = msg.sender;
+        Vault storage vault = vaults[vault_id];
         require(vault.btc_address != address(0), "vaultNotExist");
         vault.collateral += msg.value;
+        ICollateral.lock_collateral(vault_id, msg.value);
     }
+
     function withdraw_collateral(uint256 amount) external {
-        revert("TODO");
+        vault.collateral -= amount;
+        ICollateral.release_collateral(msg.sender, amount);
     }
 }
