@@ -20,7 +20,7 @@ abstract contract ICollateral {
     }
 
     function release(address sender, address to, uint256 amount) private {
-        require(CollateralBalances[sender] - CollateralUsed[vault_id] >= amount, "InSufficientCollateral");
+        require(CollateralBalances[sender] - CollateralUsed[sender] >= amount, "InSufficientCollateral");
         CollateralBalances[sender] -= amount;
         address payable _to = address(uint160(to));
         _to.transfer(amount);
