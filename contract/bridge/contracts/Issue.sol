@@ -5,8 +5,9 @@ import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import {S_IssueRequest, RequestStatus} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
+import {ICollateral} from "./Collateral.sol";
 
-abstract contract Issue {
+abstract contract Issue is ICollateral {
     using BTCUtils for bytes;
     using BytesLib for bytes;
 
@@ -26,7 +27,12 @@ abstract contract Issue {
         return uint256(keccak256(abi.encodePacked(user, blockhash(block.number-1))));
     }
 
+    function get_issue_griefing_collateral(uint256 amount_btc) private returns(uint256) {
+        return amount_btc;
+    }
+
     function _request_issue(address payable requester, uint256 amount_requested, address vault_id, uint256 griefing_collateral) internal {
+        require(get_issue_griefing_collateral(amount_requested) <= griefing_collateral, "InsufficientCollateral");
         uint256 issue_id = get_issue_id(requester);
         address btc_address = register_deposit_address(vault_id, issue_id);
         uint256 fee = get_issue_fee(amount_requested);
@@ -45,6 +51,7 @@ abstract contract Issue {
             request.btc_height = 0;
             request.status = RequestStatus.Pending;
         }
+        ICollateral.lock_collateral(request.requester, request.griefing_collateral); // ICollateral::
         emit IssueRequest(issue_id, requester, vault_id, amount_user, fee, btc_address);
     }
 
@@ -58,7 +65,7 @@ abstract contract Issue {
         }
         issueOneBTC(request.vault, request.fee);
         issueOneBTC(request.requester, amount_transferred);
-        request.requester.transfer(request.griefing_collateral);
+        ICollateral.release_collateral(request.requester, request.griefing_collateral); // ICollateral::
         request.status = RequestStatus.Completed;
         emit IssueComplete(issue_id, requester, request.vault, request.amount, request.fee, request.btc_address);
     }
@@ -68,7 +75,7 @@ abstract contract Issue {
         require(request.status == RequestStatus.Pending, "request is completed");
         require(block.timestamp > request.opentime + request.period, "TimeNotExpired");
         request.status = RequestStatus.Cancelled;
-        request.vault.transfer(request.griefing_collateral);
+        ICollateral.slash_collateral(request.requester, request.vault, request.griefing_collateral); // ICollateral::
         emit IssueCancel(issue_id, requester, request.vault, request.amount, request.fee, request.btc_address);
     }
 }
