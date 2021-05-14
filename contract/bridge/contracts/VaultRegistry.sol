@@ -18,6 +18,7 @@ abstract contract VaultRegistry is ICollateral {
         address vault_id = msg.sender;
         Vault storage vault = vaults[vault_id];
         require(vault.btc_address == address(0), "vaultExist");
+        require(btc_address != address(0), "InvalidBTCAddress");
         vault.btc_address = btc_address;
         vault.btc_public_key = btc_public_key;
         lock_additional_collateral();
@@ -39,6 +40,8 @@ abstract contract VaultRegistry is ICollateral {
     }
 
     function withdraw_collateral(uint256 amount) external {
+        Vault storage vault = vaults[msg.sender];
+        require(vault.btc_address != address(0), "vaultNotExist");
         vault.collateral -= amount;
         ICollateral.release_collateral(msg.sender, amount);
     }
