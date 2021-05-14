@@ -2,7 +2,7 @@
 
 pragma solidity ^0.6.12;
 
-import {IRelay} from "./IRelay.sol";
+import {IRelay} from "../IRelay.sol";
 
 contract RelayMock is IRelay {
     function submitBlockHeader(bytes calldata header) external override {}

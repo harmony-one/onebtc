@@ -18,7 +18,7 @@ library TransactionUtils {
         uint32 locktime;
     }
 
-    function extractTx(bytes memory raw_tx) internal returns(Transaction memory) {
+    function extractTx(bytes memory raw_tx) internal pure returns(Transaction memory) {
         uint length = raw_tx.length;
         uint pos = 4; // skip version
 
