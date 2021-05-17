@@ -1,18 +1,13 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.6.12;
-enum RequestStatus {
-    None,
-    Pending,
-    Completed,
-    Cancelled
-}
+enum RequestStatus {None, Pending, Completed, Cancelled}
 
 struct S_IssueRequest {
     address payable vault; // vault one address
     uint256 opentime;
     address payable requester;
-    address btc_address; // vault btc address 
+    address btc_address; // vault btc address
     bytes btc_public_key;
     uint256 amount;
     uint256 fee;
@@ -22,13 +17,13 @@ struct S_IssueRequest {
     RequestStatus status;
 }
 
-struct S_RedeemRequest{
+struct S_RedeemRequest {
     address vault;
     uint256 opentime;
     uint256 period;
     uint256 fee;
     uint256 amount_btc;
-    uint256 amount_one;  // Amount of DOT to be paid to the user from liquidated Vaults’ collateral
+    uint256 amount_one; // Amount of DOT to be paid to the user from liquidated Vaults’ collateral
     uint256 premium_one;
     address requester;
     address btc_address;
