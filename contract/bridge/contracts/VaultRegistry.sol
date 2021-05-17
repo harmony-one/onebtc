@@ -10,11 +10,19 @@ abstract contract VaultRegistry is ICollateral {
         bytes btc_public_key;
         uint256 collateral;
     }
-    mapping(address=>Vault) public vaults;
+    mapping(address => Vault) public vaults;
 
-    event RegisterVault(address indexed vault_id, address indexed btc_address, uint256 indexed collateral, bytes btc_public_key);
+    event RegisterVault(
+        address indexed vault_id,
+        address indexed btc_address,
+        uint256 indexed collateral,
+        bytes btc_public_key
+    );
 
-    function register_vault(address btc_address, bytes calldata btc_public_key) external payable {
+    function register_vault(address btc_address, bytes calldata btc_public_key)
+        external
+        payable
+    {
         address vault_id = msg.sender;
         Vault storage vault = vaults[vault_id];
         require(vault.btc_address == address(0), "vaultExist");
@@ -25,12 +33,17 @@ abstract contract VaultRegistry is ICollateral {
         emit RegisterVault(vault_id, btc_address, msg.value, btc_public_key);
     }
 
-    function _register_deposit_address(address vault_id, uint256 /*issue_id*/) internal view returns(address) {
+    function _register_deposit_address(
+        address vault_id,
+        uint256 /*issue_id*/
+    ) internal view returns (address) {
         return vaults[vault_id].btc_address;
     }
+
     function update_public_key(bytes calldata btc_public_key) external {
         revert("TODO");
     }
+
     function lock_additional_collateral() public payable {
         address vault_id = msg.sender;
         Vault storage vault = vaults[vault_id];
