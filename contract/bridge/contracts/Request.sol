@@ -23,7 +23,7 @@ struct S_RedeemRequest {
     uint256 period;
     uint256 fee;
     uint256 amount_btc;
-    uint256 amount_one; // Amount of DOT to be paid to the user from liquidated Vaults’ collateral
+    uint256 amount_one; // Amount of ONE to be paid to the user from liquidated Vaults’ collateral
     uint256 premium_one;
     address requester;
     address btc_address;
