@@ -51,7 +51,7 @@ abstract contract VaultRegistry is ICollateral {
     {
         Vault storage vault = vaults[vault_id];
         address derivedKey =
-            BitcoinKeyDerivation.derive(
+            BitcoinKeyDerivation.derivate(
                 vault.btc_public_key_x,
                 vault.btc_public_key_y,
                 issue_id

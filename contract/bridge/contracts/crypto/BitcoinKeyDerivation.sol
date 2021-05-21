@@ -7,7 +7,7 @@ import {Secp256k1} from "./Secp256k1.sol";
 // https://interlay.gitlab.io/polkabtc-spec/security_performance/security-analysis.html#unique-addresses-via-on-chain-key-derivation
 library BitcoinKeyDerivation{
 
-    function derive(uint256 pubX, uint256 pubY, uint256 id) internal view returns(address) {
+    function derivate(uint256 pubX, uint256 pubY, uint256 id) internal view returns(address) {
         bytes32 c =
             keccak256(
                 abi.encodePacked(

@@ -18,12 +18,14 @@ library Secp256k1 {
     uint256 constant BB = 7;
     uint256 constant PP =
         0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F;
+    uint256 constant NN = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
 
     function ecMul(
         uint256 scale,
         uint256 Px,
         uint256 Py
     ) internal pure returns (uint256, uint256) {
+        require(scale % NN != 0, "invalid scale");
         return EllipticCurve.ecMul(scale, Px, Py, AA, PP);
     }
 
