@@ -124,7 +124,6 @@ contract OneBtc is ERC20, Issue, Redeem, VaultRegistry {
 
     function register_deposit_address(address vault_id, uint256 issue_id)
         internal
-        view
         override(Issue)
         returns (address)
     {
