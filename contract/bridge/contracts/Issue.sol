@@ -41,7 +41,6 @@ abstract contract Issue is ICollateral {
 
     function register_deposit_address(address vault_id, uint256 issue_id)
         internal
-        view
         virtual
         returns (address);
 
