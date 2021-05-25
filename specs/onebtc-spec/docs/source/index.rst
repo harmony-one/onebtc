@@ -12,29 +12,46 @@ Welcome to the BTC Bridge documentation
    intro/at-a-glance
    intro/CbA
    intro/architecture
-.. intro/harmony
+   intro/harmony
 
 .. toctree::
-   :hidden:
+   :maxdepth: 2
+   :caption: Specification
+
+   spec/btc-relay
+   spec/collateral
+   spec/fee
+   spec/oracle
+   spec/issue
+   spec/nomination
+   spec/redeem
+   spec/refund
+   spec/replace
+   spec/security
+   spec/sla
+   spec/staked-relayers
+   spec/treasury
+   spec/vault-registry
+
+.. toctree::
    :maxdepth: 2
    :caption: Security and Performance
 
-..   security_performance/security-analysis
-..   security_performance/performance
+   security_performance/liquidations
+   security_performance/security-analysis
+   security_performance/performance
 
 .. toctree::
-   :hidden:
    :maxdepth: 2
    :caption: Economics
 
-..   economics/incentives
-..   economics/fees
-..   economics/SLA
+   economics/incentives
+   economics/fees
+   economics/SLA
 
 .. toctree::
-   :hidden:
    :maxdepth: 2
    :caption: All the rest
 
-..   other/license
-..   other/interlay
+   other/license
+   other/interlay
