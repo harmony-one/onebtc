@@ -29,9 +29,9 @@ The idea of CbAs is that an asset is locked on a *backing blockchain* and issued
 
 XCLAIM introduces three protocols to achieve decentralized, transparent, consistent, atomic, and censorship resistant cross-blockchain swaps:
 
-- **Issue**: Create Bitcoin-backed tokens, so-called *ONEBTC* on the BTC Parachain.
+- **Issue**: Create Bitcoin-backed tokens, so-called *ONEBTC* on the BTC Bridge.
 - **Transfer**: Transfer ONEBTC to others within the Harmony ecosystem.
-- **Redeem**: Burn Bitcoin-backed tokens on the BTC Parachain and receive 1:1 of the amount of Bitcoin in return.
+- **Redeem**: Burn Bitcoin-backed tokens on the BTC Bridge and receive 1:1 of the amount of Bitcoin in return.
 
 The basic intuition of the protocol is as below:
 
@@ -45,8 +45,8 @@ Design Principles
 
 XCLAIM guarantees that Bitcoin-backed tokens can be redeemed for the corresponding amount of Bitcoin, or the equivalent economic value in ONE. Thereby, XCLAIM overcomes the limitations of centralized approaches through three primary techniques:
 
-- **Secure audit logs**: Logs are constructed to record actions of all users both on Bitcoin and the BTC Parachain.
-- **Transaction inclusion proofs**: Chain relays are used to prove correct behavior on Bitcoin to the BTC Parachain.
+- **Secure audit logs**: Logs are constructed to record actions of all users both on Bitcoin and the BTC Bridge.
+- **Transaction inclusion proofs**: Chain relays are used to prove correct behavior on Bitcoin to the BTC Bridge.
 - **Proof-or-Punishment**: Instead of relying on timely fraud proofs (reactive), XCLAIM requires correct behavior to be proven proactively.
 - **Over-collateralization**: Non-trusted intermediaries, i.e. vaults, are bound by collateral, with mechanisms in place to mitigate exchange rate fluctuations.
 

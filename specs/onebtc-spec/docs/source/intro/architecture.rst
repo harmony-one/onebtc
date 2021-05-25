@@ -1,41 +1,41 @@
 Architecture
 ============
 
-ONEBTC consists of four different actors and eight modules. The component further uses two additional modules, the BTC-Relay component and the Parachain Governance mechanism.
+ONEBTC consists of four different actors and eight modules. The component further uses two additional modules, the BTC-Relay component and the BTC Bridge Governance mechanism.
 
 Actors
 ~~~~~~
 
 There are four main participant roles in the system. A high-level overview of all modules and actors, as well as interactions between them, is provided in :numref:`high-level` below.
 
-- **Vaults**: Vaults are collateralized intermediaries that are active on both the backing blockchain (Bitcoin) and the issuing blockchain to provide collateral in ONE. They receive and hold BTC from users who wish to create ONEBTC tokens. When a user destroys ONEBTC tokens, a vault releases the corresponding amount of BTC to the user's BTC address. Vaults interact with the following modules directly: :ref:`vault-registry`, :ref:`redeem-protocol`, and :ref:`replace-protocol`.
-- **Users**: Users interact with the BTC Parachain to create, use (trade/transfer/...), and redeem Bitcoin-backed ONEBTC tokens. Since the different protocol phases can be executed by different users, we introduce the following *sub-roles*:
+- **Vaults**: Vaults are collateralized intermediaries that are active on both the backing blockchain (Bitcoin) and the issuing blockchain to provide collateral in ONE. They receive and hold BTC from users who wish to create ONEBTC tokens. When a user destroys ONEBTC tokens, a vault releases the corresponding amount of BTC to the user's BTC address. Vaults interact with the following modules directly: Vault Registry, Redeem Protocol, and Replace Protocol.
+- **Users**: Users interact with the BTC Bridge to create, use (trade/transfer/...), and redeem Bitcoin-backed ONEBTC tokens. Since the different protocol phases can be executed by different users, we introduce the following *sub-roles*:
 
-  - **Requester**: A user that locks BTC with a vault on Bitcoin and issues ONEBTC on the BTC Parachain. Interacts with the :ref:`issue-protocol` module.
-  - **Sender** and **Receiver**: A user (Sender) that sends ONEBTC to another user (Receiver) on the BTC Parachain. Interacts with the :ref:`treasury-module` module.
-  - **Redeemer**: A user that destroys ONEBTC on the BTC Parachain to receive the corresponding amount of BTC on the Bitcoin blockchain from a Vault. Interacts with the :ref:`redeem-protocol` module.
+  - **Requester**: A user that locks BTC with a vault on Bitcoin and issues ONEBTC on the BTC Bridge. Interacts with the Issue Protocol module.
+  - **Sender** and **Receiver**: A user (Sender) that sends ONEBTC to another user (Receiver) on the BTC Bridge. Interacts with the Treasury module.
+  - **Redeemer**: A user that destroys ONEBTC on the BTC Bridge to receive the corresponding amount of BTC on the Bitcoin blockchain from a Vault. Interacts with the Redeem Protocol module.
 
-- **Staked Relayers**:  Collateralized intermediaries which run Bitcoin full nodes and (i) monitor validity and availability of transactional data for Bitcoin blocks submitted to BTC-Relay, (ii) monitor that Vaults do not move locked BTC on Bitcoin without prior authorization by the BTC Parachain (i.e., through one of the Issue, Redeem or Replace protocols). In case either of the above errors was detected, Staked Relayers report this to the BTC Parachain. Interact with the :ref:`btc-relay`, :ref:`security`, and :ref:`Vault-registry` modules.
+- **Staked Relayers**:  Collateralized intermediaries which run Bitcoin full nodes and (i) monitor validity and availability of transactional data for Bitcoin blocks submitted to BTC-Relay, (ii) monitor that Vaults do not move locked BTC on Bitcoin without prior authorization by the BTC Bridge (i.e., through one of the Issue, Redeem or Replace protocols). In case either of the above errors was detected, Staked Relayers report this to the BTC Bridge. Interact with the BTC Relay, Security, and Vault Vegistry modules.
 
 .. todo:: The exact composition of Staked Relayers (static vs dynamic committee) and the internal agreement mechanism needs to be defined. Do Staked Relayers run a BFT protocol to create a threshold signature when reporting an error / updating the state of BTC-Relay? Who can join this committee?
 
-- **Governance Mechanism**: The Parachain Governance Mechanism monitors the correct operation of the BTC Parachain, as well as the correct behaviour of Staked Relayers (and other participants if necessary). Interacts with the :ref:`security` module when Staked Relayers misbehave and can manually interfere with the operation and parameterization of all components of the BTC Parachain.
+- **Governance Mechanism**: The BTC Bridge Governance Mechanism monitors the correct operation of the BTC Bridge, as well as the correct behaviour of Staked Relayers (and other participants if necessary). Interacts with the security module when Staked Relayers misbehave and can manually interfere with the operation and parameterization of all components of the BTC Bridge.
 
-.. note:: The exact composition of the Governance Mechanism is to be defined by Harmony.
+.. note:: The exact composition of the BTC Governance Mechanism is to be defined by Harmony.
 
 Modules
 ~~~~~~~
 
-The eight modules in ONEBTC plus the BTC-Relay and Governance Mechanism interact with each other, but all have distinct logical functionalities. The figure below shows them.
+The eight modules in ONEBTC plus the BTC-Relay and BTC Governance Mechanism interact with each other, but all have distinct logical functionalities. The figure below shows them.
 
 The specification clearly separates these modules to ensure that each module can be implemented, tested, and verified in isolation. The specification follows the principle of abstracting the internal implementation away and providing a clear interface. This should allow optimisation and improvements of a module with minimal impact on other modules.
 
 .. _high-level:
 
-.. figure:: ../figures/PolkaBTC-Architecture.png
+.. figure:: ../figures/ONEBTC-Architecture.svg
     :alt: architecture diagram
 
-    High level overview of the BTC Parachain. ONEBTC consists of seven modules. The Oracle module stores the exchange rates based on the input of centralized and decentralized exchanges. The Treasury module maintains the ownership of ONEBTC, the VaultRegistry module stores information about the current Vaults in the system, and the Issue, Redeem and Replace modules expose funcitons and maintain data related to the respective sub protocols. The StabilizedCollateral modules handles vault collateralization, stabilization against exchange rate fluctuations and automatic liquidation. BTC-Relay tracks the Bitcoin main chain and verifies transaction inclusion. The Parachain Governance maintains correct operation of the BTC Parachain and intervenes / halts operation if necessary.
+    High level overview of the BTC Bridge. ONEBTC consists of seven modules. The Oracle module stores the exchange rates based on the input of centralized and decentralized exchanges. The Treasury module maintains the ownership of ONEBTC, the VaultRegistry module stores information about the current Vaults in the system, and the Issue, Redeem and Replace modules expose funcitons and maintain data related to the respective sub protocols. The StabilizedCollateral modules handles vault collateralization, stabilization against exchange rate fluctuations and automatic liquidation. BTC-Relay tracks the Bitcoin main chain and verifies transaction inclusion. The Bridge Governance maintains correct operation of the BTC Bridge and intervenes / halts operation if necessary.
 
 
 Exchange Rate Oracle
@@ -70,7 +70,7 @@ Collateral
 ----------
 
 The Collateral module is the central storage for any collateral that is collected in any other module.
-It is allows for three simple operations: locking collateral by a party, releasing collateral back to the original party that locked this collateral, and last, slashing collateral where the collateral is relocated to a party other than the one that locked the collateral.
+It allows for three simple operations: locking collateral by a party, releasing collateral back to the original party that locked this collateral, and last, slashing collateral where the collateral is relocated to a party other than the one that locked the collateral.
 
 Issue
 -----
@@ -92,14 +92,14 @@ It tracks replace requests by existing Vaults, exposes functionality for to-be-r
 Security
 --------
 
-The Security module handles the Staked Relayers. Staked Relayers can register and vote, where applicable, on the status of the BTC Parachain. They can also report theft of BTC by vaults.
+The Security module handles the Staked Relayers. Staked Relayers can register and vote, where applicable, on the status of the BTC Bridge. They can also report theft of BTC by vaults.
 
 Governance Mechanism
 --------------------
 
-The Governance Mechanism handles correct operation of the BTC Parachain.
+The Governance Mechanism handles correct operation of the BTC Bridge.
 
-.. note:: The Governance Mechanism is not part of this specification. The BTC Parachain simply expects continous operation of the BTC Parachain.
+.. note:: The Governance Mechanism is not part of this specification. The BTC Bridge simply expects continous operation of the BTC Bridge.
 
 Interactions
 ~~~~~~~~~~~~
@@ -107,7 +107,7 @@ Interactions
 We provide a detailed overview of the function calls between the different modules in :numref:`fig-interactions`.
 
 .. _fig-interactions:
-.. figure:: ../figures/polkaBTC-detailed-architecture.png
+.. figure:: ../figures/ONEBTC-detailed-architecture.svg
     :alt: detailed architecture diagram
 
-    Detailed architecture of the BTC Parachain, showing all actors, components and their interactions.
+    Detailed architecture of the BTC Bridge, showing all actors, components and their interactions.
