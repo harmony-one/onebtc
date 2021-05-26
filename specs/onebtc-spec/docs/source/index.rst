@@ -39,7 +39,6 @@ Welcome to the BTC Bridge documentation
 
    security_performance/liquidations
    security_performance/security-analysis
-   security_performance/performance
 
 .. toctree::
    :maxdepth: 2

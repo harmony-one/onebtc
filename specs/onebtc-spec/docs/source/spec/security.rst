@@ -3,11 +3,11 @@
 Security
 ========
 
-The Security module is responsible for (1) tracking the status of the BTC Parachain, (2) the "active" blocks of the BTC Parachain, and (3) generating secure identifiers.
+The Security module is responsible for (1) tracking the status of the BTC Bridge, (2) the "active" blocks of the BTC Bridge, and (3) generating secure identifiers.
 
-1. **BTC Parachain Status**: The BTC Parachain has three distinct states: ``Running``, ``Error``, and ``Shutdown`` which determine which functions can be used.
-2. **Active Blocks**: When the BTC Parachain is not in the ``Running`` state, certain operations are restricted. In order to prevent impact on the users and vaults for the core issue, redeem, and replace operations, the BTC Parachain only considers Active Blocks for the Issue, Redeem, and Replace Periods.
-3. **Secure Identifiers**: As part of the :ref:`op-return` scheme to prevent replay attacks, the security module generates unique identifiers that are used to identify transactions. 
+1. **BTC Bridge Status**: The BTC Bridge has three distinct states: ``Running``, ``Error``, and ``Shutdown`` which determine which functions can be used.
+2. **Active Blocks**: When the BTC Bridge is not in the ``Running`` state, certain operations are restricted. In order to prevent impact on the users and vaults for the core issue, redeem, and replace operations, the BTC Bridge only considers Active Blocks for the Issue, Redeem, and Replace Periods.
+3. **Secure Identifiers**: As part of the :ref:`op-return` scheme to prevent replay attacks, the security module generates unique identifiers that are used to identify transactions.
 
 Overview
 ~~~~~~~~
@@ -15,11 +15,11 @@ Overview
 Failure Modes
 -------------
 
-The BTC Parachain can enter into an ERROR and SHUTDOWN state, depending on the occurred error.
+The BTC Bridge can enter into an ERROR and SHUTDOWN state, depending on the occurred error.
 An overview is provided in the figure below.
 
-.. figure:: ../figures/failureModes.png
-    :alt: State machine showing BTC Parachain failure modes
+.. figure:: ../figures/failureModes.svg
+    :alt: State machine showing BTC Bridge failure modes
 
     (Informal) State machine showing the operational and failure modes and how to recover from or flag failures.
 
@@ -41,7 +41,7 @@ BTC-Relay Offline
 
 The :ref:`btc-relay` has less blocks stored than defined as the ``STABLE_BITCOIN_CONFIRMATIONS``.
 
-This is the initial state of the BTC-Parachain. After more than the ``STABLE_BITCOIN_CONFIRMATIONS`` BTC blocks have been stored in BTC-Relay, the BTC Parachain cannot decide if or not it is behind in terms of Bitcoin blocks since we make no assumption about the frequency of BTC blocks being produced.
+This is the initial state of the BTC-Bridge. After more than the ``STABLE_BITCOIN_CONFIRMATIONS`` BTC blocks have been stored in BTC-Relay, the BTC Bridge cannot decide if or not it is behind in terms of Bitcoin blocks since we make no assumption about the frequency of BTC blocks being produced.
 
 **Error code:** ``BTC_RELAY_OFFLINE``
 
@@ -53,13 +53,13 @@ Enums
 
 StatusCode
 ...........
-Indicates ths status of the BTC Parachain.
+Indicates ths status of the BTC Bridge.
 
-* ``RUNNING: 0`` - BTC Parachain fully operational
+* ``RUNNING: 0`` - BTC Bridge fully operational
 
-* ``ERROR: 1``- an error was detected in the BTC Parachain. See ``Errors`` for more details, i.e., the specific error codes (these determine how to react).
+* ``ERROR: 1``- an error was detected in the BTC Bridge. See ``Errors`` for more details, i.e., the specific error codes (these determine how to react).
 
-* ``SHUTDOWN: 2`` - BTC Parachain operation fully suspended. This can only be achieved via manual intervention by the Governance Mechanism.
+* ``SHUTDOWN: 2`` - BTC Bridge operation fully suspended. This can only be achieved via manual intervention by the Governance Mechanism.
 
 ErrorCode
 .........
@@ -80,10 +80,10 @@ Data Storage
 Scalars
 --------
 
-ParachainStatus
+BridgeStatus
 ...............
 
-Integer/Enum (see ``StatusCode`` below). Defines the current state of the BTC Parachain. 
+Integer/Enum (see ``StatusCode`` below). Defines the current state of the BTC Bridge.
 
 
 Errors
@@ -102,7 +102,7 @@ Integer increment-only counter, used to prevent collisions when generating ident
 ActiveBlockCount
 ................
 
-A counter variable that increments every block where the parachain status is ``RUNNING:0``. This variable is used to keep track of durations, such as issue/redeem/replace expiry. This is used instead of the block number because if the parachain status is not ``RUNNING:0``, no payment proofs can be submitted, so it would not be fair towards users and vaults to continue counting down the (expiry) periods. 
+A counter variable that increments every block where the shard status is ``RUNNING:0``. This variable is used to keep track of durations, such as issue/redeem/replace expiry. This is used instead of the block number because if the shard status is not ``RUNNING:0``, no payment proofs can be submitted, so it would not be fair towards users and vaults to continue counting down the (expiry) periods.
 
 
 Functions
@@ -124,7 +124,7 @@ Specification
 
 *Parameters*
 
-* ``account``: Parachain account identifier (links this identifier to the AccountId associated with the process where this secure id is to be used, e.g., the user calling :ref:`requestIssue`).
+* ``account``: Bridge account identifier (links this identifier to the AccountId associated with the process where this secure id is to be used, e.g., the user calling :ref:`requestIssue`).
 
 *Returns*
 
@@ -138,7 +138,7 @@ Function Sequence
 3. SHA256 hash the result of step 1.
 4. Return the resulting hash.
 
-.. note:: The funtion ``parent_hash()`` is assumed to return the hash of the parachain's parent block - which precedes the block this function is called in.
+.. note:: The funtion ``parent_hash()`` is assumed to return the hash of the shard's parent block - which precedes the block this function is called in.
 
 
 .. _hasExpired:
@@ -173,59 +173,59 @@ Function Sequence
 2. Compare this against :ref:`activeBlockCount`.
 
 
-.. _setParachainStatus:
+.. _setBridgeStatus:
 
-setParachainStatus
+setBridgeStatus
 ------------------
 
-Governance sets a status code for the BTC Parachain manually.
+Governance sets a status code for the BTC Bridge manually.
 
 Specification
 .............
 
 *Function Signature*
 
-``setParachainStatus(StatusCode)``
+``setBridgeStatus(StatusCode)``
 
 *Parameters*
 
-* ``StatusCode``: the new StatusCode of the BTC-Parachain.
+* ``StatusCode``: the new StatusCode of the BTC-Bridge.
 
-.. _insertParachainError:
+.. _insertBridgeError:
 
-insertParachainError
+insertBridgeError
 --------------------
 
-Governance inserts an error for the BTC Parachain manually.
+Governance inserts an error for the BTC Bridge manually.
 
 Specification
 .............
 
 *Function Signature*
 
-``insertParachainError(ErrorCode)``
+``insertBridgeError(ErrorCode)``
 
 *Parameters*
 
-* ``ErrorCode``: the ErrorCode to be added to the set of errors of the BTC-Parachain.
+* ``ErrorCode``: the ErrorCode to be added to the set of errors of the BTC-Bridge.
 
-.. _removeParachainError:
+.. _removeBridgeError:
 
-removeParachainError
+removeBridgeError
 --------------------
 
-Governance removes an error for the BTC Parachain manually.
+Governance removes an error for the BTC Bridge manually.
 
 Specification
 .............
 
 *Function Signature*
 
-``removeParachainError(ErrorCode)``
+``removeBridgeError(ErrorCode)``
 
 *Parameters*
 
-* ``ErrorCode``: the ErrorCode to be removed from the set of errors of the BTC-Parachain.
+* ``ErrorCode``: the ErrorCode to be removed from the set of errors of the BTC-Bridge.
 
 
 Events
@@ -240,5 +240,5 @@ RecoverFromErrors
 
 *Parameters*
 
-* ``StatusCode``: the new StatusCode of the BTC Parachain
-* ``ErrorCode[]``: the list of current errors 
+* ``StatusCode``: the new StatusCode of the BTC Bridge
+* ``ErrorCode[]``: the list of current errors

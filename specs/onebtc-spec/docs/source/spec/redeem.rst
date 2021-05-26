@@ -6,7 +6,7 @@ Redeem
 Overview
 ~~~~~~~~
 
-The redeem module allows a user to receive BTC on the Bitcoin chain in return for destroying an equivalent amount of ONEBTC on the BTC Parachain. The process is initiated by a user requesting a redeem with a vault. The vault then needs to send BTC to the user within a given time limit. Next, the vault has to finalize the process by providing a proof to the BTC Parachain that he has send the right amount of BTC to the user. If the vault fails to deliver a valid proof within the time limit, the user can claim an equivalent amount of ONE from the vault's locked collateral to reimburse him for his loss in BTC.
+The redeem module allows a user to receive BTC on the Bitcoin chain in return for destroying an equivalent amount of ONEBTC on the BTC Bridge. The process is initiated by a user requesting a redeem with a vault. The vault then needs to send BTC to the user within a given time limit. Next, the vault has to finalize the process by providing a proof to the BTC Bridge that he has send the right amount of BTC to the user. If the vault fails to deliver a valid proof within the time limit, the user can claim an equivalent amount of ONE from the vault's locked collateral to reimburse him for his loss in BTC.
 
 Moreover, as part of the liquidation procedure, users are able to directly exchange ONEBTC for ONE. To this end, a user is able to execute a special liquidation redeem if one or multiple vaults have been liquidated.
 
@@ -41,11 +41,11 @@ Fee Model
 
 Following additions are added if the fee model is integrated.
 
-- Redeem fees are paid by users in ONEBTC when executing the request. The fees are transferred to Parachain Fee Pool.
+- Redeem fees are paid by users in ONEBTC when executing the request. The fees are transferred to Bridge Fee Pool.
 - If a redeem request is canceled, the user has two choices:
     - If the user selects to reimburse, the ONE equivalent of ONEBTC at the current exchange rate plus the punishment fee is deducted from the vault and transferred to the user.
     - If the user does not reimburse, the punishment fee is deducted from the vaults collateral and transferred to the user.
-    - NOTE: with the SLA model additions, the punishment fee paid to the user stays constant (i.e., the user always receives the punishment fee of e.g. 10%). However, vaults may be slashed more than the punishment fee, as determined by the SLA. The surplus slashed collateral is routed into the Parachain Fee pool and handled like regular fee income. For example, if the vault is punished with 20%, 10% punishment fee is paid to the user and 10% is paid to the fee pool.
+    - NOTE: with the SLA model additions, the punishment fee paid to the user stays constant (i.e., the user always receives the punishment fee of e.g. 10%). However, vaults may be slashed more than the punishment fee, as determined by the SLA. The surplus slashed collateral is routed into the Bridge Fee pool and handled like regular fee income. For example, if the vault is punished with 20%, 10% punishment fee is paid to the user and 10% is paid to the fee pool.
 
 Data Model
 ~~~~~~~~~~
@@ -56,7 +56,7 @@ Scalars
 RedeemPeriod
 ............
 
-The time difference between when an redeem request is created and required completion time by a vault. Concretely, this period is the amount by which :ref:`activeBlockCount` is allowed to increase before the redeem is considered to be expired. The period has an upper limit to ensure the user gets his BTC in time and to potentially punish a vault for inactivity or stealing BTC.
+The time difference between when a redeem request is created and required completion time by a vault. Concretely, this period is the amount by which :ref:`activeBlockCount` is allowed to increase before the redeem is considered to be expired. The period has an upper limit to ensure the user gets his BTC in time and to potentially punish a vault for inactivity or stealing BTC.
 
 Maps
 ----
@@ -80,13 +80,13 @@ Stores the status and information about a single redeem request.
 ==================  ==========  =======================================================
 Parameter           Type        Description
 ==================  ==========  =======================================================
-``vault``           Account     The BTC Parachain address of the vault responsible for this redeem request.
+``vault``           Account     The BTC Bridge address of the vault responsible for this redeem request.
 ``opentime``        u256        Block height of opening the request.
 ``amountONEBTC``    ONEBTC      Amount of ONEBTC the user requested to be redeemed.
 ``amountBTC``       BTC         Amount of BTC to be released to the user.
 ``amountONE``       ONE         Amount of ONE to be paid to the user from liquidated Vaults' collateral (when ``LIQUIDATION`` error indicated in :ref:`security`).
 ``premiumONE``      ONE         Amount of ONE to be paid as a premium to this user (if the Vault's collateral rate was below ``PremiumRedeemThreshold`` at the time of redeeming).
-``redeemer``        Account     The BTC Parachain address of the user requesting the redeem.
+``redeemer``        Account     The BTC Bridge address of the user requesting the redeem.
 ``btcAddress``      bytes[20]   Base58 encoded Bitcoin public key of the User.
 ==================  ==========  =======================================================
 
@@ -99,7 +99,7 @@ requestRedeem
 --------------
 
 A user requests to start the redeem procedure.
-This function checks the BTC Parachain status in :ref:`security` and decides how the redeem process is to be executed.
+This function checks the BTC Bridge status in :ref:`security` and decides how the redeem process is to be executed.
 The following modes are possible:
 
 * **Normal Redeem** - no errors detected, full BTC value is to be Redeemed.
@@ -138,7 +138,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0`` or to ``ERROR:1`` with ``Errors`` containing only ``LIQUIDATION``. All other states are disallowed.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0`` or to ``ERROR:1`` with ``Errors`` containing only ``LIQUIDATION``. All other states are disallowed.
 
 Function Sequence
 .................
@@ -147,7 +147,7 @@ Function Sequence
 
 2. Retrieve the ``vault`` from :ref:`vault-registry`. Return ``ERR_VAULT_NOT_FOUND`` if no vault can be found.
 
-3. Check that the ``vault`` is currently not banned, i.e., ``vault.bannedUntil == None`` or ``vault.bannedUntil < current parachain block height``. Return ``ERR_VAULT_BANNED`` if this check fails.
+3. Check that the ``vault`` is currently not banned, i.e., ``vault.bannedUntil == None`` or ``vault.bannedUntil < current shard block height``. Return ``ERR_VAULT_BANNED`` if this check fails.
 
 4. Check if the ``amountONEBTC`` is less or equal to the ``issuedTokens`` by the selected vault in the VaultRegistry. Return ``ERR_AMOUNT_EXCEEDS_VAULT_BALANCE`` if this check fails.
 
@@ -179,7 +179,7 @@ Function Sequence
 liquidationRedeem
 -----------------
 
-A user executes a liquidation redeem that exchanges ONEBTC for ONE from the `LiquidationVault`. The BTC Parachain is in ``ERROR`` state with ``LIQUIDATION`` error code. The 1:1 backing is being recovered, hence this function burns ONEBTC without releasing any BTC. The user is also allocated the ``PunishmentFee`` in ONE as reimbursement for possible opportunity costs.
+A user executes a liquidation redeem that exchanges ONEBTC for ONE from the `LiquidationVault`. The BTC Bridge is in ``ERROR`` state with ``LIQUIDATION`` error code. The 1:1 backing is being recovered, hence this function burns ONEBTC without releasing any BTC. The user is also allocated the ``PunishmentFee`` in ONE as reimbursement for possible opportunity costs.
 
 Specification
 .............
@@ -212,7 +212,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0`` or to ``ERROR:1`` with ``Errors`` containing only ``LIQUIDATION``. All other states are disallowed.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0`` or to ``ERROR:1`` with ``Errors`` containing only ``LIQUIDATION``. All other states are disallowed.
 * The selected vault must not have been banned.
 
 Function Sequence
@@ -265,7 +265,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 Function Sequence
 .................
@@ -348,7 +348,7 @@ Function Sequence
 
   a. Call :ref:`slashCollateral` in the :ref:`collateral-module` module, passing ``redeem.vault``, ``redeem.redeemer`` and value of the collateral punishment, calculated as ``redeem.amountONEBTC *`` :ref:`getExchangeRate` ``* (PunishmentFee / 100000)``
 
-5. Temporarily Ban the vault from issue, redeem and replace processes by setting ``redeem.vault.bannedUntil = current parachain block height + PunishmentDelay``.
+5. Temporarily Ban the vault from issue, redeem and replace processes by setting ``redeem.vault.bannedUntil = current shard block height + PunishmentDelay``.
 
 6. Remove ``redeem`` from ``RedeemRequests``.
 
@@ -360,7 +360,7 @@ Function Sequence
 .. getPartialRedeemFactor
 .. ----------------------
 ..
-.. Calculates the fraction of BTC to be redeemed in ONE when the BTC Parachain state is in ``ERROR`` state due to a ``LIQUIDATION`` error.
+.. Calculates the fraction of BTC to be redeemed in ONE when the BTC Bridge state is in ``ERROR`` state due to a ``LIQUIDATION`` error.
 ..
 .. Specification
 .. .............

@@ -26,7 +26,7 @@ The granularity of the exchange rate. The granularity is set to :math:`10^{-5}`.
 Scalars
 -------
 
-ExchangeRateBtcInDot
+ExchangeRateBtcInOne
 ....................
 
 The BTC in ONE exchange rate. This exchange rate is used to determine how much collateral is required to issue a specific amount of ONEBTC.
@@ -55,7 +55,7 @@ The estimated Satoshis per bytes required to get a Bitcoin transaction included 
 MaxDelay
 ........
 
-The maximum delay in seconds between incoming calls providing exchange rate data. If the Exchange Rate Oracle receives no data for more than this period, the BTC Parachain enters an ``Error`` state with a ``ORACLE_OFFLINE`` error cause.
+The maximum delay in seconds between incoming calls providing exchange rate data. If the Exchange Rate Oracle receives no data for more than this period, the BTC Bridge enters an ``Error`` state with a ``ORACLE_OFFLINE`` error cause.
 
 
 LastExchangeRateTime
@@ -122,7 +122,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 Function Sequence
 .................
@@ -164,7 +164,7 @@ Specification
 Requirements
 ............
 
-* The BTC Parachain status in the :ref:`security` component MUST be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component MUST be set to ``RUNNING:0``.
 * If the caller of the function is not in ``AuthorizedOracles`` MUST return ``ERR_INVALID_ORACLE_SOURCE``.
 * If the above checks passed, the function MUST update the ``SatoshiPerBytes`` field indicated by the ``InclusionEstimate`` enum.
 * If the above steps passed, MUST emit the ``SetSatoshiPerByte`` event.
@@ -200,7 +200,7 @@ Specification
 Preconditions
 .............
 
-This function can be called by any participant to retrieve the BTC/ONE exchange rate as tracked by the BTC Parachain.
+This function can be called by any participant to retrieve the BTC/ONE exchange rate as tracked by the BTC Bridge.
 
 Function Sequence
 .................
@@ -268,7 +268,7 @@ Emits the new exchange rate when it is updated by the oracle.
 recoverFromORACLEOFFLINE
 -------------------------
 
-Internal function. Recovers the BTC Parachain state from a ``ORACLE_OFFLINE`` error and sets ``ParachainStatus`` to ``RUNNING`` if there are no other errors.
+Internal function. Recovers the BTC Bridge state from a ``ORACLE_OFFLINE`` error and sets ``BridgeStatus`` to ``RUNNING`` if there are no other errors.
 
 .. attention:: Can only be called from :ref:`oracle`.
 

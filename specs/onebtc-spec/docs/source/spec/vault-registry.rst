@@ -137,7 +137,7 @@ Optional struct storing data used in the (optional) validity check of the BTC ad
 Parameter            Type       Description
 ===================  =========  ========================================================
 ``registerId``       H256       Identifier used to link a Bitcoin transaction inclusion proof to this registration request (included in OP_RETURN).
-``vault``            Account    Parachain account identifier of the registered Vault
+``vault``            Account    Bridge account identifier of the registered Vault
 ``timeout``          DateTime   Optional maximum delay before the vault must submit a valid tranasction inclusion proof.
 ===================  =========  ========================================================
 
@@ -191,12 +191,12 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 Function Sequence
 .................
 
-The ``registerVault`` function takes as input a Parachain AccountID, a Bitcoin address and ONE collateral, and registers a new vault in the system.
+The ``registerVault`` function takes as input a Bridge AccountID, a Bitcoin address and ONE collateral, and registers a new vault in the system.
 
 1. Check that ``collateral > MinimumCollateralVault`` holds, i.e., the vault provided sufficient collateral (above the spam protection threshold).
 
@@ -240,7 +240,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 Function Sequence
 .................
@@ -351,8 +351,8 @@ Specification
 Precondition
 ............
 
-* The BTC Parachain status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
-* If the BTC Parachain status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error code ``ORACLE_OFFLINE: 3``.
+* The BTC Bridge status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
+* If the BTC Bridge status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error code ``ORACLE_OFFLINE: 3``.
 
 Function Sequence
 .................
@@ -399,7 +399,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 Function Sequence
 .................
@@ -444,7 +444,7 @@ Specification
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC to be locked.
 
 *Returns*
@@ -463,7 +463,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 Function Sequence
 .................
@@ -493,7 +493,7 @@ Specification
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC to be unreserved.
 
 
@@ -509,10 +509,10 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
-* If the BTC Parachain status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``INVALID_BTC_RELAY: 2``, ``ORACLE_OFFLINE: 3``, or ``LIQUIDATION: 4``.
+* The BTC Bridge status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
+* If the BTC Bridge status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``INVALID_BTC_RELAY: 2``, ``ORACLE_OFFLINE: 3``, or ``LIQUIDATION: 4``.
 
-.. note:: We allow to cancel pending requests. If the BTC Parachain is in status ``ERROR: 1`` with ``NO_DATA_BTC_RELAY: 1`` and the required BTC transaction is in a block not yet included in the BTC-Relay, the request will not be able to complete. In this case, this function will get called to cancel the request.
+.. note:: We allow to cancel pending requests. If the BTC Bridge is in status ``ERROR: 1`` with ``NO_DATA_BTC_RELAY: 1`` and the required BTC transaction is in a block not yet included in the BTC-Relay, the request will not be able to complete. In this case, this function will get called to cancel the request.
 
 .. .. todo:: Exclude a crashed exchange rate oracle failure from this - this call should be allowed even if we have no exchange rate, as it is only used in failed Issue and Replace, or in successful Redeem and Replace. The check for an up-an-running exchange rate oracle is handled separately in each of these protocols, if necessary.
 
@@ -545,7 +545,7 @@ Specification
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC that were just issued.
 
 
@@ -561,10 +561,10 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
-* If the BTC Parachain status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``INVALID_BTC_RELAY: 2``, ``ORACLE_OFFLINE: 3``, or ``LIQUIDATION: 4``.
+* The BTC Bridge status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
+* If the BTC Bridge status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``INVALID_BTC_RELAY: 2``, ``ORACLE_OFFLINE: 3``, or ``LIQUIDATION: 4``.
 
-.. note:: We allow to complete pending requests. If the BTC Parachain is in status ``ERROR: 1`` with ``NO_DATA_BTC_RELAY: 1`` and the required BTC transaction is in a block that is included before the affected block height in the BTC-Relay, the request will be able to complete. In this case, this function will get called to complete the request.
+.. note:: We allow to complete pending requests. If the BTC Bridge is in status ``ERROR: 1`` with ``NO_DATA_BTC_RELAY: 1`` and the required BTC transaction is in a block that is included before the affected block height in the BTC-Relay, the request will be able to complete. In this case, this function will get called to complete the request.
 
 Function Sequence
 .................
@@ -593,7 +593,7 @@ Specification
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC to be redeemed.
 
 
@@ -608,8 +608,8 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
-* If the BTC Parachain status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``NO_DATA_BTC_RELAY: 1``, ``INVALID_BTC_RELAY: 2``, or ``ORACLE_OFFLINE: 3``.
+* The BTC Bridge status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
+* If the BTC Bridge status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``NO_DATA_BTC_RELAY: 1``, ``INVALID_BTC_RELAY: 2``, or ``ORACLE_OFFLINE: 3``.
 
 .. note:: This function must still be available in case of liquidation of vaults.
 
@@ -638,7 +638,7 @@ Specification
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC not to be replaced.
 
 
@@ -655,8 +655,8 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
-* If the BTC Parachain status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``ORACLE_OFFLINE: 3`` or ``LIQUIDATION: 4``.
+* The BTC Bridge status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
+* If the BTC Bridge status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``ORACLE_OFFLINE: 3`` or ``LIQUIDATION: 4``.
 
 Function Sequence
 .................
@@ -682,8 +682,8 @@ Specification
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
-* ``user``: The BTC Parachain address of the user that made the redeem request.
+* ``vault``: The BTC Bridge address of the Vault.
+* ``user``: The BTC Bridge address of the user that made the redeem request.
 * ``tokens``: The amount of ONEBTC that were not redeemed.
 * ``collateral``: The amount of collateral assigned to this request.
 
@@ -700,8 +700,8 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
-* If the BTC Parachain status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``INVALID_BTC_RELAY: 2`` or ``ORACLE_OFFLINE: 3``.
+* The BTC Bridge status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
+* If the BTC Bridge status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``INVALID_BTC_RELAY: 2`` or ``ORACLE_OFFLINE: 3``.
 
 Function Sequence
 .................
@@ -738,7 +738,7 @@ Specification
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC redeemed.
 
 
@@ -754,8 +754,8 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
-* If the BTC Parachain status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``INVALID_BTC_RELAY: 2`` or ``ORACLE_OFFLINE: 3``.
+* The BTC Bridge status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
+* If the BTC Bridge status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``INVALID_BTC_RELAY: 2`` or ``ORACLE_OFFLINE: 3``.
 
 Function Sequence
 .................
@@ -782,7 +782,7 @@ Specification
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC redeemed.
 * ``premiumONE``: The amount of ONE to be paid to the user as a premium using the Vault's released collateral.
 * ``redeemer``: The user that redeems at a premium.
@@ -800,8 +800,8 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
-* If the BTC Parachain status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``INVALID_BTC_RELAY: 2`` or ``ORACLE_OFFLINE: 3``.
+* The BTC Bridge status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
+* If the BTC Bridge status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``INVALID_BTC_RELAY: 2`` or ``ORACLE_OFFLINE: 3``.
 
 Function Sequence
 .................
@@ -821,7 +821,7 @@ redeemTokensLiquidation
 
 Handles redeem requests which are executed during a ``LIQUIDATION`` recover (see :ref:`security`).
 Reduces the ``issuedToken`` of the ``LiquidationVault`` and "slashes" the corresponding amount of ONE collateral.
-Once ``LiquidationVault`` has not more ``issuedToken`` left, removes the ``LIQUIDATION`` error from the BTC Parachain status.
+Once ``LiquidationVault`` has not more ``issuedToken`` left, removes the ``LIQUIDATION`` error from the BTC Bridge status.
 
 Specification
 .............
@@ -849,7 +849,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
+* The BTC Bridge status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
 
 Function Sequence
 .................
@@ -896,8 +896,8 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
-* If the BTC Parachain status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``INVALID_BTC_RELAY: 2`` or ``ORACLE_OFFLINE: 3``.
+* The BTC Bridge status in the :ref:`security` component must not be set to ``SHUTDOWN: 2``.
+* If the BTC Bridge status in the :ref:`security` component is set to ``ERROR: 1``, it must not include the error codes ``INVALID_BTC_RELAY: 2`` or ``ORACLE_OFFLINE: 3``.
 
 Function Sequence
 .................
@@ -1055,7 +1055,7 @@ Emit
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC to be locked.
 
 
@@ -1075,7 +1075,7 @@ Emit
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC to be unreserved.
 
 
@@ -1095,7 +1095,7 @@ Emit an event when an issue request is executed.
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC that were just issued.
 
 *Functions*
@@ -1114,7 +1114,7 @@ Emit an event when a redeem request is requested.
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC to be redeemed.
 
 *Functions*
@@ -1133,7 +1133,7 @@ Emit an event when a replace request cannot be completed because the vault has t
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC not to be replaced.
 
 *Functions*
@@ -1152,8 +1152,8 @@ Emit an event if a redeem request cannot be fulfilled.
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
-* ``user``: The BTC Parachain address of the user that made the redeem request.
+* ``vault``: The BTC Bridge address of the Vault.
+* ``user``: The BTC Bridge address of the user that made the redeem request.
 * ``tokens``: The amount of ONEBTC that were not redeemed.
 * ``collateral``: The amount of collateral assigned to this request.
 
@@ -1173,7 +1173,7 @@ Emit an event when a redeem request successfully completes.
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC redeemed.
 
 *Functions*
@@ -1192,7 +1192,7 @@ Emit an event when a user is executing a redeem request that includes a premium.
 
 *Parameters*
 
-* ``vault``: The BTC Parachain address of the Vault.
+* ``vault``: The BTC Bridge address of the Vault.
 * ``tokens``: The amount of ONEBTC redeemed.
 * ``premiumONE``: The amount of ONE to be paid to the user as a premium using the Vault's released collateral.
 * ``redeemer``: The user that redeems at a premium.

@@ -10,7 +10,7 @@ Byzantine actors aim to manipulate the system and cause damage to users - indepe
 Currencies
 ~~~~~~~~~~
 
-The BTC-Parachain features three assets:
+The BTC-Bridge features three assets:
 
 - `BTC` - the backing-asset (locked on Bitcoin)
 - `ONEBTC` - the issued cryptocurrency-backed asset (on Harmony)
@@ -21,16 +21,16 @@ Actors: Income and Real/Opportunity Costs
 
 The main question when designing the fee model for ONEBTC is: When are fees paid, by whom, and how much?
 
-.. figure:: ../figures/taxable-actions.png
+.. figure:: ../figures/taxable-actions.svg
   :alt: Taxable actions
 
-  High-level overview of fee accrual in the BTC-Parachain (external sources only).
+  High-level overview of fee accrual in the BTC-Bridge (external sources only).
 
 
-Below, we hence overview the income and cost sources for each actor/stakeholder in the BTC-Parachain.
+Below, we hence overview the income and cost sources for each actor/stakeholder in the BTC-Bridge.
 Thereby, we differentiate between the following cost types:
 
-- **Internal costs**: costs associated directly with the BTC-Parachain (i.e., inflow or internal flow of funds)
+- **Internal costs**: costs associated directly with the BTC-Bridge (i.e., inflow or internal flow of funds)
 - **External costs**: costs associated with external factors, such as node operation, engineering costs etc. (i.e., outflow of funds)
 - **Opportunity costs**: lost revenue, if e.g. locked up collateral was to be used in other applications (e.g. to stake on the Relay chain)
 
@@ -46,7 +46,7 @@ Users
 
   - Issue and redeem fees
   - BTC-Relay fees
-  - Parachain transaction fees
+  - Bridge transaction fees
 
 - **External Costs**
 
@@ -67,7 +67,7 @@ Vaults
 - **Internal Cost**
 
   - BTC-Relay fee
-  - Parachain transaction fees
+  - Bridge transaction fees
   - (Upon failure: Slashed collateral)
 
 - **External Costs**
@@ -88,12 +88,12 @@ Staked Relayers
 
 - **Internal Cost**
 
-  - Parachain transaction fees (offset against BTC-Relay fees)
+  - Bridge transaction fees (offset against BTC-Relay fees)
   - (Upon failure: Slashed collateral)
 
 - **External Costs**
 
-  - Parachain node operation/maintenance costs
+  - Bridge node operation/maintenance costs
   - Bitcoin full node operation/maintenance costs
 
 - **Opportunity Cost**
@@ -106,7 +106,7 @@ Collators
 - **Income**
 
   - Transaction fees
-  - Parachain subsidy (SLA-based?)
+  - Bridge subsidy (SLA-based?)
 
 - **Internal Cost**
 
@@ -114,7 +114,7 @@ Collators
 
 - **External Costs**
 
-  - Parachain node operation/maintenance costs
+  - Bridge node operation/maintenance costs
 
 - **Opportunity Cost**
 
@@ -125,7 +125,7 @@ Maintainers
 
 - **Income**
 
-  - Parachain subsidy (revenue share)
+  - Bridge subsidy (revenue share)
   - Upgrade/extension/maintenance fee
 
 - **Internal Cost**
@@ -146,10 +146,10 @@ Payment flows
 
 We detail the payment flows in the figure below:
 
-.. figure:: ../figures/fee-payment-flows.png
+.. figure:: ../figures/fee-payment-flows.svg
   :alt: Payment flows
 
-  Detailed overview of fee accrual in the BTC-Parachain, showing external and internal payment flows, as well as opportunity costs.
+  Detailed overview of fee accrual in the BTC-Bridge, showing external and internal payment flows, as well as opportunity costs.
 
 
 Challenges Around Economic Efficiency
@@ -171,8 +171,8 @@ As such, an open research question is:
 Subsidizing Vault Collateral Costs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- **Higher user fees for issue/redeem** to ensure sufficiently good economic performance of Vaults to incentivize participation. Ideally, this would be combined with a supply/demand-based market for ONEBTC, driven by Parachains/applications on Harmony (see below). The risk for (both) this model is that high fees may impede adoption if users revert to cheaper, yet centralized solutions.
-- **XCMP fees from other Parachains**. Charge Parachains additional fees for getting access to ONEBTC, creating an supply/demand-based market for ONEBTC access. The more demand for ONEBTC, the higher the market price, the more BTC will be locked to mint ONEBTC. However, this (i) impedes adoption by other Parachains and (ii) results in clear price deviations between ONEBTC and BTC in times of ONEBTC shortage. The latter may not be a bad thing per se, yet may have an unexpected effect for applications using ONEBTC.
+- **Higher user fees for issue/redeem** to ensure sufficiently good economic performance of Vaults to incentivize participation. Ideally, this would be combined with a supply/demand-based market for ONEBTC, driven by Bridges/applications on Harmony (see below). The risk for (both) this model is that high fees may impede adoption if users revert to cheaper, yet centralized solutions.
+- **XCMP fees from other Bridges**. Charge Bridges additional fees for getting access to ONEBTC, creating an supply/demand-based market for ONEBTC access. The more demand for ONEBTC, the higher the market price, the more BTC will be locked to mint ONEBTC. However, this (i) impedes adoption by other Bridges and (ii) results in clear price deviations between ONEBTC and BTC in times of ONEBTC shortage. The latter may not be a bad thing per se, yet may have an unexpected effect for applications using ONEBTC.
 - **Harmony treasury subsidy** to Vaults (and Staked Relayers) on a on a continuous basis, subject to correct operation / collateral usage, to account for the opportunity costs of the Vault accrued through locking up collateral.
 - **Governance token model**, where tokens are allocated to Vaults on a continuous basis, subject to correct operation / collateral usage. The token model, however, needs careful consideration and a clear use case (in addition to voting).
 - **On-demand collateral model via XCLAIM-Commit**, where Vaults lock up collateral only for short, deterministic periods and can hence compute an accurate fee model. In addition, users can request additional collateralization for specific periods and pay for collateral on demand. However, XCLAIM-Commit is still WIP and incurs stricter liveness requirements and a significantly more involved process for maintaining the secure 1:1 backing for Vaults.

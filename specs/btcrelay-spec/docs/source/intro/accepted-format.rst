@@ -4,7 +4,7 @@ Accepted Bitcoin Transaction Format
 ===================================
 
 The :ref:`parser` module of BTC-Relay can in theory be used to parse arbitrary Bitcoin transactions.
-However, the ONEBTC component of the BTC Parachain restricts the format of Bitcoin transactions to ensure consistency and prevent protocol failure due to parsing errors.
+However, the ONEBTC component of the BTC Bridge restricts the format of Bitcoin transactions to ensure consistency and prevent protocol failure due to parsing errors.
 
 As such, Bitcoin transactions for which transaction inclusion proofs are submitted to BTC-Relay as part of the in the ONEBTC *Issue*, *Redeem*, and *Replace* protocols must be `P2PKH <https://en.bitcoinwiki.org/wiki/Pay-to-Pubkey_Hash>`_ or `P2WPKH <https://github.com/libbitcoin/libbitcoin-system/wiki/P2WPKH-Transactions>`_ transactions and follow the format below.
 
@@ -70,4 +70,4 @@ Inputs                        Outputs
 
 ============================  ===========================================================
 
-The recipient address (``btcAddress``) of the *Payment UTXO* is a address derived from the public key the vault submitted to the BTC-Parachain.
+The recipient address (``btcAddress``) of the *Payment UTXO* is a address derived from the public key the vault submitted to the BTC-Bridge.

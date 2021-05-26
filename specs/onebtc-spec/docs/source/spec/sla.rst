@@ -21,7 +21,7 @@ SLAs are used twofold:
 Step-by-step
 ------------
 
-1. Vault and Staked Relayers interact with the BTC-Parachain.
+1. Vault and Staked Relayers interact with the BTC-Bridge.
 2. Certain actions have an impact on their SLA. If this is the case, the function updates the SLA score of the Vault or Staked Relayer accordingly.
 3. The SLA is stored for each Vault and Staked Relayer to impact collateral slashing for Vaults and for fee allocation to Staked Relayers.
 
@@ -35,7 +35,7 @@ Scalars (Vaults)
 VaultSLATarget
 ..............
 
-Target value for Vault SLAs. 
+Target value for Vault SLAs.
 
 - Initial value: 100
 
@@ -47,7 +47,7 @@ FailedRedeem (Decrease)
 ExecutedIssue (Increase)
 ........................
 
-Based on volume of the issue request as compared to the average issue request size (avgIssueSizeN) of the last N issue requests. 
+Based on volume of the issue request as compared to the average issue request size (avgIssueSizeN) of the last N issue requests.
 SLAIncrease = max(requestSize / avgIssueSizeN * maxSLA, maxSLA)
 
 - Initial value: maxSLA = 4

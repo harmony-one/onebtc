@@ -3,23 +3,23 @@
 Staked Relayers
 ===============
 
-The :ref:`staked-relayers` module is responsible for handling the registration and staking of Staked Relayers. 
-It also wraps functions for Staked Relayers to submit Bitcoin block headers to the :ref:`btc-relay`. 
+The :ref:`staked-relayers` module is responsible for handling the registration and staking of Staked Relayers.
+It also wraps functions for Staked Relayers to submit Bitcoin block headers to the :ref:`btc-relay`.
 
 
 Overview
 ~~~~~~~~
 
 **Staked Relayers** are participants whose main role it is to run Bitcoin full nodes and:
-    
+
     1. Submit valid Bitcoin block headers to increase their :ref:`sla` score.
     2. Check vaults do not move BTC, unless expressly requested during :ref:`redeem-protocol`, :ref:`replace-protocol` or :ref:`refund-protocol`.
 
- In the second case, a single staked relayer report suffices - the module should check the accusation (using a Merkle proof), and liquidate the vault if valid. 
+ In the second case, a single staked relayer report suffices - the module should check the accusation (using a Merkle proof), and liquidate the vault if valid.
 
 
-Staked Relayers are overseen by the Parachain **Governance Mechanism**. 
-The Governance Mechanism also votes on critical changes to the architecture or unexpected failures, e.g. hard forks or detected 51% attacks (if a fork exceeds the specified security parameter *k*, see `Security Parameter k <https://interlay.gitlab.io/polkabtc-spec/btcrelay-spec/security_performance/security.html#security-parameter-k>`_.). 
+Staked Relayers are overseen by the Bridge **Governance Mechanism**.
+The Governance Mechanism also votes on critical changes to the architecture or unexpected failures, e.g. hard forks or detected 51% attacks (if a fork exceeds the specified security parameter *k*, see `Security Parameter k <https://interlay.gitlab.io/polkabtc-spec/btcrelay-spec/security_performance/security.html#security-parameter-k>`_.).
 
 
 
@@ -38,7 +38,7 @@ Stores the information of a Staked Relayer.
 
 =========================  =========  ========================================================
 Parameter                  Type       Description
-=========================  =========  ======================================================== 
+=========================  =========  ========================================================
 ``stake``                  Backing    Total amount of collateral/stake provided by this Staked Relayer.
 =========================  =========  ========================================================
 
@@ -52,7 +52,7 @@ Constants
 STAKED_RELAYER_STAKE
 ......................
 
-Integer denoting the minimum stake which Staked Relayers must provide when registering. 
+Integer denoting the minimum stake which Staked Relayers must provide when registering.
 
 
 Maps
@@ -68,7 +68,7 @@ TheftReports
 .............
 
 Mapping of Bitcoin transaction identifiers (SHA256 hashes) to account identifiers of Vaults who have been caught stealing Bitcoin.
-Per Bitcoin transaction, multiple Vaults can be accused (multiple inputs can come from multiple Vaults). 
+Per Bitcoin transaction, multiple Vaults can be accused (multiple inputs can come from multiple Vaults).
 This mapping is necessary to prevent duplicate theft reports.
 
 
@@ -96,11 +96,11 @@ Specification
 
 *Events*
 
-* ``RegisterStakedRelayer(StakedRelayer, collateral)``: emit an event stating that a new staked relayer (``stakedRelayer``) was registered and provide information on the Staked Relayer's stake (``stake``). 
+* ``RegisterStakedRelayer(StakedRelayer, collateral)``: emit an event stating that a new staked relayer (``stakedRelayer``) was registered and provide information on the Staked Relayer's stake (``stake``).
 
 *Errors*
 
-* ``ERR_ALREADY_REGISTERED = "This AccountId is already registered as a Staked Relayer"``: The given account identifier is already registered. 
+* ``ERR_ALREADY_REGISTERED = "This AccountId is already registered as a Staked Relayer"``: The given account identifier is already registered.
 * ``ERR_INSUFFICIENT_STAKE = "Insufficient stake provided"``: The provided stake was insufficient - it must be above ``STAKED_RELAYER_STAKE``.
 
 
@@ -120,7 +120,7 @@ The ``registerStakedRelayer`` function takes as input an AccountID and collatera
 
 4) Store the provided information (amount of ``stake``) in a new ``StakedRelayer`` and insert it into the ``StakedRelayers`` mapping using the ``stakedRelayer`` AccountId as key.
 
-5) Emit a ``RegisterStakedRelayer(StakedRelayer, collateral)`` event. 
+5) Emit a ``RegisterStakedRelayer(StakedRelayer, collateral)`` event.
 
 
 .. _deRegisterStakedRelayer:
@@ -147,7 +147,7 @@ Specification
 
 *Errors*
 
-* ``ERR_NOT_REGISTERED = "This AccountId is not registered as a Staked Relayer"``: The given account identifier is not registered. 
+* ``ERR_NOT_REGISTERED = "This AccountId is not registered as a Staked Relayer"``: The given account identifier is not registered.
 
 Preconditions
 .............
@@ -161,10 +161,10 @@ Function Sequence
 
 4) Remove the entry from ``StakedRelayers`` which has ``stakedRelayer`` as key.
 
-5) Emit a ``DeRegisterStakedRelayer(StakedRelayer)`` event. 
+5) Emit a ``DeRegisterStakedRelayer(StakedRelayer)`` event.
 
 
-.. _slashStakedRelayer: 
+.. _slashStakedRelayer:
 
 slashStakedRelayer
 ----------------------
@@ -194,7 +194,7 @@ Specification
 *Errors*
 
 * ``ERR_GOVERNANCE_ONLY = This action can only be executed by the Governance Mechanism``: Only the Governance Mechanism can slash Staked Relayers.
-* ``ERR_NOT_REGISTERED = "This AccountId is not registered as a Staked Relayer"``: The given account identifier is not registered. 
+* ``ERR_NOT_REGISTERED = "This AccountId is not registered as a Staked Relayer"``: The given account identifier is not registered.
 
 
 Function Sequence
@@ -216,14 +216,14 @@ Function Sequence
 reportVaultTheft
 -----------------
 
-A staked relayer reports misbehavior by a vault, providing a fraud proof (malicious Bitcoin transaction and the corresponding transaction inclusion proof). 
+A staked relayer reports misbehavior by a vault, providing a fraud proof (malicious Bitcoin transaction and the corresponding transaction inclusion proof).
 
 A vault is not allowed to move BTC from any registered Bitcoin address (as specified by ``Vault.wallet``), except in the following three cases:
 
-   1) The vault is executing a :ref:`redeem-protocol`. In this case, we can link the transaction to a ``RedeemRequest`` and check the correct recipient. 
-   2) The vault is executing a :ref:`replace-protocol`. In this case, we can link the transaction to a ``ReplaceRequest`` and check the correct recipient. 
-   3) The vault is executing a :ref:`refund-protocol`. In this case, we can link the transaction to a ``RefundRequest`` and check the correct recipient. 
-   4) [Optional] The vault is "merging" multiple UTXOs it controls into a single / multiple UTXOs it controls, e.g. for maintenance. In this case, the recipient address of all outputs (e.g. ``P2PKH`` / ``P2WPKH``) must be the same Vault. 
+   1) The vault is executing a :ref:`redeem-protocol`. In this case, we can link the transaction to a ``RedeemRequest`` and check the correct recipient.
+   2) The vault is executing a :ref:`replace-protocol`. In this case, we can link the transaction to a ``ReplaceRequest`` and check the correct recipient.
+   3) The vault is executing a :ref:`refund-protocol`. In this case, we can link the transaction to a ``RefundRequest`` and check the correct recipient.
+   4) [Optional] The vault is "merging" multiple UTXOs it controls into a single / multiple UTXOs it controls, e.g. for maintenance. In this case, the recipient address of all outputs (e.g. ``P2PKH`` / ``P2WPKH``) must be the same Vault.
 
 In all other cases, the vault is considered to have stolen the BTC.
 
@@ -251,9 +251,9 @@ Specification
 
 *Errors*
 
-* ``ERR_STAKED_RELAYERS_ONLY = "This action can only be executed by Staked Relayers"``: The caller of this function was not a Staked Relayer. Only Staked Relayers are allowed to suggest and vote on BTC Parachain status updates.
+* ``ERR_STAKED_RELAYERS_ONLY = "This action can only be executed by Staked Relayers"``: The caller of this function was not a Staked Relayer. Only Staked Relayers are allowed to suggest and vote on BTC Bridge status updates.
 * ``ERR_ALREADY_REPORTED = "This txId has already been logged as a theft by the given Vault"``: This transaction / vault combination has already been reported.
-* ``ERR_VAULT_NOT_FOUND = "There exists no vault with the given account id"``: The specified vault does not exist. 
+* ``ERR_VAULT_NOT_FOUND = "There exists no vault with the given account id"``: The specified vault does not exist.
 * ``ERR_ALREADY_LIQUIDATED = "This vault is already being liquidated``: The specified vault is already being liquidated.
 * ``ERR_VALID_REDEEM = "The given transaction is a valid Redeem execution by the accused Vault"``: The given transaction is associated with a valid :ref:`redeem-protocol`.
 * ``ERR_VALID_REPLACE = "The given transaction is a valid Replace execution by the accused Vault"``: The given transaction is associated with a valid :ref:`replace-protocol`.
@@ -270,38 +270,38 @@ Function Sequence
 
 3. Check if this ``vault`` has already been liquidated. If this is the case, return ``ERR_ALREADY_LIQUIDATED`` (no point in duplicate reporting).
 
-4. Check if the given Bitcoin transaction is already associated with an entry in ``TheftReports`` (calculate ``txId`` from ``rawTx`` as key for lookup). If yes, check if the specified ``vault`` is already listed in the associated set of Vaults. If the vault is already in the set, return ``ERR_ALREADY_REPORTED``. 
+4. Check if the given Bitcoin transaction is already associated with an entry in ``TheftReports`` (calculate ``txId`` from ``rawTx`` as key for lookup). If yes, check if the specified ``vault`` is already listed in the associated set of Vaults. If the vault is already in the set, return ``ERR_ALREADY_REPORTED``.
 
 5. Extract the ``outputs`` from ``rawTx`` using `extractOutputs` from the BTC-Relay.
 
-6. Check if the transaction is a "migration" of UTXOs to the same Vault. For each output, in the extracted ``outputs``, extract the recipient Bitcoin address (using `extractOutputAddress` from the BTC-Relay). 
+6. Check if the transaction is a "migration" of UTXOs to the same Vault. For each output, in the extracted ``outputs``, extract the recipient Bitcoin address (using `extractOutputAddress` from the BTC-Relay).
 
-   a) If one of the extracted Bitcoin addresses does not match a Bitcoin address of the accused ``vault`` (``Vault.wallet``) **continue to step 7**. 
+   a) If one of the extracted Bitcoin addresses does not match a Bitcoin address of the accused ``vault`` (``Vault.wallet``) **continue to step 7**.
 
    b) If all extracted addresses match the Bitcoin addresses of the accused ``vault`` (``Vault.wallet``), abort and return ``ERR_VALID_MERGE_TRANSACTION``.
 
-7. Check if the transaction is part of a valid :ref:`redeem-protocol`, :ref:`replace-protocol` or :ref:`refund-protocol` process. 
+7. Check if the transaction is part of a valid :ref:`redeem-protocol`, :ref:`replace-protocol` or :ref:`refund-protocol` process.
 
-  a) Extract the OP_RETURN value using `extractOPRETURN` from the BTC-Relay. If this call returns an error (no valid OP_RETURN output, hence not valid :ref:`redeem-protocol`, :ref:`replace-protocol` or :ref:`refund-protocol` process), **continue to step 8**. 
+  a) Extract the OP_RETURN value using `extractOPRETURN` from the BTC-Relay. If this call returns an error (no valid OP_RETURN output, hence not valid :ref:`redeem-protocol`, :ref:`replace-protocol` or :ref:`refund-protocol` process), **continue to step 8**.
 
   c) Check if the extracted OP_RETURN value matches any ``redeemId`` in ``RedeemRequest`` (in ``RedeemRequests`` in :ref:`redeem-protocol`), any ``replaceId`` in ``ReplaceRequest`` (in ``RedeemRequests`` in :ref:`redeem-protocol`) or any ``refundId`` in ``RefundRequest`` (in ``RefundRequests`` in :ref:`refund-protocol`) entries *associated with this Vault*. If no match is found, **continue to step 8**.
 
   d) Otherwise, if an associated ``RedeemRequest``, ``ReplaceRequest`` or ``RefundRequest`` was found: extract the value (using `extractOutputValue` from the BTC-Relay) and recipient Bitcoin address (using `extractOutputAddress` from the BTC-Relay). Next, check:
 
-      i ) if the value is equal (or greater) than ``paymentValue`` in the ``RedeemRequest``, ``ReplaceRequest`` or ``RefundRequest``. 
-     
+      i ) if the value is equal (or greater) than ``paymentValue`` in the ``RedeemRequest``, ``ReplaceRequest`` or ``RefundRequest``.
+
       ii ) if the recipient Bitcoin address matches the recipient specified in the ``RedeemRequest``, ``ReplaceRequest`` or ``RefundRequest``.
 
       iii ) if the change Bitcoin address(es) are registered to the accused ``vault`` (``Vault.wallet``).
 
     If all checks are successful, abort and return ``ERR_VALID_REDEEM``, ``ERR_VALID_REPLACE`` or ``ERR_VALID_REFUND``. Otherwise, **continue to step 8**.
 
-8. The vault misbehaved (displaced BTC). 
+8. The vault misbehaved (displaced BTC).
 
     a) Call :ref:`liquidateVault`, liquidating the vault and transferring all of its balances and collateral to the ``LiquidationVault`` for failure and reimbursement handling;
 
     b) emit ``ReportVaultTheft(vaultId)``
-  
+
 9. Return
 
 
@@ -320,7 +320,7 @@ Emit an event stating that a new staked relayer was registered and provide infor
 *Parameters*
 
 * ``stakedRelayer``: newly registered staked Relayer
-* ``stake``: stake provided by the staked relayer upon registration 
+* ``stake``: stake provided by the staked relayer upon registration
 
 *Functions*
 
@@ -330,7 +330,7 @@ Emit an event stating that a new staked relayer was registered and provide infor
 DeRegisterStakedRelayer
 -------------------------
 
-Emit an event stating that a staked relayer has been de-registered 
+Emit an event stating that a staked relayer has been de-registered
 
 *Event Signature*
 
@@ -375,7 +375,7 @@ Emits an event when a vault has been accused of theft.
 
 *Parameters*
 
-* ``vault``: account identifier of the vault accused of theft. 
+* ``vault``: account identifier of the vault accused of theft.
 
 *Functions*
 
@@ -388,7 +388,7 @@ Errors
 
 * **Message**: "This AccountId is not registered as a Staked Relayer."
 * **Function**: :ref:`deRegisterStakedRelayer`, :ref:`slashStakedRelayer`
-* **Cause**: The given account identifier is not registered. 
+* **Cause**: The given account identifier is not registered.
 
 ``ERR_GOVERNANCE_ONLY``
 
@@ -400,7 +400,7 @@ Errors
 
 * **Message**: "This action can only be executed by Staked Relayers"
 * **Function**: :ref:`reportVaultTheft`
-* **Cause**: The caller of this function was not a Staked Relayer. Only Staked Relayers are allowed to suggest and vote on BTC Parachain status updates.
+* **Cause**: The caller of this function was not a Staked Relayer. Only Staked Relayers are allowed to suggest and vote on BTC Bridge status updates.
 
 ``ERR_ALREADY_REPORTED``
 
@@ -412,7 +412,7 @@ Errors
 
 * **Message**: "There exists no vault with the given account id"
 * **Function**: :ref:`reportVaultTheft`
-* **Cause**:  The specified vault does not exist. 
+* **Cause**:  The specified vault does not exist.
 
 ``ERR_ALREADY_LIQUIDATED``
 

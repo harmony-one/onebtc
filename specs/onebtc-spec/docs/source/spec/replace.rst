@@ -17,7 +17,7 @@ Step-by-Step
 
 2. *OldVault* submits a replacement request, indicating how much BTC is to be migrated by calling the :ref:`requestReplace` function.
 
-   * *OldVault* is required to lock some amount of ONE collateral (``ReplaceGriefingCollateral``) as griefing protection, to prevent *OldVault* from holding *NewVault*'s ONE collateral locked in the BTC Parachain without ever finalizing the redeem protocol (transfer of BTC).
+   * *OldVault* is required to lock some amount of ONE collateral (``ReplaceGriefingCollateral``) as griefing protection, to prevent *OldVault* from holding *NewVault*'s ONE collateral locked in the BTC Bridge without ever finalizing the redeem protocol (transfer of BTC).
 
 3. Optional: If an *OldVault* has changed its mind or can't find a *NewVault* to replace it, it can call the :ref:`withdrawReplaceRequest` function to invalidate its request. If the request is already accepted (step 4), then this function cannot be invoked.
 
@@ -102,7 +102,7 @@ Stores the status and information about a single replace request.
 ======================  ==========  =======================================================
 Parameter               Type        Description
 ======================  ==========  =======================================================
-``oldVault``            Account     BTC Parachain account of the vault that is to be replaced.
+``oldVault``            Account     BTC Bridge account of the vault that is to be replaced.
 ``opentime``            u256        Block height of opening the request.
 ``amount``              ONEBTC      Amount of BTC / ONEBTC to be replaced.
 ``griefingCollateral``  ONE         Griefing protection collateral locked by ``oldVault``.
@@ -173,7 +173,7 @@ Specification
 Preconditions
 ...............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 Function Sequence
 .................
@@ -182,7 +182,7 @@ Function Sequence
 
 2. Retrieve the ``vault`` as per the ``oldVault`` account identifier from ``Vaults`` in the ``VaultRegistry``. Return ``ERR_VAULT_NOT_FOUND`` if no vault can be found.
 
-3. Check that the ``vault`` is currently not banned, i.e., ``vault.bannedUntil == None`` or ``vault.bannedUntil < current parachain block height``. Return ``ERR_VAULT_BANNED`` if this check fails.
+3. Check that the ``vault`` is currently not banned, i.e., ``vault.bannedUntil == None`` or ``vault.bannedUntil < current shard block height``. Return ``ERR_VAULT_BANNED`` if this check fails.
 
 4. Check that the requested ``btcAmount`` is equal to or lower than ``vault.issuedTokens`` mins the ``vault.toBeRedeemedTokens``.
 
@@ -201,7 +201,7 @@ Function Sequence
 10. Create new ``ReplaceRequest`` entry:
 
    * ``Replace.oldVault = vault``,
-   * ``Replace.opentime`` = current time on Parachain,
+   * ``Replace.opentime`` = current time on Bridge,
    * ``Replace.amount = amount``,
    * ``Replace.griefingCollateral = griefingCollateral``.
 
@@ -302,7 +302,7 @@ Specification
 Preconditions
 ...............
 
-The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 
 Function Sequence
@@ -313,7 +313,7 @@ Function Sequence
 
 2. Retrieve the vault as per the ``newVault`` parameter from ``Vaults`` in the ``VaultRegistry``. Return ``ERR_VAULT_NOT_FOUND`` error if no such vault can be found.
 
-3. Check that the ``newVault`` is currently not banned, i.e., ``newVault.bannedUntil == None`` or ``newVault.bannedUntil < current parachain block height``. Return ``ERR_VAULT_BANNED`` if this check fails.
+3. Check that the ``newVault`` is currently not banned, i.e., ``newVault.bannedUntil == None`` or ``newVault.bannedUntil < current shard block height``. Return ``ERR_VAULT_BANNED`` if this check fails.
 
 4. Check that the provided ``collateral`` exceeds the necessary amount, i.e., ``collateral >= SecureCollateralThreshold * Replace.btcAmount``. Return ``ERR_INSUFFICIENT_COLLATERAL`` error if this check fails.
 
@@ -322,7 +322,7 @@ Function Sequence
 6. Update the ``ReplaceRequest`` entry:
 
   * ``Replace.newVault = newVault``,
-  * ``Replace.acceptTime`` = current Parachain time,
+  * ``Replace.acceptTime`` = current Bridge time,
   * ``Replace.btcAddress = btcAddress`` (new Vault's BTC address),
   * ``Replace.collateral = collateral`` (ONE collateral locked by new Vault).
 
@@ -368,7 +368,7 @@ Specification
 Preconditions
 ...............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 * The to-be-replaced vault transferred the correct amount of BTC to the BTC address of the new vault on Bitcoin, and has generated a transaction inclusion proof.
 
 Function Sequence
@@ -392,7 +392,7 @@ Function Sequence
 
 9. Remove the ``ReplaceRequest`` from ``ReplaceRequests``.
 
-.. note:: It can be the case that the to-be-replaced *OldVault* controls a significant numbers of Bitcoin UTXOs with user funds, making it impossible to execute the migration of funds to the *NewVault* within a single Bitcoin transaction. As a result, it may be necessary to "merge" these UTXOs using multiple "merge transactions" on Bitcoin, i.e., transactions which takes as input multiple UTXOs controlled by the *OldVault* and create a single UTXO controlled (again) by the *OldVault*. Once the UTXOs produced by "merge transactions" can be merged by a single, final transaction, the *OldVault* moves the funds to the *NewVault*. (An alternative is to allow the *OldVault* to submit multiple transaction inclusion proofs when calling ``executeReplace``, although this significantly increases the complexity of transaction parsing on the BTC Parachain side).
+.. note:: It can be the case that the to-be-replaced *OldVault* controls a significant numbers of Bitcoin UTXOs with user funds, making it impossible to execute the migration of funds to the *NewVault* within a single Bitcoin transaction. As a result, it may be necessary to "merge" these UTXOs using multiple "merge transactions" on Bitcoin, i.e., transactions which takes as input multiple UTXOs controlled by the *OldVault* and create a single UTXO controlled (again) by the *OldVault*. Once the UTXOs produced by "merge transactions" can be merged by a single, final transaction, the *OldVault* moves the funds to the *NewVault*. (An alternative is to allow the *OldVault* to submit multiple transaction inclusion proofs when calling ``executeReplace``, although this significantly increases the complexity of transaction parsing on the BTC Bridge side).
 
 
 .. _cancelReplace:
@@ -429,7 +429,7 @@ Specification
 Preconditions
 ...............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 Function Sequence
 ..................

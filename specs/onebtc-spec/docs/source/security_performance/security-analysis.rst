@@ -9,8 +9,8 @@ Replay Attacks
 Without adequate protection, inclusion proofs for transactions on Bitcoin can be **replayed** by: (i) the user to trick ONEBTC component into issuing duplicate ONEBTC tokens and (ii) the vault to reuse a single transaction on Bitcoin to falsely prove multiple redeem, replace, and refund requests.
 We employ two different mechanisms to achieve this:
 
-1. *Identification via OP_RETURN*: When sending a Bitcoin transaction, the BTC-Parachain requires that a unique identifier is included as one of the outputs in the transaction.
-2. *Unique Addresses via On-Chain Key Derivation*: The BTC-Parachain generates a new and unique address that Bitcoin can be transferred to.
+1. *Identification via OP_RETURN*: When sending a Bitcoin transaction, the BTC-Bridge requires that a unique identifier is included as one of the outputs in the transaction.
+2. *Unique Addresses via On-Chain Key Derivation*: The BTC-Bridge generates a new and unique address that Bitcoin can be transferred to.
 
 The details of the transaction format can be found at the `accepted Bitcoin transaction format <https://interlay.gitlab.io/polkabtc-spec/btcrelay-spec/intro/accepted-format.html>`_.
 
@@ -49,7 +49,7 @@ Applied in the following protocol:
 
 - :ref:`issue-protocol`
 
-To avoid the use of OP_RETURN during the issue process, and the significant usability drawbacks incurred by this approach, we employ the use of an On-chain Key Derivation scheme (OKD) for Bitcoin’s ECDSA (secp256k1 curve). The BTC-Parachain maintains a BTC ‘master’ public key for each registered vault and generates a unique, ephemeral ‘deposit’ public key (and RIPEMD-160 address) for each issue request, utilizing the unique issue identifier for replay protection.
+To avoid the use of OP_RETURN during the issue process, and the significant usability drawbacks incurred by this approach, we employ the use of an On-chain Key Derivation scheme (OKD) for Bitcoin’s ECDSA (secp256k1 curve). The BTC-Bridge maintains a BTC ‘master’ public key for each registered vault and generates a unique, ephemeral ‘deposit’ public key (and RIPEMD-160 address) for each issue request, utilizing the unique issue identifier for replay protection.
 
 This way, each issue request can be linked to a distinct Bitcoin transaction via the receiving (‘deposit’) address, making it impossible for vaults/users to execute replay attacks. The use of OKD thereby allows to keep the issue process non-interactive, ensuring vaults cannot censor issue requests.
 
@@ -63,12 +63,12 @@ We define the full OKD scheme as follows (additive notation):
 **Preliminaries**
 
 A Vault has a private/public keypair :math:`(v, V)`, where :math:`V = v·G` and :math:`G` is the base point of the secp256k1 curve.
-Upon registration, the Vault submits public key :math:`V` to the BTC-Parachain storage.
+Upon registration, the Vault submits public key :math:`V` to the BTC-Bridge storage.
 
 **Issue protocol via new OKD scheme**
 
-1. When a user creates an issue request, the BTC-Parachain
-    a. Computes :math:`c = H(V || id)`, where id is the unique issue identifier, generated on-chain by the BTC-Parachain using the user’s AccountId and an internal auto-incrementing nonce as input.
+1. When a user creates an issue request, the BTC-Bridge
+    a. Computes :math:`c = H(V || id)`, where id is the unique issue identifier, generated on-chain by the BTC-Bridge using the user’s AccountId and an internal auto-incrementing nonce as input.
     b. Generates a new public key (“deposit public key”) :math:`D = V·c` and then the corresponding BTC RIPEMD-160 hash-based address :math:`addr(D)` (‘deposit’ address) using :math:`D` as input.
     c. Stores :math:`D` and :math:`addr(D)` alongside the id of the Issue request.
 2. The user deposits the amount of to-be-issued BTC to :math:`addr(D)` and submits the Bitcoin transaction inclusion proof, alongside the raw Bitcoin transaction, to BTC-Relay.
@@ -85,7 +85,7 @@ To this end, the ONEBTC component forbids vaults to move locked funds lock trans
 This theft is observable by any user.
 However, we used the specific roles of Staked Relayers to report theft of BTC.
 To restore **Consistency**, the ONEBTC component slashes the vault's entire collateral and executes automatic liquidation, yielding negative utility for the vault.
-To allow economically rational vaults to move funds on the BTC Parachain we use the :ref:`replace-protocol`, a non-interactive atomic cross-chain swap (ACCS) protocol based on cross-chain state verification.
+To allow economically rational vaults to move funds on the BTC Bridge we use the :ref:`replace-protocol`, a non-interactive atomic cross-chain swap (ACCS) protocol based on cross-chain state verification.
 
 
 Permanent Blockchain Splits
@@ -110,7 +110,7 @@ Next, we identify two possibilities to synchronize Bitcoin balances on I and I':
 Denial-of-Service Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-ONEBTC is decentralized by design, thus making denial-of-service (DoS) attacks difficult. Given that any user with access to Bitcoin and BTC Parachain can become a vault, an adversary would have to target all vaults simultaneously. Where there are a large number of vaults, this attack would be impractical and expensive to perform. Alternatively, an attacker may try to target the ONEBTC component. However, performing a DoS attack against the ONEBTC component is equivalent to a DoS attack against the entire issuing blockchain or network, which conflicts with our assumptions of a resource bounded adversary and the security models of Bitcoin and BTC Parachain. Moreover, should an adversary perform a Sybil attack and register as a large number of vaults and ignore service requests to perform a DoS attack, the adversary would be required to lock up a large amount of collateral to be effective. This would lead to the collateral being slashed by the ONEBTC component, making this attack expensive and irrational.
+ONEBTC is decentralized by design, thus making denial-of-service (DoS) attacks difficult. Given that any user with access to Bitcoin and BTC Bridge can become a vault, an adversary would have to target all vaults simultaneously. Where there are a large number of vaults, this attack would be impractical and expensive to perform. Alternatively, an attacker may try to target the ONEBTC component. However, performing a DoS attack against the ONEBTC component is equivalent to a DoS attack against the entire issuing blockchain or network, which conflicts with our assumptions of a resource bounded adversary and the security models of Bitcoin and BTC Bridge. Moreover, should an adversary perform a Sybil attack and register as a large number of vaults and ignore service requests to perform a DoS attack, the adversary would be required to lock up a large amount of collateral to be effective. This would lead to the collateral being slashed by the ONEBTC component, making this attack expensive and irrational.
 
 Fee Model Security: Sybil Attacks and Extortion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

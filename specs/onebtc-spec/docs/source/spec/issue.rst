@@ -6,16 +6,16 @@ Issue
 Overview
 ~~~~~~~~
 
-The Issue module allows as user to create new ONEBTC tokens. The user needs to request ONEBTC through the :ref:`requestIssue` function, then send BTC to a vault, and finally complete the issuing of ONEBTC by calling the :ref:`executeIssue` function. If the user does not complete the process in time, the vault can cancel the issue request and receive a griefing collateral from the user by invoking the :ref:`cancelIssue` function. Below is a high-level step-by-step description of the protocol.
+The Issue module allows a user to create new ONEBTC tokens. The user needs to request ONEBTC through the :ref:`requestIssue` function, then send BTC to a vault, and finally complete the issuing of ONEBTC by calling the :ref:`executeIssue` function. If the user does not complete the process in time, the vault can cancel the issue request and receive a griefing collateral from the user by invoking the :ref:`cancelIssue` function. Below is a high-level step-by-step description of the protocol.
 
 Step-by-step
 ------------
 
 1. Precondition: a vault has locked collateral as described in the :ref:`Vault-registry`.
-2. A user executes the :ref:`requestIssue` function to open an issue request on the BTC Parachain. The issue request includes the amount of ONEBTC the user wants to issue, the selected vault, and a small collateral to prevent :ref:`griefing`.
+2. A user executes the :ref:`requestIssue` function to open an issue request on the BTC Bridge. The issue request includes the amount of ONEBTC the user wants to issue, the selected vault, and a small collateral to prevent :ref:`griefing`.
 3. A user sends the equivalent amount of BTC that he wants to issue as ONEBTC to the vault on the Bitcoin blockchain.
-4. The user or a vault acting on behalf of the user extracts a transaction inclusion proof of that locking transaction on the Bitcoin blockchain. The user or a vault acting on behalf of the user executes the :ref:`executeIssue` function on the BTC Parachain. The issue function requires a reference to the issue request and the transaction inclusion proof of the Bitcoin locking transaction. If the function completes successfully, the user receives the requested amount of ONEBTC into his account.
-5. Optional: If the user is not able to complete the issue request within the predetermined time frame (``IssuePeriod``), the vault is able to call the :ref:`cancelIssue` function to cancel the issue request adn will receive the griefing collateral locked by the user.
+4. The user or a vault acting on behalf of the user extracts a transaction inclusion proof of that locking transaction on the Bitcoin blockchain. The user or a vault acting on behalf of the user executes the :ref:`executeIssue` function on the BTC Bridge. The issue function requires a reference to the issue request and the transaction inclusion proof of the Bitcoin locking transaction. If the function completes successfully, the user receives the requested amount of ONEBTC into his account.
+5. Optional: If the user is not able to complete the issue request within the predetermined time frame (``IssuePeriod``), the vault is able to call the :ref:`cancelIssue` function to cancel the issue request and will receive the griefing collateral locked by the user.
 
 Security
 --------
@@ -38,8 +38,8 @@ Fee Model
 
 Following additions are added if the fee model is integrated.
 
-- Issue fees are paid by users in ONEBTC when executing the request. The fees are transferred to the Parachain Fee Pool.
-- If an issue request is executed, the user’s griefing collateral is returned.
+- Issue fees are paid by users in ONEBTC when executing the request. The fees are transferred to the Bridge Fee Pool.
+- If an issue request is executed, the user's griefing collateral is returned.
 - If an issue request is canceled, the vault assigned to this issue request receives the griefing collateral.
 
 
@@ -84,7 +84,7 @@ Stores the status and information about a single issue request.
 ======================  ==========  =======================================================
 Parameter               Type        Description
 ======================  ==========  =======================================================
-``vault``               Account     The BTC Parachain address of the vault responsible for this commit request.
+``vault``               Account     The BTC Bridge address of the vault responsible for this commit request.
 ``opentime``            u256        Block height of opening the request.
 ``griefingCollateral``  ONE         Collateral provided by a user.
 ``amount``              ONEBTC      Amount of ONEBTC to be issued.
@@ -118,7 +118,7 @@ requestIssue
 ------------
 
 A user opens an issue request to create a specific amount of ONEBTC.
-When calling this function, a user provides her own parachain account identifier, the to be issued amount of ONEBTC, and the vault she wants to use in this process (parachain account identifier). Further, she provides some (small) amount of ONE collateral (``griefingCollateral``) to prevent griefing.
+When calling this function, a user provides her own bridge account identifier, the to be issued amount of ONEBTC, and the vault she wants to use in this process (shard account identifier). Further, she provides some (small) amount of ONE collateral (``griefingCollateral``) to prevent griefing.
 
 Specification
 .............
@@ -129,9 +129,9 @@ Specification
 
 *Parameters*
 
-* ``requester``: The user's BTC Parachain account.
+* ``requester``: The user's BTC Bridge account.
 * ``amount``: The amount of ONEBTC to be issued.
-* ``vault``: The BTC Parachain address of the vault involved in this issue request.
+* ``vault``: The BTC Bridge address of the vault involved in this issue request.
 * ``griefingCollateral``: The collateral amount provided by the user as griefing protection.
 
 *Events*
@@ -148,14 +148,14 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 Function Sequence
 .................
 
 1. Retrieve the ``vault`` from :ref:`vault-registry`. Return ``ERR_VAULT_NOT_FOUND`` if no vault can be found.
 
-2. Check that the ``vault`` is currently not banned, i.e., ``vault.bannedUntil == None`` or ``vault.bannedUntil < current parachain block height``. Return ``ERR_VAULT_BANNED`` if this check fails.
+2. Check that the ``vault`` is currently not banned, i.e., ``vault.bannedUntil == None`` or ``vault.bannedUntil < current bridge block height``. Return ``ERR_VAULT_BANNED`` if this check fails.
 
 3. Check if the ``griefingCollateral`` is greater or equal ``IssueGriefingCollateral``. If this check fails, return ``ERR_INSUFFICIENT_COLLATERAL``.
 
@@ -213,7 +213,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 .. todo:: REJECT any Issue request where the sender BTC address belongs to an existing Vault.
 
@@ -305,9 +305,9 @@ Emit a ``RequestIssue`` event if a user successfully open a issue request.
 *Parameters*
 
 * ``issueId``: A unique hash identifying the issue request.
-* ``requester``: The user's BTC Parachain account.
+* ``requester``: The user's BTC Bridge account.
 * ``amount``: The amount of ONEBTC to be issued.
-* ``vault``: The BTC Parachain address of the vault involved in this issue request.
+* ``vault``: The BTC Bridge address of the vault involved in this issue request.
 * ``btcAddress``: The Bitcoin address of the vault.
 
 *Functions*
@@ -324,9 +324,9 @@ ExecuteIssue
 *Parameters*
 
 * ``issueId``: A unique hash identifying the issue request.
-* ``requester``: The user's BTC Parachain account.
+* ``requester``: The user's BTC Bridge account.
 * ``amount``: The amount of ONEBTC to be issued.
-* ``vault``: The BTC Parachain address of the vault involved in this issue request.
+* ``vault``: The BTC Bridge address of the vault involved in this issue request.
 
 *Functions*
 

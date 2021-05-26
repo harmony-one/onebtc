@@ -65,7 +65,7 @@ Function sequence
 
 7. Emit a ``Initialized`` event using ``height`` and ``hashCurrentBlock`` as input.
 
-.. warning:: Attention: the Bitcoin block header submitted to ``initialize`` must be in the Bitcoin main chain - this must be checked outside of the BTC Parachain **before** making this function call! A wrong initialization will cause the entire BTC Parachain to fail, since verification requires that all submitted blocks **must** (indirectly) point to the initialized block (i.e., have it as ancestor, just like the actual Bitcoin genesis block).
+.. warning:: Attention: the Bitcoin block header submitted to ``initialize`` must be in the Bitcoin main chain - this must be checked outside of the BTC Bridge **before** making this function call! A wrong initialization will cause the entire BTC Bridge to fail, since verification requires that all submitted blocks **must** (indirectly) point to the initialized block (i.e., have it as ancestor, just like the actual Bitcoin genesis block).
 
 .. _storeBlockHeader:
 
@@ -95,7 +95,7 @@ Specification
 Preconditions
 ~~~~~~~~~~~~~
 
-* The BTC Parachain status must not be set to ``SHUTDOWN: 3``.
+* The BTC Bridge status must not be set to ``SHUTDOWN: 3``.
 
 .. warning:: The BTC-Relay does not necessarily have the same view of the Bitcoin blockchain as the user's local Bitcoin client. This can happen if (i) the BTC-Relay is under attack, (ii) the BTC-Relay is out of sync, or, similarly, (iii) if the user's local Bitcoin client is under attack or out of sync (see :ref:`security`).
 
@@ -219,11 +219,11 @@ Function Sequence
 
   d. Update ``BestBlockHeight = mainChain.maxHeight`` and ``BestBlock = mainChain.chain[mainChain.maxHeight]`` (``nextBestForkHeight`` updated in :ref:`storeBlockHeader`).
 
-  f. Check that ``noData`` or ``invalid`` are both **empty** in ``mainChain``. If this is the case, check if we need to update the BTC Parachain state.
+  f. Check that ``noData`` or ``invalid`` are both **empty** in ``mainChain``. If this is the case, check if we need to update the BTC Bridge state.
 
-    i ) If ``noData`` or ``invalid`` are both **empty** and ``Errors`` in :ref:`security` contains ``NO_DATA_BTC_RELAY`` or ``INVALID_BTC_RELAY`` call ``recoverFromBTCRelayFailure`` to recover the BTC Parachain from the BTC-Relay related error.
+    i ) If ``noData`` or ``invalid`` are both **empty** and ``Errors`` in :ref:`security` contains ``NO_DATA_BTC_RELAY`` or ``INVALID_BTC_RELAY`` call ``recoverFromBTCRelayFailure`` to recover the BTC Bridge from the BTC-Relay related error.
 
-    ii ) If ``ParachainStatus`` is set to ``RUNNING`` and either ``noData`` or ``invalid`` are **not empty** in the new main chain ``BlockChain`` entry: update ``ParachainStatus`` to ``ERROR`` and append ``NO_DATA_BTC_RELAY`` or ``INVALID_BTC_RELAY`` (depending on which of ``invalid`` and ``noData`` lists was not empty) to the ``Errors`` list.
+    ii ) If ``BridgeStatus`` is set to ``RUNNING`` and either ``noData`` or ``invalid`` are **not empty** in the new main chain ``BlockChain`` entry: update ``BridgeStatus`` to ``ERROR`` and append ``NO_DATA_BTC_RELAY`` or ``INVALID_BTC_RELAY`` (depending on which of ``invalid`` and ``noData`` lists was not empty) to the ``Errors`` list.
 
   g. Remove ``fork`` from ``Chains``.
 
@@ -324,7 +324,7 @@ Specification
 
 *Errors*
 
-* ``ERR_SHUTDOWN = "BTC Parachain has shut down"``: the BTC Parachain has been shutdown by a manual intervention of the Governance Mechanism.
+* ``ERR_SHUTDOWN = "BTC Bridge has shut down"``: the BTC Bridge has been shutdown by a manual intervention of the Governance Mechanism.
 * ``ERR_MALFORMED_TXID = "Malformed transaction identifier"``: return error if the transaction identifier (``txId``) is malformed.
 * ``ERR_CONFIRMATIONS = "Transaction has less confirmations than requested"``: return error if the block in which the transaction specified by ``txId`` was included has less confirmations than requested.
 * ``ERR_INVALID_MERKLE_PROOF = "Invalid Merkle Proof"``: return error if the Merkle proof is malformed or fails verification (does not hash to Merkle root).
@@ -333,7 +333,7 @@ Specification
 Preconditions
 ~~~~~~~~~~~~~
 
-* The BTC Parachain status must not be set to ``SHUTDOWN: 3``. If ``SHUTDOWN`` is set, all transaction verification is disabled.
+* The BTC Bridge status must not be set to ``SHUTDOWN: 3``. If ``SHUTDOWN`` is set, all transaction verification is disabled.
 
 
 Function Sequence
@@ -347,7 +347,7 @@ Function Sequence
 
   b. If ``insecure == True``, check against ``max(confirmations, STABLE_BITCOIN_CONFIRMATIONS)``.
 
-3. Check if the Bitcoin block was stored for a sufficient number of blocks (on the parachain) to ensure that staked relayers had the time to flag the block as potentially invalid. Check performed against ``STABLE_PARACHAIN_CONFIRMATIONS``.
+3. Check if the Bitcoin block was stored for a sufficient number of blocks (on the shard) to ensure that staked relayers had the time to flag the block as potentially invalid. Check performed against ``STABLE_PARACHAIN_CONFIRMATIONS``.
 
 4. Extract the block header from ``BlockHeaders`` using the ``blockHash`` tracked in ``Chains`` at the passed ``txBlockHeight``.
 
@@ -413,7 +413,7 @@ Specification
 Preconditions
 ~~~~~~~~~~~~~
 
-* The BTC Parachain status must not be set to ``SHUTDOWN: 3``. If ``SHUTDOWN`` is set, all transaction validation is disabled.
+* The BTC Bridge status must not be set to ``SHUTDOWN: 3``. If ``SHUTDOWN`` is set, all transaction validation is disabled.
 
 Function Sequence
 ~~~~~~~~~~~~~~~~~
@@ -476,7 +476,7 @@ Flags tracked Bitcoin block headers when Staked Relayers report and agree on a `
 
 .. attention:: This function **does not** validate the Staked Relayers accusation. Instead, it is put up to a majority vote among all Staked Relayers in the form of a
 
-.. note:: This function can only be called from the *Security* module of ONEBTC, after Staked Relayers have achieved a majority vote on a BTC Parachain status update indicating a BTC-Relay failure.
+.. note:: This function can only be called from the *Security* module of ONEBTC, after Staked Relayers have achieved a majority vote on a BTC Bridge status update indicating a BTC-Relay failure.
 
 Specification
 ~~~~~~~~~~~~~~
@@ -530,7 +530,7 @@ clearBlockError
 
 Clears ``ErrorCode`` entries given as parameters from the status of a ``RichBlockHeader``.  Can be ``NO_DATA_BTC_RELAY`` or ``INVALID_BTC_RELAY`` failure.
 
-.. note:: This function can only be called from the *Security* module of ONEBTC, after Staked Relayers have achieved a majority vote on a BTC Parachain status update indicating that a ``RichBlockHeader`` entry no longer has the specified errors.
+.. note:: This function can only be called from the *Security* module of ONEBTC, after Staked Relayers have achieved a majority vote on a BTC Bridge status update indicating that a ``RichBlockHeader`` entry no longer has the specified errors.
 
 
 Specification

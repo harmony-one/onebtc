@@ -61,7 +61,7 @@ Functions
 transfer
 --------
 
-Transfers a specified amount of ONEBTC from a Sender to a Receiver on the BTC Parachain.
+Transfers a specified amount of ONEBTC from a Sender to a Receiver on the BTC Bridge.
 
 Specification
 .............
@@ -106,7 +106,7 @@ The ``transfer`` function takes as input the sender, the receiver, and an amount
 mint
 ----
 
-In the BTC Parachain new ONEBTC can be created by leveraging the :ref:`issue-protocol`.
+In the BTC Bridge new ONEBTC can be created by leveraging the :ref:`issue-protocol`.
 However, to separate concerns and access to data, the Issue module has to call the ``mint`` function to complete the issue process in the ONEBTC component.
 The function increases the ``totalSupply`` of ONEBTC.
 

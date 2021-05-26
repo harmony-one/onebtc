@@ -23,10 +23,10 @@ Data Model
 Scalars (Fee Pools)
 -------------------
 
-ParachainFeePool
+BridgeFeePool
 ................
 
-Tracks the balance of fees earned by the BTC-Parachain which are to be distributed across all Vault, Staked Relayer, Collator and Maintainer pools.
+Tracks the balance of fees earned by the BTC-Bridge which are to be distributed across all Vault, Staked Relayer, Collator and Maintainer pools.
 
 VaultRewards
 ............
@@ -45,14 +45,14 @@ Tracks the fee share (in %) allocated to Staked Relayers.
 CollatorRewards
 ...............
 
-Tracks the fee share (in %) allocated to Collators (excl. Parachain transaction fees).
+Tracks the fee share (in %) allocated to Collators (excl. Bridge transaction fees).
 
 - Initial value: 0%
 
 MaintainerRewards
 .................
 
-Tracks fee share (in %) allocated to Parachain maintainers.
+Tracks fee share (in %) allocated to Bridge maintainers.
 
 - Initial value: 20%
 
@@ -104,8 +104,8 @@ PunishmentDelay
 
 Time period in which a vault cannot participate in issue, redeem or replace requests.
 
-- Measured in Parachain blocks
-- Initial value: 1 day (Parachain constant)
+- Measured in Bridge blocks
+- Initial value: 1 day (Bridge constant)
 
 ReplaceGriefingCollateral
 .........................
@@ -147,14 +147,14 @@ Specification
 Function Sequence
 .................
 
-1. Calculate the fees assigned to all Vaults using the `ParachainFeePool` and the `VaultRewards`.
+1. Calculate the fees assigned to all Vaults using the `BridgeFeePool` and the `VaultRewards`.
 2. Calculate the fees for every Vault according to the initial values.
 3. Update the `TotalRewards` mapping for the Vault.
 
 distributeRelayerRewards
 ------------------------
 
-Specifies the distribution of fees in the Staked Relayer fee pool among individual Staked Relayers. This function can implement different reward distributions. We differentiate if the BTC-Parachain operates with the SLA model or without.
+Specifies the distribution of fees in the Staked Relayer fee pool among individual Staked Relayers. This function can implement different reward distributions. We differentiate if the BTC-Bridge operates with the SLA model or without.
 
 - SLA model deactivated:
     - 100% of Staked Relayer fees distributed among active relayers proportional to their locked stake.
@@ -174,7 +174,7 @@ Specification
 Function Sequence
 .................
 
-1. Calculate the fees assigned to all Staked Relayers using the `ParachainFeePool` and the `StakedRelayerRewards`.
+1. Calculate the fees assigned to all Staked Relayers using the `BridgeFeePool` and the `StakedRelayerRewards`.
 2. Calculate the fees for every Staked Relayer according to the reward distribution mode (SLA model activated/deactivated).
 3. Update the `TotalRewards` mapping for the Staked Relayer.
 

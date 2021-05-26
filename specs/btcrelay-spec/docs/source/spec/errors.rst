@@ -33,13 +33,13 @@ A summary of error codes raised in exceptions by BTC-Relay, and their meanings, 
 
 * **Function:** :ref:`storeBlockHeader`
 
-* **Cause**: Raised if the block header does not reference the highest block in the fork specified by ``forkId`` (via ``prevBlockHash``). 
+* **Cause**: Raised if the block header does not reference the highest block in the fork specified by ``forkId`` (via ``prevBlockHash``).
 
-``ERR_NOT_FORK`` 
+``ERR_NOT_FORK``
 
 * **Message**: "Indicated fork submission, but block is in main chain"
 
-* **Function**: :ref:`storeBlockHeader` 
+* **Function**: :ref:`storeBlockHeader`
 
 * **Cause**:  Raised if raise exception if the submitted block header is actually extending the current longest chain tracked by BTC-Relay (``Chains``), instead of a fork.
 
@@ -49,12 +49,12 @@ A summary of error codes raised in exceptions by BTC-Relay, and their meanings, 
 
 * **Function**: :ref:`storeBlockHeader`
 
-* **Cause**: Raised if a non-existent fork identifier is passed. 
+* **Cause**: Raised if a non-existent fork identifier is passed.
 
 ``ERR_INVALID_HEADER_SIZE``
 
 
-* **Message**: "Invalid block header size": 
+* **Message**: "Invalid block header size":
 
 * **Function**: :ref:`parseBlockHeader`
 
@@ -68,7 +68,7 @@ A summary of error codes raised in exceptions by BTC-Relay, and their meanings, 
 
 * **Function**: :ref:`verifyBlockHeader`
 
-* **Cause**: Raised if the submitted block header is already stored in the BTC-Relay (duplicate PoW ``blockHash``). 
+* **Cause**: Raised if the submitted block header is already stored in the BTC-Relay (duplicate PoW ``blockHash``).
 
 ``ERR_PREV_BLOCK``
 
@@ -77,7 +77,7 @@ A summary of error codes raised in exceptions by BTC-Relay, and their meanings, 
 
 * **Function**: :ref:`verifyBlockHeader`
 
-* **Cause**: Raised if the submitted block does not reference an already stored block header as predecessor (via ``prevBlockHash``). 
+* **Cause**: Raised if the submitted block does not reference an already stored block header as predecessor (via ``prevBlockHash``).
 
 
 ``ERR_LOW_DIFF``
@@ -141,7 +141,7 @@ A summary of error codes raised in exceptions by BTC-Relay, and their meanings, 
 
 * **Function**: :ref:`verifyTransactionInclusion`
 
-* **Cause**: The BTC Parachain has been partially deactivated for all blocks with a higher block height than the lowest blocked flagged with ``NO_DATA_BTC_RELAY``.
+* **Cause**: The BTC Bridge has been partially deactivated for all blocks with a higher block height than the lowest blocked flagged with ``NO_DATA_BTC_RELAY``.
 
 ``ERR_INVALID``
 
@@ -149,15 +149,15 @@ A summary of error codes raised in exceptions by BTC-Relay, and their meanings, 
 
 * **Function**: :ref:`verifyTransactionInclusion`
 
-* **Cause**: The BTC Parachain has been halted because Staked Relayers reported an invalid block.
+* **Cause**: The BTC Bridge has been halted because Staked Relayers reported an invalid block.
 
 ``ERR_SHUTDOWN``
 
-* **Message**: "BTC Parachain has shut down"
+* **Message**: "BTC Bridge has shut down"
 
 * **Function**: :ref:`verifyTransactionInclusion` | :ref:`storeBlockHeader` | :ref:`storeBlockHeader`
 
-* **Cause**: The BTC Parachain has been shutdown by a manual intervention of the Governance Mechanism.
+* **Cause**: The BTC Bridge has been shutdown by a manual intervention of the Governance Mechanism.
 
 
 
@@ -171,7 +171,7 @@ A summary of error codes raised in exceptions by BTC-Relay, and their meanings, 
 
 
 
-``ERR_INSUFFICIENT_VALUE``: 
+``ERR_INSUFFICIENT_VALUE``:
 
 * **Message**: "Value of payment below requested amount"
 
@@ -214,7 +214,7 @@ A summary of error codes raised in exceptions by BTC-Relay, and their meanings, 
 
 * **Function**: :ref:`getOutputStartIndex`
 
-* **Cause**: : The version of the given transaction is not 1 or 2. See `transaction format details <https://bitcoin.org/en/developer-reference#raw-transaction-format>`_ in the Bitcoin Developer Reference. 
+* **Cause**: : The version of the given transaction is not 1 or 2. See `transaction format details <https://bitcoin.org/en/developer-reference#raw-transaction-format>`_ in the Bitcoin Developer Reference.
 
 ``ERR_NOT_OP_RETURN``
 
@@ -230,4 +230,4 @@ A summary of error codes raised in exceptions by BTC-Relay, and their meanings, 
 
 * **Function**: :ref:`verifyTransactionInclusion`
 
-* **Cause**: The ``mainChain`` is not at least ``STABLE_BITCOIN_CONFIRMATIONS`` ahead of the next best fork. 
+* **Cause**: The ``mainChain`` is not at least ``STABLE_BITCOIN_CONFIRMATIONS`` ahead of the next best fork.

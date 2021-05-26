@@ -83,7 +83,7 @@ Precondition
 ............
 
 * The function must be called by any of the four modules: :ref:`issue-protocol`, :ref:`redeem-protocol`, :ref:`replace-protocol`, or :ref:`Vault-registry`.
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 Function Sequence
 .................
@@ -123,7 +123,7 @@ Precondition
 ............
 
 * The function must be called by any of the four modules: :ref:`issue-protocol`, :ref:`redeem-protocol`, :ref:`replace-protocol`, or :ref:`Vault-registry`.
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 Function Sequence
 .................
@@ -171,7 +171,7 @@ Precondition
 ............
 
 * The function must be called by any of the four modules: :ref:`issue-protocol`, :ref:`redeem-protocol`, :ref:`replace-protocol`, or :ref:`Vault-registry`.
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 Function Sequence
 .................

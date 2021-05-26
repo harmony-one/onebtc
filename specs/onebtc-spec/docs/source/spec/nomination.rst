@@ -17,7 +17,7 @@ Step-by-step
 
 #. Vaults opt in to the nomination feature, becoming Operators.
 #. The maximum nomination an Operator can receive is bounded by their own locked collateral.
-#. Nominators select one or more Operators and lock their collateral balance onto the BTC Parachain.
+#. Nominators select one or more Operators and lock their collateral balance onto the BTC Bridge.
 #. Nominators can go offline and their nominated collateral will generate rewards passively.
 #. Operator and Nominator collateral cannot be withdrawn directly. Rather, withdrawals are subject to an unbonding period.
 #. In case of Operator failure, Nominators are returned any left-over collateral (after victim users are reimbursed).
@@ -48,17 +48,17 @@ Vault Nomination Protocol
 #. Vault replacement is disallowed for Operators with nominated collateral. Otherwise, Security Assumptions 1 and 2 would be violated.
 #. The nominated ONE:
 
-   #. Is locked on the parachain
+   #. Is locked on the bridge
 
    #. Cannot be withdrawn by the operating Vault
 
-   #. Is capped at a fraction of the Vault’s deposited collateral (Max Nomination Ratio). This prevents the Operator from withdrawing its entire collateral and only exposing Nominators to economic risk, or stealing without liquidation consequences. This means that an Operator can only withdraw collateral as long as the fraction of nominated collateral does not exceed the threshold cap. Capping Nominator collateral also prevents Operators being “outnumbered” by Nominators and their relative fee earnings being marginalized.
+   #. Is capped at a fraction of the Vault's deposited collateral (Max Nomination Ratio). This prevents the Operator from withdrawing its entire collateral and only exposing Nominators to economic risk, or stealing without liquidation consequences. This means that an Operator can only withdraw collateral as long as the fraction of nominated collateral does not exceed the threshold cap. Capping Nominator collateral also prevents Operators being “outnumbered” by Nominators and their relative fee earnings being marginalized.
 
 #. Liquidation slashing is handled as follows.
 
    #. In case the collateral managed by the Operator falls below the liquidation threshold, the Operator and Nominators are slashed proportionally to their collateral.
 
-   #. In case the Operator steals Bitcoin deposited at its address, its collateral is used to cover as much of the slashed amount as possible. If the Operator’s collateral was not enough to cover the entire amount, the Nominators are slashed proportionally for the remaining amount.
+   #. In case the Operator steals Bitcoin deposited at its address, its collateral is used to cover as much of the slashed amount as possible. If the Operator's collateral was not enough to cover the entire amount, the Nominators are slashed proportionally for the remaining amount.
 
 #. Collateral withdrawals are first requested and then executed. A withdrawal request:
 
@@ -78,7 +78,7 @@ Vault Nomination Protocol
 
    #. Operator withdrawals must not cause nominated collateral to exceed the Max Nomination Ratio.
 
-#. Forced collateral withdrawal. If an operator’s withdrawal would result in a violation of the Max Nomination Ratio, automatically refund excess nominated collateral to the nominators, proportionally. Both the operator withdrawal and the nominator refunds are subject to the unbonding period.
+#. Forced collateral withdrawal. If an operator's withdrawal would result in a violation of the Max Nomination Ratio, automatically refund excess nominated collateral to the nominators, proportionally. Both the operator withdrawal and the nominator refunds are subject to the unbonding period.
 #. If an Operator issued zero ONEBTC, it can deregister and automatically refund Nominators their collateral.
 #. When an Operator is banned, its collateralization is lowered to the secure collateral threshold by automatically refunding nominated ONE, proportionally.
 
@@ -249,7 +249,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 
 Function Sequence
@@ -295,7 +295,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 
 Function Sequence
@@ -347,7 +347,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 
 Function Sequence
@@ -398,7 +398,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 
 Function Sequence
@@ -453,7 +453,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 
 Function Sequence
@@ -501,7 +501,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 
 Function Sequence
@@ -549,7 +549,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 
 Function Sequence
@@ -598,7 +598,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 
 Function Sequence
@@ -650,7 +650,7 @@ Specification
 Preconditions
 .............
 
-* The BTC Parachain status in the :ref:`security` component must be set to ``RUNNING:0``.
+* The BTC Bridge status in the :ref:`security` component must be set to ``RUNNING:0``.
 
 
 Function Sequence

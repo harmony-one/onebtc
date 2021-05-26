@@ -1,17 +1,17 @@
-# BTC Parachain Specification
+# BTC Bridge Specification
 
 This repository includes the specification for a two-way bridge between Harmony and Bitcoin.
-The bridge implements Bitcoin-backed tokens on a Harmony Parachain.
+The bridge implements Bitcoin-backed tokens on a Harmony shard.
 The concept of Bitcoin-backed tokens is based on [Cryptocurrency-backed Assets](https://www.xclaim.io/).
 
 The specification consists of two parts:
 
 1. [XCLAIM(BTC,ONE) Bitcoin-backed tokens ](./onebtc-spec): The protocols and functions required to issue and redeem tokens as well as management of vaults.
-2. [BTC-Relay](./btcrelay-spec/): The component that is used to verify Bitcoin transactions on the Harmony parachain.
+2. [BTC-Relay](./btcrelay-spec/): The component that is used to verify Bitcoin transactions on the Harmony shard.
 
 ## Specification Documents
 
-### BTC Parachain
+### BTC Bridge
 
 - [Website](https://harmony.github.io/onebtc-spec)
 

@@ -1,8 +1,8 @@
 Performance and Costs
 ==============================
 
-Contrary to permissionless blockchains, such as Ethereum, Harmony's Parachains can easily implement the cryptographic primitives of the verified blockchains, instead of relying on pre-compiled smart contracts or manual and costly implementation of primitives.
-In the case of Bitcoin, the BTC Parachain can provide native support for the SHA256 and RIPEMD-160 hash functions, as well as for ECDSA using the `secp256k1 <https://en.bitcoin.it/wiki/Secp256k1>`_ curve.
+Contrary to permissionless blockchains, such as Ethereum, Harmony's Bridges can easily implement the cryptographic primitives of the verified blockchains, instead of relying on pre-compiled smart contracts or manual and costly implementation of primitives.
+In the case of Bitcoin, the BTC Bridge can provide native support for the SHA256 and RIPEMD-160 hash functions, as well as for ECDSA using the `secp256k1 <https://en.bitcoin.it/wiki/Secp256k1>`_ curve.
 
 
 Consequently, storage resembles the main cost factor of BTC-Relay on Harmony.
@@ -37,7 +37,7 @@ Pruning
 ~~~~~~~
 
 Optionally, to further reduce storage requirements (e.g., in case more data is to be stored per block in the future), *pruning* of ``Chains`` and ``BlockHeaders`` can be introduced.
-While the storage overhead for Bitcoin itself may be acceptable, Harmony is expected to connect to numerous blockchains and tracking the entire blockchain history for each could unnecessarily bloat Parachains (even more so, if Parachains are non-exclusive to specific blockchains).
+While the storage overhead for Bitcoin itself may be acceptable, Harmony is expected to connect to numerous blockchains and tracking the entire blockchain history for each could unnecessarily bloat Bridges (even more so, if Bridges are non-exclusive to specific blockchains).
 
 With pruning activated, ``Chains`` would be implemented as a FIFO queue, where sufficiently old block headers are removed from ``BlockHeaders`` (and the references from ``Chains`` and ``Forks`` accordingly).
 The pruning depth can be set to e.g. 10 000 blocks. There is no need to store more block headers, as verification of transactions contained in older blocks can still be performed by requiring users to *re-spend*.
@@ -51,8 +51,8 @@ Batch Submissions
 
 Currently, BTC-Relay supports submissions of a single Bitcoin block header per transaction.
 
-To reduce network load on the Parachain, multiple block header submissions can be batched into a single transaction.
-Note: the improvement in terms of data broadcast to the Parachain depends on the fixed costs per Parachain transaction (if Parachain transactions are considered a negligible cost, batching may be unnecessary).
+To reduce network load on the Bridge, multiple block header submissions can be batched into a single transaction.
+Note: the improvement in terms of data broadcast to the Bridge depends on the fixed costs per Bridge transaction (if Bridge transactions are considered a negligible cost, batching may be unnecessary).
 
 The potential improvement can especially be useful for blockchains with higher block generation rates than Bitcoin's 1 block / 10 minutes, as in the case of Ethereum.
 
