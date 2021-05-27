@@ -24,9 +24,9 @@ copyright = u'2021, Harmony'
 author = u'Harmony'
 
 # The short X.Y version
-version = u'v3.1.0'
+version = u'v0.1.0'
 # The full version, including alpha/beta/rc tags
-release = u'v3.1.0'
+release = u'v0.1.0'
 
 
 # -- General configuration ---------------------------------------------------

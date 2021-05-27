@@ -10,10 +10,10 @@ Further, it is able to handle forks and follows the chain with the most accumula
 
 The correct operation of BTC-Relay is crucial: should BTC-Relay cease to operate, the bridge between Harmony and Bitcoin is interrupted.
 
-.. figure:: ../figures/polkaBTC-btcrelay.png
+.. figure:: ../figures/ONEBTC-Architecture.svg
     :alt: Overview of BTC-Relay as a component of the BTC Bridge
 
-    BTC-Relay (highlighted in blue) is a key component of the BTC Bridge: it is necessary to verify and keep track of the state of Bitcoin.
+    BTC-Relay (highlighted in purple) is a key component of the BTC Bridge: it is necessary to verify and keep track of the state of Bitcoin.
 
 
 How to Use this Document

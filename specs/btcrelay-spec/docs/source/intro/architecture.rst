@@ -5,7 +5,7 @@ BTC-Relay is a component / module of the BTC Bridge.
 Its main functionality is verification and storage of Bitcoin block headers, as well as verification of Bitcoin transaction inclusion proofs.
 Below, we provide an overview of its components, as well as relevant actors - offering references to the full specification contained in the rest of this document.
 
-.. figure:: ../figures/architecture.png
+.. figure:: ../figures/architecture.svg
     :alt: BTC Bridge architecture diagram
 
     Overview of the BTC-Relay architecture. Bitcoin block headers are submitted to the Verification Component, which interacts with the Utils, Parser and Failure Handling components, as well as the Bridge Storage.

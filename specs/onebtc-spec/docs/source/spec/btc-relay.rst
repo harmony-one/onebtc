@@ -7,4 +7,4 @@ The BTC-Relay is responsible for storing Bitcoin block headers and maintaining t
 We can use the stored block headers to verify transaction inclusion in Bitcoin.
 Further, BTC_Relay exposes functions to validate that the contents of a transactions are as expected.
 
-Specification **TODO**
+The specification of the `BTC-Relay is found here: https://onebtc-relay.web.app <https://onebtc-relay.web.app>`_.
