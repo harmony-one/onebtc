@@ -2,7 +2,8 @@
 Trustless Bitcoin on Harmony
 
 ## Specification for a Harmony<>BTC bridge using XCLAIM and BTC-Relay
-[Coming soon...]
+* https://onebtc-dev.web.app
+* https://onebtc-relay.web.app
 
 ## Components [details soon...]
 * btc-relay & bitcoin types, parising, verfications
