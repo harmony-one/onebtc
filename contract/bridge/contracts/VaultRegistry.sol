@@ -50,6 +50,7 @@ abstract contract VaultRegistry is ICollateral {
         returns (address)
     {
         Vault storage vault = vaults[vault_id];
+        require(vault.btc_public_key_x != 0, "vaultNotExist");
         address derivedKey =
             BitcoinKeyDerivation.derivate(
                 vault.btc_public_key_x,
@@ -85,5 +86,10 @@ abstract contract VaultRegistry is ICollateral {
         require(vault.btc_public_key_x != 0, "vaultNotExist");
         vault.collateral -= amount;
         ICollateral.release_collateral(msg.sender, amount);
+    }
+
+    function try_increase_to_be_issued_tokens(address vault_id, uint256 amount) internal {
+        //Vault storage vault = vaults[vault_id];
+        //uint256 newIssued = vault.issued_btc + amount;
     }
 }
