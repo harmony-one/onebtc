@@ -50,7 +50,7 @@ abstract contract ICollateral {
     function use_collateral_inc(address vault_id, uint256 amount) internal {
         CollateralUsed[vault_id] += amount;
         require(
-            CollateralBalances[vault_id] <= CollateralUsed[vault_id],
+            CollateralBalances[vault_id] >= CollateralUsed[vault_id],
             "InSufficientCollateral"
         );
     }

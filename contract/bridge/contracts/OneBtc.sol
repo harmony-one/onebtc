@@ -101,7 +101,8 @@ contract OneBtc is ERC20, Issue, Redeem, VaultRegistry {
         internal
         override(Redeem)
     {
-        ERC20.transferFrom(from, address(this), amount);
+        //ERC20(this).transferFrom(from, address(this), amount);
+        ERC20._transfer(msg.sender, address(this), amount);
     }
 
     function burnLockedOneBTC(uint256 amount) internal override(Redeem) {
@@ -112,7 +113,7 @@ contract OneBtc is ERC20, Issue, Redeem, VaultRegistry {
         internal
         override(Redeem)
     {
-        ERC20.transfer(receiver, amount);
+        ERC20._transfer(address(this), receiver, amount);
     }
 
     function issueOneBTC(address receiver, uint256 amount)
@@ -127,6 +128,6 @@ contract OneBtc is ERC20, Issue, Redeem, VaultRegistry {
         override(Issue)
         returns (address)
     {
-        VaultRegistry._register_deposit_address(vault_id, issue_id);
+        return VaultRegistry._register_deposit_address(vault_id, issue_id);
     }
 }

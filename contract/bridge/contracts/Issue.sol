@@ -45,9 +45,9 @@ abstract contract Issue is ICollateral {
         returns (address);
 
     function get_issue_fee(
-        uint256 /*amount_requested*/
+        uint256 amount_requested
     ) private pure returns (uint256) {
-        return 0;
+        return amount_requested*2/1000;
     }
 
     function get_issue_id(address user) private view returns (uint256) {
@@ -130,7 +130,7 @@ abstract contract Issue is ICollateral {
             request.amount = amount_transferred - request.fee;
         }
         issueOneBTC(request.vault, request.fee);
-        issueOneBTC(request.requester, amount_transferred);
+        issueOneBTC(request.requester, request.amount);
         ICollateral.release_collateral(
             request.requester,
             request.griefing_collateral
