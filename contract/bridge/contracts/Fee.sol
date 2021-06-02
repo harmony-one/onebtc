@@ -1,8 +1,40 @@
-// SPDX-License-Identifier: MIT
+/*
+SPDX-License-Identifier: MIT
+
+Fee Module
+https://onebtc-dev.web.app/spec/fee.html
+https://onebtc-dev.web.app/economics/fees.html
+
+1. Fees are paid by Users and forwarded to a common Fee Pool from e.g., issue and redeem requests.
+2. Fees are then split to multiple smaller fee pools for the Vaults, Staked Relayers, Maintainers, and Collators.
+3. The individual fee pools (Vaults, Staked Relayers, Maintainers, and Collators) are then split among the actors based on individual distribution criteria.
+4. Each actor can withdraw fees from their individual pool.
+5. Fees can be paid both in ONEBTC and ONE.
+*/
 
 pragma solidity ^0.6.12;
 
 contract Fee {
+
+    struct FeePools {
+        uint256 bridgeFeePool;
+        uint256 vaultRewards; // Initial value: 77%
+        uint256 stakedRelayerRewards; // Initial value: 3%
+        uint256 collatorRewards; // Initial value: 0%
+    }
+
+    struct Fees {
+        uint256 maintainerRewards; // Initial value: 20%
+        uint256 issueFee; // Paid in ONEBTC - Initial value: 0.5%
+        uint256 issueGriefingCollateral; // Paid in ONE - Initial value: 0.005%
+        uint256 redeemFee; // Paid in ONEBTC. - Initial value: 0.5%
+        uint256 premiumRedeemFee; // Paid in ONE - Initial value: 5%
+        uint256 punishmentFee; // Paid in ONE - Initial value: 10%
+        uint256 punishmentDelay; // Measured in Bridge blocks - Initial value: 1 day (Bridge constant)
+        uint256 replaceGriefingCollateral; // Paid in ONE - Initial value: 0.005%
+    }
+
+    mapping (address => uint256) totalRewards;
 
     event WithdrawFees(
         address account,
