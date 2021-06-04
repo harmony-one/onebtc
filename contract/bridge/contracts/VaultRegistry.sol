@@ -4,16 +4,22 @@ pragma solidity ^0.6.12;
 
 import {ICollateral} from "./Collateral.sol";
 import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
+import {ExchangeRateOracle} from "./ExchangeRateOracle.sol";
 
 abstract contract VaultRegistry is ICollateral {
     struct Vault {
         uint256 btc_public_key_x;
         uint256 btc_public_key_y;
         uint256 collateral;
+        uint256 issued;
+        uint256 toBeIssued;
+        uint256  toBeRedeemed;
         address[] deposit_addresses;
     }
     mapping(address => Vault) public vaults;
-
+    uint256 public constant secure_collateral_threshold = 150; // 150%
+    ExchangeRateOracle oracle;
+    
     event RegisterVault(
         address indexed vault_id,
         uint256 collateral,
@@ -22,6 +28,8 @@ abstract contract VaultRegistry is ICollateral {
     );
 
     event VaultPublicKeyUpdate(address indexed vault_id, uint256 x, uint256 y);
+    event IncreaseToBeIssuedTokens(address indexed vault_id, uint256 amount);
+    event IssueTokens(address indexed vault_id, uint256 amount);
 
     function register_vault(uint256 btc_public_key_x, uint256 btc_public_key_y)
         external
@@ -89,7 +97,25 @@ abstract contract VaultRegistry is ICollateral {
     }
 
     function try_increase_to_be_issued_tokens(address vault_id, uint256 amount) internal {
-        //Vault storage vault = vaults[vault_id];
-        //uint256 newIssued = vault.issued_btc + amount;
+        Vault storage vault = vaults[vault_id];
+        vault.issued += amount;
+        emit IncreaseToBeIssuedTokens(vault_id, amount);
+    }
+
+    function calculate_max_wrapped_from_collateral_for_threshold(uint256 collateral, uint256 threshold) internal view returns(uint256) {
+        uint256 collateral_in_wrapped = oracle.collateralToWrapped(collateral);
+        return collateral_in_wrapped*100/threshold;
+    }
+
+    function issuable_tokens(address vault_id, uint256 amount) public view returns(uint256) {
+        uint256 free_collateral = ICollateral.get_free_collateral(vault_id);
+        return calculate_max_wrapped_from_collateral_for_threshold(free_collateral, secure_collateral_threshold);
+    }
+
+    function issue_tokens(address vault_id, uint256 amount) internal {
+        Vault storage vault = vaults[vault_id];
+        vault.issued += amount;
+        vault.toBeIssued -= amount;
+        emit IssueTokens(vault_id, amount);
     }
 }

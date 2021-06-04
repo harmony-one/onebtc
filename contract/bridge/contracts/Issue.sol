@@ -127,7 +127,7 @@ abstract contract Issue is ICollateral {
             );
         if (amount_transferred != request.amount + request.fee) {
             // only the requester of the issue can execute payments with different amounts
-            require(msg.sender == requestor, "InvalidExecutor");
+            require(msg.sender == request.requester, "InvalidExecutor");
             request.fee = get_issue_fee(amount_transferred);
             request.amount = amount_transferred - request.fee;
         }

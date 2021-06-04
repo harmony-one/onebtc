@@ -47,6 +47,10 @@ abstract contract ICollateral {
         emit SlashCollateral(from, to, amount);
     }
 
+    function get_free_collateral(address vault_id) internal view returns(uint256) {
+        return CollateralBalances[vault_id] - CollateralUsed[vault_id];
+    }
+
     function use_collateral_inc(address vault_id, uint256 amount) internal {
         CollateralUsed[vault_id] += amount;
         require(
