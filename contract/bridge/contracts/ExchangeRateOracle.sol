@@ -1,4 +1,11 @@
-// SPDX-License-Identifier: MIT
+/**
+SPDX-License-Identifier: MIT
+
+Exchange Rate Oracle Module
+https://onebtc-dev.web.app/spec/oracle.html
+
+The Exchange Rate Oracle receives a continuous data feed on the exchange rate between BTC and ONE.
+*/
 
 pragma solidity ^0.6.12;
 
@@ -28,6 +35,11 @@ contract ExchangeRateOracle {
         authorizedOracles[0x5B38Da6a701c568545dCfcB03FcB875f56beddC4] = true;
      }
 
+    /**
+    @notice Set the latest (aggregate) BTC/ONE exchange rate. This function invokes a check of vault collateral rates in the Vault Registry component.
+    @param oracle the oracle account calling this function. Must be pre-authorized and tracked in this component!
+    @param rate the u128 BTC/ONE exchange rate.
+    */
     function setExchangeRate(address oracle, uint256 rate) public {
         require(authorizedOracles[oracle], "ERR_INVALID_ORACLE_SOURCE");
 
@@ -42,6 +54,11 @@ contract ExchangeRateOracle {
         emit SetExchangeRate(oracle, rate);
     }
 
+    /**
+    @notice Set the Satoshi per bytes fee
+    @param fee the Satoshi per byte fee.
+    @param inclusionEstimate the estimated inclusion time.
+    */
     function setSatoshiPerBytes(uint256 fee, uint256 inclusionEstimate) public {
         // 1. The BTC Bridge status in the Security component MUST be set to RUNNING:0.
         // TODO require()
@@ -53,6 +70,10 @@ contract ExchangeRateOracle {
         emit SetSatoshiPerByte(fee, inclusionEstimate);
     }
 
+    /**
+    @notice Returns the latest BTC/ONE exchange rate, as received from the external data sources.
+    @return uint256 (aggregate) exchange rate value
+    */
     function getExchageRate() public view returns (uint256) {
         require (now - lastExchangeRateTime > MAX_DELAY, "ERR_MISSING_EXCHANGE_RATE");
 
