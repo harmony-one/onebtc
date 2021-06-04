@@ -29,6 +29,7 @@ abstract contract VaultRegistry is ICollateral {
 
     event VaultPublicKeyUpdate(address indexed vault_id, uint256 x, uint256 y);
     event IncreaseToBeIssuedTokens(address indexed vault_id, uint256 amount);
+    event DecreaseToBeIssuedTokens(address indexed vault_id, uint256 amount);
     event IssueTokens(address indexed vault_id, uint256 amount);
 
     function register_vault(uint256 btc_public_key_x, uint256 btc_public_key_y)
@@ -53,7 +54,7 @@ abstract contract VaultRegistry is ICollateral {
         );
     }
 
-    function _register_deposit_address(address vault_id, uint256 issue_id)
+    function register_deposit_address(address vault_id, uint256 issue_id)
         internal
         returns (address)
     {
@@ -96,9 +97,21 @@ abstract contract VaultRegistry is ICollateral {
         ICollateral.release_collateral(msg.sender, amount);
     }
 
-    function try_increase_to_be_issued_tokens(address vault_id, uint256 amount) internal {
+    function calculate_collateral(uint256 collateral, uint256 numerator, uint256 denominator) internal pure returns(uint256){
+        return collateral*numerator/denominator;
+    }
+
+    function decrease_to_be_issued_tokens(address vault_id, uint256 amount) internal {
         Vault storage vault = vaults[vault_id];
-        vault.issued += amount;
+        vault.toBeIssued -= amount;
+        emit DecreaseToBeIssuedTokens(vault_id, amount);
+    }
+
+    function try_increase_to_be_issued_tokens(address vault_id, uint256 amount) internal {
+        uint256 issuable_tokens = issuable_tokens(vault_id);
+        require(issuable_tokens >= amount, "ExceedingVaultLimit");
+        Vault storage vault = vaults[vault_id];
+        vault.toBeIssued += amount;
         emit IncreaseToBeIssuedTokens(vault_id, amount);
     }
 
@@ -107,7 +120,7 @@ abstract contract VaultRegistry is ICollateral {
         return collateral_in_wrapped*100/threshold;
     }
 
-    function issuable_tokens(address vault_id, uint256 amount) public view returns(uint256) {
+    function issuable_tokens(address vault_id) public view returns(uint256) {
         uint256 free_collateral = ICollateral.get_free_collateral(vault_id);
         return calculate_max_wrapped_from_collateral_for_threshold(free_collateral, secure_collateral_threshold);
     }

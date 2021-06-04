@@ -6,8 +6,9 @@ import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import {S_RedeemRequest, RequestStatus} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
 import {ICollateral} from "./Collateral.sol";
+import {VaultRegistry} from "./VaultRegistry.sol";
 
-abstract contract Redeem is ICollateral {
+abstract contract Redeem is ICollateral,VaultRegistry {
     using BTCUtils for bytes;
     using BytesLib for bytes;
 

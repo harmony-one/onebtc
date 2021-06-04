@@ -8,9 +8,8 @@ import {TransactionUtils} from "./TransactionUtils.sol";
 import {Issue} from "./Issue.sol";
 import {Redeem} from "./Redeem.sol";
 import {IRelay} from "./IRelay.sol";
-import {VaultRegistry} from "./VaultRegistry.sol";
 
-contract OneBtc is ERC20, Issue, Redeem, VaultRegistry {
+contract OneBtc is ERC20, Issue, Redeem {
     IRelay public realy;
 
     constructor(IRelay _relay) public ERC20("OneBtc", "OneBtc") {
@@ -123,11 +122,4 @@ contract OneBtc is ERC20, Issue, Redeem, VaultRegistry {
         ERC20._mint(receiver, amount);
     }
 
-    function register_deposit_address(address vault_id, uint256 issue_id)
-        internal
-        override(Issue)
-        returns (address)
-    {
-        return VaultRegistry._register_deposit_address(vault_id, issue_id);
-    }
 }
