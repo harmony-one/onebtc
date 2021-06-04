@@ -58,4 +58,24 @@ contract ExchangeRateOracle {
 
         return exchangeRate;
     }
+
+    /**
+    * @notice Get BTC amount by ONE.
+    * @param amount collateral(ONE) amount
+    * @return BTC amount
+    */
+    function collateralToWrapped(uint256 amount) public view returns(uint256) {
+        uint256 rate = getExchageRate();
+        return amount/rate;
+    }
+
+    /**
+    * @notice Get ONE amount by BTC.
+    * @param amount BTC amount
+    * @return ONE amount
+    */
+    function wrappedToCollateral(uint256 amount) public view returns(uint256) {
+        uint256 rate = getExchageRate();
+        return amount*rate;
+    }
 }
