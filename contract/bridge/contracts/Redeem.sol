@@ -8,7 +8,7 @@ import {TxValidate} from "./TxValidate.sol";
 import {ICollateral} from "./Collateral.sol";
 import {VaultRegistry} from "./VaultRegistry.sol";
 
-abstract contract Redeem is ICollateral,VaultRegistry {
+abstract contract Redeem is ICollateral, VaultRegistry {
     using BTCUtils for bytes;
     using BytesLib for bytes;
 
@@ -69,6 +69,10 @@ abstract contract Redeem is ICollateral,VaultRegistry {
         return amount_btc;
     }
 
+    function getCurrentInclusionFee() private returns (uint256) {
+        return 0;
+    }
+
     function _request_redeem(
         address requester,
         uint256 amount_one_btc,
@@ -77,8 +81,18 @@ abstract contract Redeem is ICollateral,VaultRegistry {
     ) internal {
         lockOneBTC(requester, amount_one_btc);
         uint256 fee_one_btc = get_redeem_fee(amount_one_btc);
-        uint256 redeem_amount_one_btc = amount_one_btc - fee_one_btc;
+        uint256 inclusionFee = getCurrentInclusionFee();
+        uint256 toBeBurnedBtc = amount_one_btc - fee_one_btc;
+        uint256 redeemAmountOneBtc = toBeBurnedBtc - inclusionFee;
         uint256 redeem_id = get_redeem_id(requester);
+
+        require(
+            VaultRegistry.tryIncreaseToBeRedeemedTokens(
+                vault_id,
+                toBeBurnedBtc
+            ),
+            "InsufficientTokensCommitted"
+        );
         // TODO: decrease collateral
         S_RedeemRequest storage request = redeemRequests[requester][redeem_id];
         require(request.status == RequestStatus.None, "invalid request");
@@ -87,9 +101,10 @@ abstract contract Redeem is ICollateral,VaultRegistry {
             request.opentime = block.timestamp;
             request.period = 2 days;
             request.fee = fee_one_btc;
-            request.amount_btc = redeem_amount_one_btc;
+            request.transferFeeBtc = inclusionFee;
+            request.amount_btc = redeemAmountOneBtc;
             //request.premium_one
-            request.amount_one = get_redeem_collateral(redeem_amount_one_btc);
+            request.amount_one = get_redeem_collateral(redeemAmountOneBtc);
             request.requester = requester;
             request.btc_address = btc_address;
             //request.btc_height
@@ -126,6 +141,7 @@ abstract contract Redeem is ICollateral,VaultRegistry {
         releaseLockedOneBTC(request.vault, request.fee);
         request.status = RequestStatus.Completed;
         ICollateral.use_collateral_dec(request.vault, request.amount_one);
+        VaultRegistry.redeemTokens(request.vault, request.amount_btc + request.transferFeeBtc);
         emit RedeemComplete(
             redeem_id,
             requester,

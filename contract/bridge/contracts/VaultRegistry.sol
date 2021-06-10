@@ -29,6 +29,7 @@ abstract contract VaultRegistry is ICollateral {
 
     event VaultPublicKeyUpdate(address indexed vault_id, uint256 x, uint256 y);
     event IncreaseToBeIssuedTokens(address indexed vault_id, uint256 amount);
+    event IncreaseToBeRedeemedTokens(address indexed vault_id, uint256 amount);
     event DecreaseToBeIssuedTokens(address indexed vault_id, uint256 amount);
     event IssueTokens(address indexed vault_id, uint256 amount);
 
@@ -107,12 +108,33 @@ abstract contract VaultRegistry is ICollateral {
         emit DecreaseToBeIssuedTokens(vault_id, amount);
     }
 
-    function try_increase_to_be_issued_tokens(address vault_id, uint256 amount) internal {
+    function tryIncreaseToBeIssuedTokens(address vault_id, uint256 amount) internal returns(bool) {
         uint256 issuable_tokens = issuable_tokens(vault_id);
-        require(issuable_tokens >= amount, "ExceedingVaultLimit");
+        if(issuable_tokens > amount) return false; // ExceedingVaultLimit
         Vault storage vault = vaults[vault_id];
         vault.toBeIssued += amount;
         emit IncreaseToBeIssuedTokens(vault_id, amount);
+        return true;
+    }
+
+    function tryIncreaseToBeRedeemedTokens(address vaultId, uint256 amount) internal returns(bool) {
+        uint256 redeemable = redeemableTokens(vaultId);
+        if(redeemable > amount) return false; // ExceedingVaultLimit
+        Vault storage vault = vaults[vaultId];
+        vault.toBeRedeemed += amount;
+        emit IncreaseToBeRedeemedTokens(vaultId, amount);
+        return true;
+    }
+
+    function redeemableTokens(address vaultId) internal returns(uint256) {
+        Vault storage vault = vaults[vaultId];
+        return vault.issued - vault.toBeRedeemed;
+    }
+
+    function redeemTokens(address vaultId, uint256 amount) internal {
+        Vault storage vault = vaults[vaultId];
+        vault.toBeRedeemed -= amount;
+        vault.issued -= amount;
     }
 
     function calculate_max_wrapped_from_collateral_for_threshold(uint256 collateral, uint256 threshold) internal view returns(uint256) {

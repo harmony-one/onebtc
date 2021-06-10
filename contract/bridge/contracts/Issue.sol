@@ -8,7 +8,7 @@ import {TxValidate} from "./TxValidate.sol";
 import {ICollateral} from "./Collateral.sol";
 import {VaultRegistry} from "./VaultRegistry.sol";
 
-abstract contract Issue is ICollateral,VaultRegistry {
+abstract contract Issue is ICollateral, VaultRegistry {
     using BTCUtils for bytes;
     using BytesLib for bytes;
 
@@ -46,10 +46,12 @@ abstract contract Issue is ICollateral,VaultRegistry {
 
     function issueOneBTC(address receiver, uint256 amount) internal virtual;
 
-    function get_issue_fee(
-        uint256 amount_requested
-    ) private pure returns (uint256) {
-        return amount_requested*2/1000;
+    function get_issue_fee(uint256 amount_requested)
+        private
+        pure
+        returns (uint256)
+    {
+        return (amount_requested * 2) / 1000;
     }
 
     function get_issue_id(address user) private view returns (uint256) {
@@ -67,10 +69,20 @@ abstract contract Issue is ICollateral,VaultRegistry {
         return amount_btc;
     }
 
-    function update_issue_amount(uint256 issue_id, S_IssueRequest storage issue, uint256 transferred_btc, uint256 confiscated_griefing_collateral) internal {
+    function update_issue_amount(
+        uint256 issue_id,
+        S_IssueRequest storage issue,
+        uint256 transferred_btc,
+        uint256 confiscated_griefing_collateral
+    ) internal {
         issue.fee = get_issue_fee(transferred_btc);
         issue.amount = transferred_btc - issue.fee;
-        emit IssueAmountChange(issue_id, issue.amount, issue.fee, confiscated_griefing_collateral);
+        emit IssueAmountChange(
+            issue_id,
+            issue.amount,
+            issue.fee,
+            confiscated_griefing_collateral
+        );
     }
 
     function _request_issue(
@@ -84,9 +96,16 @@ abstract contract Issue is ICollateral,VaultRegistry {
                 griefing_collateral,
             "InsufficientCollateral"
         );
-        VaultRegistry.try_increase_to_be_issued_tokens(vault_id, amount_requested);
+        require(
+            VaultRegistry.tryIncreaseToBeIssuedTokens(
+                vault_id,
+                amount_requested
+            ),
+            "ExceedingVaultLimit"
+        );
         uint256 issue_id = get_issue_id(requester);
-        address btc_address = VaultRegistry.register_deposit_address(vault_id, issue_id);
+        address btc_address =
+            VaultRegistry.register_deposit_address(vault_id, issue_id);
         uint256 fee = get_issue_fee(amount_requested);
         uint256 amount_user = amount_requested - fee;
         S_IssueRequest storage request = issueRequests[requester][issue_id];
@@ -140,25 +159,49 @@ abstract contract Issue is ICollateral,VaultRegistry {
             require(msg.sender == request.requester, "InvalidExecutor");
             uint256 deficit = expected_total_amount - amount_transferred;
             VaultRegistry.decrease_to_be_issued_tokens(request.vault, deficit);
-            uint256 released_collateral = VaultRegistry.calculate_collateral(request.griefing_collateral, amount_transferred, expected_total_amount);
-            ICollateral.release_collateral(request.requester, released_collateral);
-            uint256 slashed_collateral = request.griefing_collateral - released_collateral;
+            uint256 released_collateral =
+                VaultRegistry.calculate_collateral(
+                    request.griefing_collateral,
+                    amount_transferred,
+                    expected_total_amount
+                );
+            ICollateral.release_collateral(
+                request.requester,
+                released_collateral
+            );
+            uint256 slashed_collateral =
+                request.griefing_collateral - released_collateral;
             ICollateral.slash_collateral(
                 request.requester,
                 request.vault,
                 slashed_collateral
             ); // ICollateral::
-            update_issue_amount(issue_id, request, amount_transferred, slashed_collateral);
+            update_issue_amount(
+                issue_id,
+                request,
+                amount_transferred,
+                slashed_collateral
+            );
         } else {
             ICollateral.release_collateral(
                 request.requester,
                 request.griefing_collateral
             ); // ICollateral::
             if (amount_transferred > expected_total_amount) {
-                uint256 surplus_btc = amount_transferred - expected_total_amount;
-                if (VaultRegistry.issuable_tokens(request.vault) >= surplus_btc) {
-                    VaultRegistry.try_increase_to_be_issued_tokens(request.vault, surplus_btc);
-                    update_issue_amount(issue_id, request, amount_transferred, 0);
+                uint256 surplus_btc =
+                    amount_transferred - expected_total_amount;
+                if (
+                    VaultRegistry.tryIncreaseToBeIssuedTokens(
+                        request.vault,
+                        surplus_btc
+                    )
+                ) {
+                    update_issue_amount(
+                        issue_id,
+                        request,
+                        amount_transferred,
+                        0
+                    );
                 } else {
                     // vault does not have enough collateral to accept the over payment, so refund.
                     // TODO request_refund
@@ -166,9 +209,13 @@ abstract contract Issue is ICollateral,VaultRegistry {
                 }
             }
         }
+        uint256 total = request.amount + request.fee;
+        VaultRegistry.issue_tokens(request.vault, total);
         issueOneBTC(request.vault, request.fee);
         issueOneBTC(request.requester, request.amount);
         request.status = RequestStatus.Completed;
+        // TODO: update sla
+        // sla.event_update_vault_sla(request.vault, total);
         emit IssueComplete(
             issue_id,
             requester,
@@ -195,6 +242,10 @@ abstract contract Issue is ICollateral,VaultRegistry {
             request.vault,
             request.griefing_collateral
         ); // ICollateral::
+        VaultRegistry.decrease_to_be_issued_tokens(
+            request.vault,
+            request.amount + request.fee
+        );
         emit IssueCancel(
             issue_id,
             requester,
