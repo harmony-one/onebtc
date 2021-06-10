@@ -18,15 +18,15 @@ library TransactionUtils {
         uint32 locktime;
     }
 
-    function extractTx(bytes memory raw_tx)
+    function extractTx(bytes memory rawTx)
         internal
         pure
         returns (Transaction memory)
     {
-        uint256 length = raw_tx.length;
+        uint256 length = rawTx.length;
         uint256 pos = 4; // skip version
 
-        bytes memory segwit = raw_tx.slice(pos, 2);
+        bytes memory segwit = rawTx.slice(pos, 2);
         if (segwit[0] == 0x00 && segwit[1] == 0x01) {
             pos = pos + 2;
         }
@@ -34,14 +34,14 @@ library TransactionUtils {
         uint256 vinsPos = pos;
 
         (uint256 varIntLen, uint256 numInputs) =
-            raw_tx.slice(pos, length - pos).parseVarInt();
+            rawTx.slice(pos, length - pos).parseVarInt();
         pos += varIntLen + 1;
 
         for (uint256 i = 0; i < numInputs; i++) {
             pos += 36; // skip outpoint
             // read varInt for script sig
             (uint256 scriptSigvarIntLen, uint256 scriptSigLen) =
-                raw_tx.slice(pos, length - pos).parseVarInt();
+                rawTx.slice(pos, length - pos).parseVarInt();
 
             pos += (scriptSigvarIntLen +
                 1 + // skip varInt
@@ -51,10 +51,10 @@ library TransactionUtils {
         uint256 voutsPos = pos;
         return
             Transaction({
-                version: uint32(raw_tx.slice(0, 4).bytesToUint()),
-                vins: raw_tx.slice(vinsPos, voutsPos - vinsPos),
-                vouts: raw_tx.slice(voutsPos, length - 4 - voutsPos),
-                locktime: uint32(raw_tx.lastBytes(4).bytesToUint())
+                version: uint32(rawTx.slice(0, 4).bytesToUint()),
+                vins: rawTx.slice(vinsPos, voutsPos - vinsPos),
+                vouts: rawTx.slice(voutsPos, length - 4 - voutsPos),
+                locktime: uint32(rawTx.lastBytes(4).bytesToUint())
             });
     }
 }

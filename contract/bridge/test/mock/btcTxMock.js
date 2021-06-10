@@ -10,13 +10,13 @@ const Number2Buffer = num=>{ // bigendia
     return Buffer.from(str, 'hex');
 }
 
-function issue_tx_mock(issue_id, vault_address, issue_value) {
-    const valut_script = bitcoin.address.toOutputScript(vault_address);
+function issueTxMock(issueId, vaultAddress, issueValue) {
+    const valutScript = bitcoin.address.toOutputScript(vaultAddress);
     const tx = new bitcoin.Transaction();
     tx.addInput(Buffer.alloc(32, 1), 0, 4294967295, Buffer.alloc(32));
-    tx.addOutput(valut_script, issue_value)
-    if(issue_id != undefined){
-        const OpData = Number2Buffer(issue_id);
+    tx.addOutput(valutScript, issueValue)
+    if(issueId != undefined){
+        const OpData = Number2Buffer(issueId);
         const embed = bitcoin.payments.embed({ data: [OpData] });
         tx.addOutput(embed.output, 0)
     }
@@ -24,5 +24,5 @@ function issue_tx_mock(issue_id, vault_address, issue_value) {
 }
 
 module.exports = {
-    issue_tx_mock
+    issueTxMock
 }

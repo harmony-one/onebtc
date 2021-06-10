@@ -12,144 +12,144 @@ abstract contract Issue is ICollateral {
     using BytesLib for bytes;
 
     event IssueRequest(
-        uint256 indexed issue_id,
+        uint256 indexed issueId,
         address indexed requester,
-        address indexed vault_id,
+        address indexed vaultId,
         uint256 amount,
         uint256 fee,
-        address btc_address
+        address btcAddress
     );
     event IssueComplete(
-        uint256 indexed issude_id,
+        uint256 indexed issudeId,
         address indexed requester,
-        address indexed vault_id,
+        address indexed vaultId,
         uint256 amount,
         uint256 fee,
-        address btc_address
+        address btcAddress
     );
     event IssueCancel(
-        uint256 indexed issude_id,
+        uint256 indexed issudeId,
         address indexed requester,
-        address indexed vault_id,
+        address indexed vaultId,
         uint256 amount,
         uint256 fee,
-        address btc_address
+        address btcAddress
     );
     mapping(address => mapping(uint256 => S_IssueRequest)) public issueRequests;
 
     function issueOneBTC(address receiver, uint256 amount) internal virtual;
 
-    function register_deposit_address(address vault_id, uint256 issue_id)
+    function registerDepositAddress(address vaultId, uint256 issueId)
         internal
         virtual
         returns (address);
 
-    function get_issue_fee(
-        uint256 amount_requested
+    function getIssueFee(
+        uint256 amountRequested
     ) private pure returns (uint256) {
-        return amount_requested*2/1000;
+        return amountRequested*2/1000;
     }
 
-    function get_issue_id(address user) private view returns (uint256) {
-        //get_secure_id
+    function getIssueId(address user) private view returns (uint256) {
+        //getSecureId
         return
             uint256(
                 keccak256(abi.encodePacked(user, blockhash(block.number - 1)))
             );
     }
 
-    function get_issue_griefing_collateral(uint256 amount_btc)
+    function getIssueGriefingCollateral(uint256 amountBtc)
         private
         returns (uint256)
     {
-        return amount_btc;
+        return amountBtc;
     }
 
-    function _request_issue(
+    function _requestIssue(
         address payable requester,
-        uint256 amount_requested,
-        address vault_id,
-        uint256 griefing_collateral
+        uint256 amountRequested,
+        address vaultId,
+        uint256 griefingCollateral
     ) internal {
         require(
-            get_issue_griefing_collateral(amount_requested) <=
-                griefing_collateral,
+            getIssueGriefingCollateral(amountRequested) <=
+                griefingCollateral,
             "InsufficientCollateral"
         );
-        uint256 issue_id = get_issue_id(requester);
-        address btc_address = register_deposit_address(vault_id, issue_id);
-        uint256 fee = get_issue_fee(amount_requested);
-        uint256 amount_user = amount_requested - fee;
-        S_IssueRequest storage request = issueRequests[requester][issue_id];
+        uint256 issueId = getIssueId(requester);
+        address btcAddress = registerDepositAddress(vaultId, issueId);
+        uint256 fee = getIssueFee(amountRequested);
+        uint256 amountUser = amountRequested - fee;
+        S_IssueRequest storage request = issueRequests[requester][issueId];
         require(request.status == RequestStatus.None, "invalid request");
         {
-            request.vault = address(uint160(vault_id));
+            request.vault = address(uint160(vaultId));
             request.opentime = block.timestamp;
             request.requester = requester;
-            request.btc_address = btc_address;
-            request.amount = amount_user;
+            request.btcAddress = btcAddress;
+            request.amount = amountUser;
             request.fee = fee;
-            request.griefing_collateral = griefing_collateral;
+            request.griefingCollateral = griefingCollateral;
             request.period = 2 days;
-            request.btc_height = 0;
+            request.btcHeight = 0;
             request.status = RequestStatus.Pending;
         }
-        ICollateral.lock_collateral(
+        ICollateral.lockCollateral(
             request.requester,
-            request.griefing_collateral
+            request.griefingCollateral
         ); // ICollateral::
         emit IssueRequest(
-            issue_id,
+            issueId,
             requester,
-            vault_id,
-            amount_user,
+            vaultId,
+            amountUser,
             fee,
-            btc_address
+            btcAddress
         );
     }
 
-    function _execute_issue(
+    function _executeIssue(
         address requester,
-        uint256 issue_id,
+        uint256 issueId,
         bytes memory _vout
     ) internal {
-        S_IssueRequest storage request = issueRequests[requester][issue_id];
+        S_IssueRequest storage request = issueRequests[requester][issueId];
         require(
             request.status == RequestStatus.Pending,
             "request is completed"
         );
-        uint256 amount_transferred =
-            TxValidate.validate_transaction(
+        uint256 amountTransferred =
+            TxValidate.validateTransaction(
                 _vout,
                 0,
-                request.btc_address,
-                issue_id
+                request.btcAddress,
+                issueId
             );
-        if (amount_transferred != request.amount + request.fee) {
+        if (amountTransferred != request.amount + request.fee) {
             // only the requester of the issue can execute payments with different amounts
-            require(msg.sender == requestor, "InvalidExecutor");
-            request.fee = get_issue_fee(amount_transferred);
-            request.amount = amount_transferred - request.fee;
+            require(msg.sender == requester, "InvalidExecutor");
+            request.fee = getIssueFee(amountTransferred);
+            request.amount = amountTransferred - request.fee;
         }
         issueOneBTC(request.vault, request.fee);
         issueOneBTC(request.requester, request.amount);
-        ICollateral.release_collateral(
+        ICollateral.releaseCollateral(
             request.requester,
-            request.griefing_collateral
+            request.griefingCollateral
         ); // ICollateral::
         request.status = RequestStatus.Completed;
         emit IssueComplete(
-            issue_id,
+            issueId,
             requester,
             request.vault,
             request.amount,
             request.fee,
-            request.btc_address
+            request.btcAddress
         );
     }
 
-    function _cancel_issue(address requester, uint256 issue_id) internal {
-        S_IssueRequest storage request = issueRequests[requester][issue_id];
+    function _cancelIssue(address requester, uint256 issueId) internal {
+        S_IssueRequest storage request = issueRequests[requester][issueId];
         require(
             request.status == RequestStatus.Pending,
             "request is completed"
@@ -159,18 +159,18 @@ abstract contract Issue is ICollateral {
             "TimeNotExpired"
         );
         request.status = RequestStatus.Cancelled;
-        ICollateral.slash_collateral(
+        ICollateral.slashCollateral(
             request.requester,
             request.vault,
-            request.griefing_collateral
+            request.griefingCollateral
         ); // ICollateral::
         emit IssueCancel(
-            issue_id,
+            issueId,
             requester,
             request.vault,
             request.amount,
             request.fee,
-            request.btc_address
+            request.btcAddress
         );
     }
 }

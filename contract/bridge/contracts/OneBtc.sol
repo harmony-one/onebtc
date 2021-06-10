@@ -19,82 +19,82 @@ contract OneBtc is ERC20, Issue, Redeem, VaultRegistry {
     }
 
     function verifyTx(
-        bytes calldata merkle_proof,
-        bytes calldata raw_tx,
+        bytes calldata merkleProof,
+        bytes calldata rawTx,
         uint64 heightAndIndex,
         bytes calldata header
     ) private returns (bytes memory) {
-        bytes32 tx_id = raw_tx.hash256();
+        bytes32 txId = rawTx.hash256();
         realy.verifyTx(
             uint32(heightAndIndex >> 32),
             heightAndIndex & type(uint32).max,
-            tx_id,
+            txId,
             header,
-            merkle_proof,
+            merkleProof,
             6,
             true
         );
         TransactionUtils.Transaction memory btcTx =
-            TransactionUtils.extractTx(raw_tx);
+            TransactionUtils.extractTx(rawTx);
         require(btcTx.locktime == 0, "locktime must zero!");
         // check version?
         // btcTx.version
         return btcTx.vouts;
     }
 
-    function request_issue(uint256 amount_requested, address vault_id)
+    function requestIssue(uint256 amountRequested, address vaultId)
         external
         payable
     {
-        Issue._request_issue(msg.sender, amount_requested, vault_id, msg.value);
+        Issue._requestIssue(msg.sender, amountRequested, vaultId, msg.value);
     }
 
-    function execute_issue(
+    function executeIssue(
         address requester,
-        uint256 issue_id,
-        bytes calldata merkle_proof,
-        bytes calldata raw_tx, // avoid compiler error: stack too deep
+        uint256 issueId,
+        bytes calldata merkleProof,
+        bytes calldata rawTx, // avoid compiler error: stack too deep
         //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
         uint64 heightAndIndex,
         bytes calldata header
     ) external {
         bytes memory _vout =
-            verifyTx(merkle_proof, raw_tx, heightAndIndex, header);
-        Issue._execute_issue(requester, issue_id, _vout);
+            verifyTx(merkleProof, rawTx, heightAndIndex, header);
+        Issue._executeIssue(requester, issueId, _vout);
     }
 
-    function cancel_issue(address requester, uint256 issue_id) external {
-        Issue._cancel_issue(requester, issue_id);
+    function cancelIssue(address requester, uint256 issueId) external {
+        Issue._cancelIssue(requester, issueId);
     }
 
-    function request_redeem(
-        uint256 amount_one_btc,
-        address btc_address,
-        address vault_id
+    function requestRedeem(
+        uint256 amountOneBtc,
+        address btcAddress,
+        address vaultId
     ) external {
-        Redeem._request_redeem(
+        Redeem._requestRedeem(
             msg.sender,
-            amount_one_btc,
-            btc_address,
-            vault_id
+            amountOneBtc,
+            btcAddress,
+            vaultId
         );
     }
 
-    function execute_redeem(
+    function executeRedeem(
         address requester,
-        uint256 redeem_id,
-        bytes calldata merkle_proof,
-        bytes calldata raw_tx,
+        uint256 redeemId,
+        bytes calldata merkleProof,
+        bytes calldata rawTx,
         uint64 heightAndIndex,
         bytes calldata header
     ) external {
         bytes memory _vout =
-            verifyTx(merkle_proof, raw_tx, heightAndIndex, header);
-        Redeem._execute_redeem(requester, redeem_id, _vout);
+            verifyTx(merkleProof, rawTx, heightAndIndex, header);
+        Redeem._executeRedeem(requester, redeemId, _vout);
     }
 
-    function cancel_redeem(address requester, uint256 redeem_id) external {
-        Redeem._cancel_redeem(requester, redeem_id);
+    function cancelRedeem(address requester, uint256 redeemId) external {
+        Redeem._cancelRedeem(requester, redeemId);
     }
 
     function lockOneBTC(address from, uint256 amount)
@@ -123,11 +123,11 @@ contract OneBtc is ERC20, Issue, Redeem, VaultRegistry {
         ERC20._mint(receiver, amount);
     }
 
-    function register_deposit_address(address vault_id, uint256 issue_id)
+    function registerDepositAddress(address vaultId, uint256 issueId)
         internal
         override(Issue)
         returns (address)
     {
-        return VaultRegistry._register_deposit_address(vault_id, issue_id);
+        return VaultRegistry._registerDepositAddress(vaultId, issueId);
     }
 }
