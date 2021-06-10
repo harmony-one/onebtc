@@ -121,7 +121,7 @@ abstract contract VaultRegistry is ICollateral {
     }
 
     function issuable_tokens(address vault_id) public view returns(uint256) {
-        uint256 free_collateral = ICollateral.get_free_collateral(vault_id);
+        uint256 free_collateral = ICollateral.getFreeCollateral(vault_id);
         return calculate_max_wrapped_from_collateral_for_threshold(free_collateral, secure_collateral_threshold);
     }
 
