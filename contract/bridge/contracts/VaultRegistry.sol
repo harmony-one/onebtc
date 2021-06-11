@@ -7,89 +7,89 @@ import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
 
 abstract contract VaultRegistry is ICollateral {
     struct Vault {
-        uint256 btc_public_key_x;
-        uint256 btc_public_key_y;
+        uint256 btcPublicKeyX;
+        uint256 btcPublicKeyY;
         uint256 collateral;
-        address[] deposit_addresses;
+        address[] depositAddresses;
     }
     mapping(address => Vault) public vaults;
 
     event RegisterVault(
-        address indexed vault_id,
+        address indexed vaultId,
         uint256 collateral,
-        uint256 btc_public_key_x,
-        uint256 btc_public_key_y
+        uint256 btcPublicKeyX,
+        uint256 btcPublicKeyY
     );
 
-    event VaultPublicKeyUpdate(address indexed vault_id, uint256 x, uint256 y);
+    event VaultPublicKeyUpdate(address indexed vaultId, uint256 x, uint256 y);
 
-    function register_vault(uint256 btc_public_key_x, uint256 btc_public_key_y)
+    function registerVault(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
         external
         payable
     {
-        address vault_id = msg.sender;
-        Vault storage vault = vaults[vault_id];
-        require(vault.btc_public_key_x == 0, "vaultExist");
+        address vaultId = msg.sender;
+        Vault storage vault = vaults[vaultId];
+        require(vault.btcPublicKeyX == 0, "vaultExist");
         require(
-            btc_public_key_x != 0 && btc_public_key_y != 0,
+            btcPublicKeyX != 0 && btcPublicKeyY != 0,
             "invalidPubkey"
         );
-        vault.btc_public_key_x = btc_public_key_x;
-        vault.btc_public_key_y = btc_public_key_y;
-        lock_additional_collateral();
+        vault.btcPublicKeyX = btcPublicKeyX;
+        vault.btcPublicKeyY = btcPublicKeyY;
+        lockAdditionalCollateral();
         emit RegisterVault(
-            vault_id,
+            vaultId,
             msg.value,
-            btc_public_key_x,
-            btc_public_key_y
+            btcPublicKeyX,
+            btcPublicKeyY
         );
     }
 
-    function _register_deposit_address(address vault_id, uint256 issue_id)
+    function _registerDepositAddress(address vaultId, uint256 issueId)
         internal
         returns (address)
     {
-        Vault storage vault = vaults[vault_id];
-        require(vault.btc_public_key_x != 0, "vaultNotExist");
+        Vault storage vault = vaults[vaultId];
+        require(vault.btcPublicKeyX != 0, "vaultNotExist");
         address derivedKey =
             BitcoinKeyDerivation.derivate(
-                vault.btc_public_key_x,
-                vault.btc_public_key_y,
-                issue_id
+                vault.btcPublicKeyX,
+                vault.btcPublicKeyY,
+                issueId
             );
-        vault.deposit_addresses.push(derivedKey);
+        vault.depositAddresses.push(derivedKey);
         return derivedKey;
     }
 
-    function update_public_key(
-        uint256 btc_public_key_x,
-        uint256 btc_public_key_y
+    function updatePublicKey(
+        uint256 btcPublicKeyX,
+        uint256 btcPublicKeyY
     ) external {
-        address vault_id = msg.sender;
-        Vault storage vault = vaults[vault_id];
-        require(vault.btc_public_key_x != 0, "vaultNotExist");
-        vault.btc_public_key_x = btc_public_key_x;
-        vault.btc_public_key_y = btc_public_key_y;
-        emit VaultPublicKeyUpdate(vault_id, btc_public_key_x, btc_public_key_y);
+        address vaultId = msg.sender;
+        Vault storage vault = vaults[vaultId];
+        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+        vault.btcPublicKeyX = btcPublicKeyX;
+        vault.btcPublicKeyY = btcPublicKeyY;
+        emit VaultPublicKeyUpdate(vaultId, btcPublicKeyX, btcPublicKeyY);
     }
 
-    function lock_additional_collateral() public payable {
-        address vault_id = msg.sender;
-        Vault storage vault = vaults[vault_id];
-        require(vault.btc_public_key_x != 0, "vaultNotExist");
+    function lockAdditionalCollateral() public payable {
+        address vaultId = msg.sender;
+        Vault storage vault = vaults[vaultId];
+        require(vault.btcPublicKeyX != 0, "vaultNotExist");
         vault.collateral += msg.value;
-        ICollateral.lock_collateral(vault_id, msg.value);
+        ICollateral.lockCollateral(vaultId, msg.value);
     }
 
-    function withdraw_collateral(uint256 amount) external {
+    function withdrawCollateral(uint256 amount) external {
         Vault storage vault = vaults[msg.sender];
-        require(vault.btc_public_key_x != 0, "vaultNotExist");
+        require(vault.btcPublicKeyX != 0, "vaultNotExist");
         vault.collateral -= amount;
-        ICollateral.release_collateral(msg.sender, amount);
+        ICollateral.releaseCollateral(msg.sender, amount);
     }
 
-    function try_increase_to_be_issued_tokens(address vault_id, uint256 amount) internal {
-        //Vault storage vault = vaults[vault_id];
-        //uint256 newIssued = vault.issued_btc + amount;
+    function tryIncreaseToBeIssuedTokens(address vaultId, uint256 amount) internal {
+        //Vault storage vault = vaults[vaultId];
+        //uint256 newIssued = vault.issuedBtc + amount;
     }
 }
