@@ -16,16 +16,19 @@ import {Parser} from "../../relay/src/Parser.sol";
 contract stakedRelayers {
 
     struct StakedRelayer {
+        address account;
         uint256 stake;
     }
 
-    uint STAKED_RELAYER_STAKE;
     mapping(address => StakedRelayer) public stakedRelayersMap;
     mapping(address => uint256) public theftReports;
 
+    // CONSTANTS
+    uint256 constant STAKED_RELAYER_STAKE = 100;
+
     // ERRORS
     string constant ERR_ALREADY_REGISTERED = "This AccountId is already registered as a Staked Relayer";
-    string constant ERR_INSUFFICIENT_STAKE = "Insufficient stake provided";
+    string constant public ERR_INSUFFICIENT_STAKE = "Insufficient stake provided";
     string constant ERR_GOVERNANCE_ONLY = "ERR_GOVERNANCE_ONLY";
     string constant ERR_NOT_REGISTERED = "This AccountId is not registered as a Staked Relayer";
     string constant ERR_STAKED_RELAYERS_ONLY = "This action can only be executed by Staked Relayers";
@@ -77,11 +80,11 @@ contract stakedRelayers {
     * @param _stakedRelayer The account of the staked relayer to be registered.
     * @param stake to-be-locked collateral/stake.
     */
-    function registerStakedRelayer(StakedRelayer memory _stakedRelayer, uint256 stake) public {
+    function registerStakedRelayer(StakedRelayer memory _stakedRelayer, uint256 stake)  public {
         // The registerStakedRelayer function takes as input an AccountID and collateral amount (to be used as stake) to register a new staked relayer in the system.
 
         // 1. Check that the stakedRelayer is not already in StakedRelayers. Return ERR_ALREADY_REGISTERED if this check fails.
-        // require(stakedRelayersMap[_stakedRelayer.stake], ERR_ALREADY_REGISTERED);
+        // require(stakedRelayersMap, ERR_ALREADY_REGISTERED);
 
         // 2. Check that stake > STAKED_RELAYER_STAKE holds, i.e., the staked relayer provided sufficient collateral. Return ERR_INSUFFICIENT_STAKE error if this check fails.
         require(stake > STAKED_RELAYER_STAKE, ERR_INSUFFICIENT_STAKE);
@@ -93,13 +96,13 @@ contract stakedRelayers {
         // );
 
         // 4. Store the provided information (amount of stake) in a new StakedRelayer and insert it into the StakedRelayers mapping using the stakedRelayer AccountId as key.
-        // stakedRelayersMap[_stakedRelayer.stake] = stake;
+        stakedRelayersMap[_stakedRelayer.account] = _stakedRelayer;
 
         // 5. Emit a RegisterStakedRelayer(StakedRelayer, collateral) event.
-        emit RegisterStakedRelayer(
-            _stakedRelayer,
-            stake
-        );
+        // emit RegisterStakedRelayer(
+        //     _stakedRelayer,
+        //     stake
+        // );
     }
 
     /**
