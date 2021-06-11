@@ -8,112 +8,112 @@ import {ExchangeRateOracle} from "./ExchangeRateOracle.sol";
 
 abstract contract VaultRegistry is ICollateral {
     struct Vault {
-        uint256 btc_public_key_x;
-        uint256 btc_public_key_y;
+        uint256 btcPublicKeyX;
+        uint256 btcPublicKeyY;
         uint256 collateral;
         uint256 issued;
         uint256 toBeIssued;
         uint256  toBeRedeemed;
-        address[] deposit_addresses;
+        address[] depositAddresses;
     }
     mapping(address => Vault) public vaults;
-    uint256 public constant secure_collateral_threshold = 150; // 150%
+    uint256 public constant secureCollateralThreshold = 150; // 150%
     ExchangeRateOracle oracle;
     
     event RegisterVault(
-        address indexed vault_id,
+        address indexed vaultId,
         uint256 collateral,
-        uint256 btc_public_key_x,
-        uint256 btc_public_key_y
+        uint256 btcPublicKeyX,
+        uint256 btcPublicKeyY
     );
 
-    event VaultPublicKeyUpdate(address indexed vault_id, uint256 x, uint256 y);
-    event IncreaseToBeIssuedTokens(address indexed vault_id, uint256 amount);
-    event IncreaseToBeRedeemedTokens(address indexed vault_id, uint256 amount);
-    event DecreaseToBeIssuedTokens(address indexed vault_id, uint256 amount);
-    event IssueTokens(address indexed vault_id, uint256 amount);
+    event VaultPublicKeyUpdate(address indexed vaultId, uint256 x, uint256 y);
+    event IncreaseToBeIssuedTokens(address indexed vaultId, uint256 amount);
+    event IncreaseToBeRedeemedTokens(address indexed vaultId, uint256 amount);
+    event DecreaseToBeIssuedTokens(address indexed vaultId, uint256 amount);
+    event IssueTokens(address indexed vaultId, uint256 amount);
 
-    function register_vault(uint256 btc_public_key_x, uint256 btc_public_key_y)
+    function registerVault(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
         external
         payable
     {
-        address vault_id = msg.sender;
-        Vault storage vault = vaults[vault_id];
-        require(vault.btc_public_key_x == 0, "vaultExist");
+        address vaultId = msg.sender;
+        Vault storage vault = vaults[vaultId];
+        require(vault.btcPublicKeyX == 0, "vaultExist");
         require(
-            btc_public_key_x != 0 && btc_public_key_y != 0,
+            btcPublicKeyX != 0 && btcPublicKeyY != 0,
             "invalidPubkey"
         );
-        vault.btc_public_key_x = btc_public_key_x;
-        vault.btc_public_key_y = btc_public_key_y;
-        lock_additional_collateral();
+        vault.btcPublicKeyX = btcPublicKeyX;
+        vault.btcPublicKeyY = btcPublicKeyY;
+        lockAdditionalCollateral();
         emit RegisterVault(
-            vault_id,
+            vaultId,
             msg.value,
-            btc_public_key_x,
-            btc_public_key_y
+            btcPublicKeyX,
+            btcPublicKeyY
         );
     }
 
-    function register_deposit_address(address vault_id, uint256 issue_id)
+    function registerDepositAddress(address vaultId, uint256 issueId)
         internal
         returns (address)
     {
-        Vault storage vault = vaults[vault_id];
-        require(vault.btc_public_key_x != 0, "vaultNotExist");
+        Vault storage vault = vaults[vaultId];
+        require(vault.btcPublicKeyX != 0, "vaultNotExist");
         address derivedKey =
             BitcoinKeyDerivation.derivate(
-                vault.btc_public_key_x,
-                vault.btc_public_key_y,
-                issue_id
+                vault.btcPublicKeyX,
+                vault.btcPublicKeyY,
+                issueId
             );
-        vault.deposit_addresses.push(derivedKey);
+        vault.depositAddresses.push(derivedKey);
         return derivedKey;
     }
 
-    function update_public_key(
-        uint256 btc_public_key_x,
-        uint256 btc_public_key_y
+    function updatePublicKey(
+        uint256 btcPublicKeyX,
+        uint256 btcPublicKeyY
     ) external {
-        address vault_id = msg.sender;
-        Vault storage vault = vaults[vault_id];
-        require(vault.btc_public_key_x != 0, "vaultNotExist");
-        vault.btc_public_key_x = btc_public_key_x;
-        vault.btc_public_key_y = btc_public_key_y;
-        emit VaultPublicKeyUpdate(vault_id, btc_public_key_x, btc_public_key_y);
+        address vaultId = msg.sender;
+        Vault storage vault = vaults[vaultId];
+        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+        vault.btcPublicKeyX = btcPublicKeyX;
+        vault.btcPublicKeyY = btcPublicKeyY;
+        emit VaultPublicKeyUpdate(vaultId, btcPublicKeyX, btcPublicKeyY);
     }
 
-    function lock_additional_collateral() public payable {
-        address vault_id = msg.sender;
-        Vault storage vault = vaults[vault_id];
-        require(vault.btc_public_key_x != 0, "vaultNotExist");
+    function lockAdditionalCollateral() public payable {
+        address vaultId = msg.sender;
+        Vault storage vault = vaults[vaultId];
+        require(vault.btcPublicKeyX != 0, "vaultNotExist");
         vault.collateral += msg.value;
-        ICollateral.lock_collateral(vault_id, msg.value);
+        ICollateral.lockCollateral(vaultId, msg.value);
     }
 
-    function withdraw_collateral(uint256 amount) external {
+    function withdrawCollateral(uint256 amount) external {
         Vault storage vault = vaults[msg.sender];
-        require(vault.btc_public_key_x != 0, "vaultNotExist");
+        require(vault.btcPublicKeyX != 0, "vaultNotExist");
         vault.collateral -= amount;
-        ICollateral.release_collateral(msg.sender, amount);
+        ICollateral.releaseCollateral(msg.sender, amount);
     }
 
-    function calculate_collateral(uint256 collateral, uint256 numerator, uint256 denominator) internal pure returns(uint256){
+    function calculateCollateral(uint256 collateral, uint256 numerator, uint256 denominator) internal pure returns(uint256){
         return collateral*numerator/denominator;
     }
 
-    function decrease_to_be_issued_tokens(address vault_id, uint256 amount) internal {
-        Vault storage vault = vaults[vault_id];
+    function decreaseToBeIssuedTokens(address vaultId, uint256 amount) internal {
+        Vault storage vault = vaults[vaultId];
         vault.toBeIssued -= amount;
-        emit DecreaseToBeIssuedTokens(vault_id, amount);
+        emit DecreaseToBeIssuedTokens(vaultId, amount);
     }
 
-    function tryIncreaseToBeIssuedTokens(address vault_id, uint256 amount) internal returns(bool) {
-        uint256 issuable_tokens = issuable_tokens(vault_id);
-        if(issuable_tokens > amount) return false; // ExceedingVaultLimit
-        Vault storage vault = vaults[vault_id];
+    function tryIncreaseToBeIssuedTokens(address vaultId, uint256 amount) internal returns(bool) {
+        uint256 issuableTokens = issuableTokens(vaultId);
+        if(issuableTokens > amount) return false; // ExceedingVaultLimit
+        Vault storage vault = vaults[vaultId];
         vault.toBeIssued += amount;
-        emit IncreaseToBeIssuedTokens(vault_id, amount);
+        emit IncreaseToBeIssuedTokens(vaultId, amount);
         return true;
     }
 
@@ -137,20 +137,20 @@ abstract contract VaultRegistry is ICollateral {
         vault.issued -= amount;
     }
 
-    function calculate_max_wrapped_from_collateral_for_threshold(uint256 collateral, uint256 threshold) internal view returns(uint256) {
-        uint256 collateral_in_wrapped = oracle.collateralToWrapped(collateral);
-        return collateral_in_wrapped*100/threshold;
+    function calculateMaxWrappedFromCollateralForThreshold(uint256 collateral, uint256 threshold) internal view returns(uint256) {
+        uint256 collateralInWrapped = oracle.collateralToWrapped(collateral);
+        return collateralInWrapped*100/threshold;
     }
 
-    function issuable_tokens(address vault_id) public view returns(uint256) {
-        uint256 free_collateral = ICollateral.getFreeCollateral(vault_id);
-        return calculate_max_wrapped_from_collateral_for_threshold(free_collateral, secure_collateral_threshold);
+    function issuableTokens(address vaultId) public view returns(uint256) {
+        uint256 freeCollateral = ICollateral.getFreeCollateral(vaultId);
+        return calculateMaxWrappedFromCollateralForThreshold(freeCollateral, secureCollateralThreshold);
     }
 
-    function issue_tokens(address vault_id, uint256 amount) internal {
-        Vault storage vault = vaults[vault_id];
+    function issueTokens(address vaultId, uint256 amount) internal {
+        Vault storage vault = vaults[vaultId];
         vault.issued += amount;
         vault.toBeIssued -= amount;
-        emit IssueTokens(vault_id, amount);
+        emit IssueTokens(vaultId, amount);
     }
 }

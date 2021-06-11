@@ -16,28 +16,28 @@ abstract contract Redeem is ICollateral, VaultRegistry {
         public redeemRequests;
 
     event RedeemRequest(
-        uint256 indexed redeem_id,
+        uint256 indexed redeemId,
         address indexed requester,
-        address indexed vault_id,
+        address indexed vaultId,
         uint256 amount,
         uint256 fee,
-        address btc_address
+        address btcAddress
     );
     event RedeemComplete(
-        uint256 indexed redeem_id,
+        uint256 indexed redeemId,
         address indexed requester,
-        address indexed vault_id,
+        address indexed vaultId,
         uint256 amount,
         uint256 fee,
-        address btc_address
+        address btcAddress
     );
     event RedeemCancel(
-        uint256 indexed redeem_id,
+        uint256 indexed redeemId,
         address indexed requester,
-        address indexed vault_id,
+        address indexed vaultId,
         uint256 amount,
         uint256 fee,
-        address btc_address
+        address btcAddress
     );
 
     function lockOneBTC(address from, uint256 amount) internal virtual;
@@ -48,112 +48,112 @@ abstract contract Redeem is ICollateral, VaultRegistry {
         internal
         virtual;
 
-    function get_redeem_fee(
-        uint256 /*amount_requested*/
+    function getRedeemFee(
+        uint256 /*amountRequested*/
     ) private pure returns (uint256) {
         return 0;
     }
 
-    function get_redeem_id(address user) private view returns (uint256) {
-        //get_secure_id
+    function getRedeemId(address user) private view returns (uint256) {
+        //getSecureId
         return
             uint256(
                 keccak256(abi.encodePacked(user, blockhash(block.number - 1)))
             );
     }
 
-    function get_redeem_collateral(uint256 amount_btc)
+    function getRedeemCollateral(uint256 amountBtc)
         private
         returns (uint256)
     {
-        return amount_btc;
+        return amountBtc;
     }
 
     function getCurrentInclusionFee() private returns (uint256) {
         return 0;
     }
 
-    function _request_redeem(
+    function _requestRedeem(
         address requester,
-        uint256 amount_one_btc,
-        address btc_address,
-        address vault_id
+        uint256 amountOneBtc,
+        address btcAddress,
+        address vaultId
     ) internal {
-        lockOneBTC(requester, amount_one_btc);
-        uint256 fee_one_btc = get_redeem_fee(amount_one_btc);
+        lockOneBTC(requester, amountOneBtc);
+        uint256 feeOneBtc = getRedeemFee(amountOneBtc);
         uint256 inclusionFee = getCurrentInclusionFee();
-        uint256 toBeBurnedBtc = amount_one_btc - fee_one_btc;
+        uint256 toBeBurnedBtc = amountOneBtc - feeOneBtc;
         uint256 redeemAmountOneBtc = toBeBurnedBtc - inclusionFee;
-        uint256 redeem_id = get_redeem_id(requester);
+        uint256 redeemId = getRedeemId(requester);
 
         require(
             VaultRegistry.tryIncreaseToBeRedeemedTokens(
-                vault_id,
+                vaultId,
                 toBeBurnedBtc
             ),
             "InsufficientTokensCommitted"
         );
         // TODO: decrease collateral
-        S_RedeemRequest storage request = redeemRequests[requester][redeem_id];
+        S_RedeemRequest storage request = redeemRequests[requester][redeemId];
         require(request.status == RequestStatus.None, "invalid request");
         {
-            request.vault = vault_id;
+            request.vault = vaultId;
             request.opentime = block.timestamp;
             request.period = 2 days;
-            request.fee = fee_one_btc;
+            request.fee = feeOneBtc;
             request.transferFeeBtc = inclusionFee;
-            request.amount_btc = redeemAmountOneBtc;
-            //request.premium_one
-            request.amount_one = get_redeem_collateral(redeemAmountOneBtc);
+            request.amountBtc = redeemAmountOneBtc;
+            //request.premiumOne
+            request.amountOne = getRedeemCollateral(redeemAmountOneBtc);
             request.requester = requester;
-            request.btc_address = btc_address;
-            //request.btc_height
+            request.btcAddress = btcAddress;
+            //request.btcHeight
             request.status = RequestStatus.Pending;
         }
-        ICollateral.use_collateral_inc(vault_id, request.amount_one);
+        ICollateral.useCollateralInc(vaultId, request.amountOne);
         emit RedeemRequest(
-            redeem_id,
+            redeemId,
             requester,
-            vault_id,
-            request.amount_btc,
+            vaultId,
+            request.amountBtc,
             request.fee,
-            request.btc_address
+            request.btcAddress
         );
     }
 
-    function _execute_redeem(
+    function _executeRedeem(
         address requester,
-        uint256 redeem_id,
+        uint256 redeemId,
         bytes memory _vout
     ) internal {
-        S_RedeemRequest storage request = redeemRequests[requester][redeem_id];
+        S_RedeemRequest storage request = redeemRequests[requester][redeemId];
         require(
             request.status == RequestStatus.Pending,
             "request is completed"
         );
-        TxValidate.validate_transaction(
+        TxValidate.validateTransaction(
             _vout,
-            request.amount_btc,
-            request.btc_address,
-            redeem_id
+            request.amountBtc,
+            request.btcAddress,
+            redeemId
         );
-        burnLockedOneBTC(request.amount_btc);
+        burnLockedOneBTC(request.amountBtc);
         releaseLockedOneBTC(request.vault, request.fee);
         request.status = RequestStatus.Completed;
-        ICollateral.use_collateral_dec(request.vault, request.amount_one);
-        VaultRegistry.redeemTokens(request.vault, request.amount_btc + request.transferFeeBtc);
+        ICollateral.useCollateralDec(request.vault, request.amountOne);
+        VaultRegistry.redeemTokens(request.vault, request.amountBtc + request.transferFeeBtc);
         emit RedeemComplete(
-            redeem_id,
+            redeemId,
             requester,
             request.vault,
-            request.amount_btc,
+            request.amountBtc,
             request.fee,
-            request.btc_address
+            request.btcAddress
         );
     }
 
-    function _cancel_redeem(address requester, uint256 redeem_id) internal {
-        S_RedeemRequest storage request = redeemRequests[requester][redeem_id];
+    function _cancelRedeem(address requester, uint256 redeemId) internal {
+        S_RedeemRequest storage request = redeemRequests[requester][redeemId];
         require(
             request.status == RequestStatus.Pending,
             "request is completed"
@@ -165,22 +165,22 @@ abstract contract Redeem is ICollateral, VaultRegistry {
         request.status = RequestStatus.Cancelled;
         releaseLockedOneBTC(
             request.requester,
-            request.amount_btc + request.fee
+            request.amountBtc + request.fee
         );
 
-        ICollateral.use_collateral_dec(request.vault, request.amount_one);
-        ICollateral.slash_collateral(
+        ICollateral.useCollateralDec(request.vault, request.amountOne);
+        ICollateral.slashCollateral(
             request.vault,
             request.requester,
-            request.amount_one
+            request.amountOne
         );
         emit RedeemCancel(
-            redeem_id,
+            redeemId,
             requester,
             request.vault,
-            request.amount_btc,
+            request.amountBtc,
             request.fee,
-            request.btc_address
+            request.btcAddress
         );
     }
 }

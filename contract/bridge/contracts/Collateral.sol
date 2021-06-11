@@ -13,7 +13,7 @@ abstract contract ICollateral {
         return address(this).balance;
     }
 
-    function lock_collateral(address sender, uint256 amount) internal {
+    function lockCollateral(address sender, uint256 amount) internal {
         require(msg.value >= amount, "InvalidCollateral");
         CollateralBalances[sender] += amount;
         emit LockCollateral(sender, amount);
@@ -33,12 +33,12 @@ abstract contract ICollateral {
         _to.transfer(amount);
     }
 
-    function release_collateral(address sender, uint256 amount) internal {
+    function releaseCollateral(address sender, uint256 amount) internal {
         release(sender, sender, amount);
         emit ReleaseCollateral(sender, amount);
     }
 
-    function slash_collateral(
+    function slashCollateral(
         address from,
         address to,
         uint256 amount
@@ -47,20 +47,20 @@ abstract contract ICollateral {
         emit SlashCollateral(from, to, amount);
     }
 
-    function getFreeCollateral(address vault_id) internal view returns(uint256) {
-        return CollateralBalances[vault_id] - CollateralUsed[vault_id];
+    function getFreeCollateral(address vaultId) internal view returns(uint256) {
+        return CollateralBalances[vaultId] - CollateralUsed[vaultId];
     }
 
-    function use_collateral_inc(address vault_id, uint256 amount) internal {
-        CollateralUsed[vault_id] += amount;
+    function useCollateralInc(address vaultId, uint256 amount) internal {
+        CollateralUsed[vaultId] += amount;
         require(
-            CollateralBalances[vault_id] >= CollateralUsed[vault_id],
+            CollateralBalances[vaultId] >= CollateralUsed[vaultId],
             "InSufficientCollateral"
         );
     }
 
-    function use_collateral_dec(address vault_id, uint256 amount) internal {
-        require(CollateralUsed[vault_id] >= amount, "InSufficientCollateral");
-        CollateralUsed[vault_id] -= amount;
+    function useCollateralDec(address vaultId, uint256 amount) internal {
+        require(CollateralUsed[vaultId] >= amount, "InSufficientCollateral");
+        CollateralUsed[vaultId] -= amount;
     }
 }

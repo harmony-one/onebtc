@@ -7,13 +7,13 @@ struct S_IssueRequest {
     address payable vault; // vault one address
     uint256 opentime;
     address payable requester;
-    address btc_address; // vault btc address
-    bytes btc_public_key;
+    address btcAddress; // vault btc address
+    bytes btcPublicKey;
     uint256 amount;
     uint256 fee;
-    uint256 griefing_collateral;
+    uint256 griefingCollateral;
     uint256 period;
-    uint256 btc_height;
+    uint256 btcHeight;
     RequestStatus status;
 }
 
@@ -22,13 +22,13 @@ struct S_RedeemRequest {
     uint256 opentime;
     uint256 period;
     uint256 fee;
+    uint256 amountBtc;
     uint256 transferFeeBtc;
-    uint256 amount_btc;
-    uint256 amount_one; // Amount of ONE to be paid to the user from liquidated Vaults’ collateral
-    uint256 premium_one;
+    uint256 amountOne; // Amount of ONE to be paid to the user from liquidated Vaults’ collateral
+    uint256 premiumOne;
     address requester;
-    address btc_address;
+    address btcAddress;
     // The latest Bitcoin height as reported by the BTC-Relay at time of opening.
-    uint256 btc_height;
+    uint256 btcHeight;
     RequestStatus status;
 }
