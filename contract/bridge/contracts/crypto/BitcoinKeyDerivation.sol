@@ -4,7 +4,7 @@ pragma solidity 0.6.12;
 
 import {Secp256k1} from "./Secp256k1.sol";
 
-// https://interlay.gitlab.io/polkabtc-spec/security_performance/security-analysis.html#unique-addresses-via-on-chain-key-derivation
+// https://interlay.gitlab.io/polkabtc-spec/securityPerformance/security-analysis.html#unique-addresses-via-on-chain-key-derivation
 library BitcoinKeyDerivation{
 
     function derivate(uint256 pubX, uint256 pubY, uint256 id) internal view returns(address) {
