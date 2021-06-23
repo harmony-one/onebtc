@@ -6,8 +6,9 @@ import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import {S_IssueRequest, RequestStatus} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
 import {ICollateral} from "./Collateral.sol";
+import {VaultRegistry} from "./VaultRegistry.sol";
 
-abstract contract Issue is ICollateral {
+abstract contract Issue is ICollateral, VaultRegistry {
     using BTCUtils for bytes;
     using BytesLib for bytes;
 
@@ -35,14 +36,15 @@ abstract contract Issue is ICollateral {
         uint256 fee,
         address btcAddress
     );
+    event IssueAmountChange(
+        uint256 indexed issuedId,
+        uint256 amount,
+        uint256 fee,
+        uint256 confiscatedGriefingCollateral
+    );
     mapping(address => mapping(uint256 => S_IssueRequest)) public issueRequests;
 
     function issueOneBTC(address receiver, uint256 amount) internal virtual;
-
-    function registerDepositAddress(address vaultId, uint256 issueId)
-        internal
-        virtual
-        returns (address);
 
     function getIssueFee(
         uint256 amountRequested
@@ -65,6 +67,22 @@ abstract contract Issue is ICollateral {
         return amountBtc;
     }
 
+    function updateIssueAmount(
+        uint256 issueId,
+        S_IssueRequest storage issue,
+        uint256 transferredBtc,
+        uint256 confiscatedGriefingCollateral
+    ) internal {
+        issue.fee = getIssueFee(transferredBtc);
+        issue.amount = transferredBtc - issue.fee;
+        emit IssueAmountChange(
+            issueId,
+            issue.amount,
+            issue.fee,
+            confiscatedGriefingCollateral
+        );
+    }
+
     function _requestIssue(
         address payable requester,
         uint256 amountRequested,
@@ -76,8 +94,15 @@ abstract contract Issue is ICollateral {
                 griefingCollateral,
             "InsufficientCollateral"
         );
+        require(
+            VaultRegistry.tryIncreaseToBeIssuedTokens(
+                vaultId,
+                amountRequested
+            ),
+            "ExceedingVaultLimit"
+        );
         uint256 issueId = getIssueId(requester);
-        address btcAddress = registerDepositAddress(vaultId, issueId);
+        address btcAddress = VaultRegistry.registerDepositAddress(vaultId, issueId);
         uint256 fee = getIssueFee(amountRequested);
         uint256 amountUser = amountRequested - fee;
         S_IssueRequest storage request = issueRequests[requester][issueId];
@@ -125,19 +150,69 @@ abstract contract Issue is ICollateral {
                 request.btcAddress,
                 issueId
             );
-        if (amountTransferred != request.amount + request.fee) {
+        uint256 expectedTotalAmount = request.amount + request.fee;
+        if (amountTransferred < expectedTotalAmount) {
             // only the requester of the issue can execute payments with different amounts
-            require(msg.sender == requester, "InvalidExecutor");
-            request.fee = getIssueFee(amountTransferred);
-            request.amount = amountTransferred - request.fee;
+            require(msg.sender == request.requester, "InvalidExecutor");
+            uint256 deficit = expectedTotalAmount - amountTransferred;
+            VaultRegistry.decreaseToBeIssuedTokens(request.vault, deficit);
+            uint256 releasedCollateral =
+                VaultRegistry.calculateCollateral(
+                    request.griefingCollateral,
+                    amountTransferred,
+                    expectedTotalAmount
+                );
+            ICollateral.releaseCollateral(
+                request.requester,
+                releasedCollateral
+            );
+            uint256 slashedCollateral =
+                request.griefingCollateral - releasedCollateral;
+            ICollateral.slashCollateral(
+                request.requester,
+                request.vault,
+                slashedCollateral
+            ); // ICollateral::
+            updateIssueAmount(
+                issueId,
+                request,
+                amountTransferred,
+                slashedCollateral
+            );
+        } else {
+            ICollateral.releaseCollateral(
+                request.requester,
+                request.griefingCollateral
+            ); // ICollateral::
+            if (amountTransferred > expectedTotalAmount) {
+                uint256 surplusBtc =
+                    amountTransferred - expectedTotalAmount;
+                if (
+                    VaultRegistry.tryIncreaseToBeIssuedTokens(
+                        request.vault,
+                        surplusBtc
+                    )
+                ) {
+                    updateIssueAmount(
+                        issueId,
+                        request,
+                        amountTransferred,
+                        0
+                    );
+                } else {
+                    // vault does not have enough collateral to accept the over payment, so refund.
+                    // TODO requestRefund
+                    // requestRefund(surplusBtc, request.vault, request.requester, issueId);
+                }
+            }
         }
+        uint256 total = request.amount + request.fee;
+        VaultRegistry.issueTokens(request.vault, total);
         issueOneBTC(request.vault, request.fee);
         issueOneBTC(request.requester, request.amount);
-        ICollateral.releaseCollateral(
-            request.requester,
-            request.griefingCollateral
-        ); // ICollateral::
         request.status = RequestStatus.Completed;
+        // TODO: update sla
+        // sla.eventUpdateVaultSla(request.vault, total);
         emit IssueComplete(
             issueId,
             requester,
@@ -164,6 +239,10 @@ abstract contract Issue is ICollateral {
             request.vault,
             request.griefingCollateral
         ); // ICollateral::
+        VaultRegistry.decreaseToBeIssuedTokens(
+            request.vault,
+            request.amount + request.fee
+        );
         emit IssueCancel(
             issueId,
             requester,
