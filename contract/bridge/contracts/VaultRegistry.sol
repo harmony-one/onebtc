@@ -137,7 +137,7 @@ abstract contract VaultRegistry is ICollateral {
         vault.issued -= amount;
     }
 
-    function calculateMaxWrappedFromCollateralForThreshold(uint256 collateral, uint256 threshold) internal view returns(uint256) {
+    function calculateMaxWrappedFromCollateralForThreshold(uint256 collateral, uint256 threshold) public view returns(uint256) {
         uint256 collateralInWrapped = oracle.collateralToWrapped(collateral);
         return collateralInWrapped*100/threshold;
     }
