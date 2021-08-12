@@ -1,9 +1,5 @@
 const VaultRegistryTestWrapper = artifacts.require("VaultRegistryTestWrapper");
-
-const BN = require("bn.js");
-const { expectRevert } = require("@openzeppelin/test-helpers");
 const bitcoin = require("bitcoinjs-lib");
-const { issueTxMock } = require("../mock/btcTxMock");
 const bn = (b) => BigInt(`0x${b.toString("hex")}`);
 
 web3.extend({
@@ -98,7 +94,7 @@ contract("VaultRegistry unit test", (accounts) => {
   });
 
   it("Free Collateral is correct", async function () {
-    const amount = await this.VaultRegistry.getFreeCollateral_public(
+    const amount = await this.VaultRegistry.testGetFreeCollateral(
       this.vaultId
     );
 
@@ -120,7 +116,7 @@ contract("VaultRegistry unit test", (accounts) => {
   it("tryIncreaseToBeIssuedTokens", async function () {
     const amount = web3.utils.toWei("5");
 
-    const req = await this.VaultRegistry.tryIncreaseToBeIssuedTokens_public(
+    const req = await this.VaultRegistry.testTryIncreaseToBeIssuedTokens(
       this.vaultId,
       amount
     );
@@ -134,7 +130,7 @@ contract("VaultRegistry unit test", (accounts) => {
   });
 
   it("Register Deposit Address", async function () {
-    await this.VaultRegistry.registerDepositAddress_public(this.vaultId, 1);
+    await this.VaultRegistry.testRegisterDepositAddress(this.vaultId, 1);
 
     this.depositAddress = await this.VaultRegistry.getLastDepositAddress();
 
@@ -144,7 +140,7 @@ contract("VaultRegistry unit test", (accounts) => {
   it("Issue tokens 5 Wei", async function () {
     const amount = web3.utils.toWei("5");
 
-    const req = await this.VaultRegistry.issueTokens_public(
+    const req = await this.VaultRegistry.testIssueTokens(
       this.vaultId,
       amount
     );
@@ -163,7 +159,7 @@ contract("VaultRegistry unit test", (accounts) => {
   it("tryIncreaseToBeRedeemedTokens", async function () {
     const amount = web3.utils.toWei("5");
 
-    const req = await this.VaultRegistry.tryIncreaseToBeRedeemedTokens_public(
+    const req = await this.VaultRegistry.testTryIncreaseToBeRedeemedTokens(
       this.vaultId,
       amount
     );
@@ -182,7 +178,7 @@ contract("VaultRegistry unit test", (accounts) => {
   it("Redeem tokens 5 Wei", async function () {
     const amount = web3.utils.toWei("5");
 
-    const req = await this.VaultRegistry.redeemTokens_public(
+    const req = await this.VaultRegistry.testRedeemTokens(
       this.vaultId,
       amount
     );
