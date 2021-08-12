@@ -32,6 +32,32 @@ module.exports = {
    */
 
   networks: {
+    test: {
+      host: 'localhost',
+      port: 7545,
+      network_id: '5777',
+      // gas: 4712388
+      // host: "127.0.0.1",
+      // port: 8545,
+      // network_id: '*',
+      accounts: 5,
+      defaultEtherBalance: 500,
+      blockTime: 0
+    },
+
+    local: {
+      host: 'localhost',
+      port: 7545,
+      network_id: '5777',
+      // gas: 4712388
+      // host: "127.0.0.1",
+      // port: 8545,
+      // network_id: '*',
+      accounts: 5,
+      defaultEtherBalance: 500,
+      blockTime: 0
+    },
+
     develop: {
       host: "127.0.0.1",
       port: 8545,

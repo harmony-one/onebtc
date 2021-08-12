@@ -19,7 +19,7 @@ abstract contract VaultRegistry is ICollateral {
     mapping(address => Vault) public vaults;
     uint256 public constant secureCollateralThreshold = 150; // 150%
     ExchangeRateOracle oracle;
-    
+
     event RegisterVault(
         address indexed vaultId,
         uint256 collateral,
@@ -32,6 +32,7 @@ abstract contract VaultRegistry is ICollateral {
     event IncreaseToBeRedeemedTokens(address indexed vaultId, uint256 amount);
     event DecreaseToBeIssuedTokens(address indexed vaultId, uint256 amount);
     event IssueTokens(address indexed vaultId, uint256 amount);
+    event RedeemTokens(address indexed vaultId, uint256 amount);
 
     function registerVault(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
         external
@@ -53,6 +54,16 @@ abstract contract VaultRegistry is ICollateral {
             btcPublicKeyX,
             btcPublicKeyY
         );
+    }
+
+    function toBeRedeemed(address vaultId) public view returns (uint256) {
+        Vault storage vault = vaults[vaultId];
+        return vault.toBeRedeemed;
+    }
+
+    function issued(address vaultId) public view returns (uint256) {
+        Vault storage vault = vaults[vaultId];
+        return vault.issued;
     }
 
     function registerDepositAddress(address vaultId, uint256 issueId)
@@ -119,7 +130,7 @@ abstract contract VaultRegistry is ICollateral {
 
     function tryIncreaseToBeRedeemedTokens(address vaultId, uint256 amount) internal returns(bool) {
         uint256 redeemable = redeemableTokens(vaultId);
-        if(redeemable > amount) return false; // ExceedingVaultLimit
+        if(amount > redeemable) return false; // ExceedingVaultLimit
         Vault storage vault = vaults[vaultId];
         vault.toBeRedeemed += amount;
         emit IncreaseToBeRedeemedTokens(vaultId, amount);
@@ -135,6 +146,7 @@ abstract contract VaultRegistry is ICollateral {
         Vault storage vault = vaults[vaultId];
         vault.toBeRedeemed -= amount;
         vault.issued -= amount;
+        emit RedeemTokens(vaultId, amount);
     }
 
     function calculateMaxWrappedFromCollateralForThreshold(uint256 collateral, uint256 threshold) public view returns(uint256) {
