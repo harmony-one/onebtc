@@ -10,35 +10,35 @@ contract VaultRegistryTestWrapper is VaultRegistry {
         return lastDepositAddress;
     }
 
-    function registerDepositAddress_public(address vaultId, uint256 issueId) public {
+    function testRegisterDepositAddress(address vaultId, uint256 issueId) public {
         lastDepositAddress = registerDepositAddress(vaultId, issueId);
     }
 
-    function decreaseToBeIssuedTokens_public(address vaultId, uint256 amount) public {
+    function testDecreaseToBeIssuedTokens(address vaultId, uint256 amount) public {
         return decreaseToBeIssuedTokens(vaultId, amount);
     }
 
-    function tryIncreaseToBeIssuedTokens_public(address vaultId, uint256 amount) public returns(bool) {
+    function testTryIncreaseToBeIssuedTokens(address vaultId, uint256 amount) public returns(bool) {
         return tryIncreaseToBeIssuedTokens(vaultId, amount);
     }
 
-    function tryIncreaseToBeRedeemedTokens_public(address vaultId, uint256 amount) public returns(bool) {
+    function testTryIncreaseToBeRedeemedTokens(address vaultId, uint256 amount) public returns(bool) {
         return tryIncreaseToBeRedeemedTokens(vaultId, amount);
     }
 
-    function redeemableTokens_public(address vaultId) public returns(uint256) {
+    function testRedeemableTokens(address vaultId) public returns(uint256) {
         return redeemableTokens(vaultId);
     }
 
-    function redeemTokens_public(address vaultId, uint256 amount) public {
+    function testRedeemTokens(address vaultId, uint256 amount) public {
         return redeemTokens(vaultId, amount);
     }
 
-    function issueTokens_public(address vaultId, uint256 amount) public {
+    function testIssueTokens(address vaultId, uint256 amount) public {
         return issueTokens(vaultId, amount);
     }
 
-    function getFreeCollateral_public(address vaultId) public view returns(uint256) {
+    function testGetFreeCollateral(address vaultId) public view returns(uint256) {
         return getFreeCollateral(vaultId);
     }
 }

@@ -36,7 +36,7 @@ contract("Collateral unit test", (accounts) => {
     let errorMessage = "";
 
     try {
-      await this.CollateralTestWrapper.lockCollateral_public(
+      await this.CollateralTestWrapper.testLockCollateral(
         this.vaultId,
         this.lockAmount,
         {
@@ -53,7 +53,7 @@ contract("Collateral unit test", (accounts) => {
 
   it("LockCollateral with 1 Gwei amount", async function () {
     const lockCollateralReq =
-      await this.CollateralTestWrapper.lockCollateral_public(
+      await this.CollateralTestWrapper.testLockCollateral(
         this.vaultId,
         this.lockAmount,
         {
@@ -77,12 +77,12 @@ contract("Collateral unit test", (accounts) => {
 
   it("after lock: freeCollateral equal 1 Gwei", async function () {
     const freeCollateral =
-      await this.CollateralTestWrapper.getFreeCollateral_public(this.vaultId);
+      await this.CollateralTestWrapper.testGetFreeCollateral(this.vaultId);
     assert.equal(Number(freeCollateral), this.lockAmount);
   });
 
   it("ReleaseCollateral 0.5 Gwei", async function () {
-    const req = await this.CollateralTestWrapper.releaseCollateral_public(
+    const req = await this.CollateralTestWrapper.testReleaseCollateral(
       this.vaultId,
       0.5 * 1e9
     );
@@ -100,12 +100,12 @@ contract("Collateral unit test", (accounts) => {
 
   it("after release: freeCollateral equal 0.5 Gwei", async function () {
     const freeCollateral =
-      await this.CollateralTestWrapper.getFreeCollateral_public(this.vaultId);
+      await this.CollateralTestWrapper.testGetFreeCollateral(this.vaultId);
     assert.equal(Number(freeCollateral), 0.5 * 1e9);
   });
 
   it("SlashCollateral 0.2 Gwei to new account", async function () {
-    const req = await this.CollateralTestWrapper.slashCollateral_public(
+    const req = await this.CollateralTestWrapper.testSlashCollateral(
       this.vaultId,
       this.vaultId_new,
       0.2 * 1e9
@@ -125,7 +125,7 @@ contract("Collateral unit test", (accounts) => {
 
   it("after slash: 1Vault freeCollateral equal 0.3 Gwei", async function () {
     const freeCollateral =
-      await this.CollateralTestWrapper.getFreeCollateral_public(this.vaultId);
+      await this.CollateralTestWrapper.testGetFreeCollateral(this.vaultId);
     assert.equal(Number(freeCollateral), 0.3 * 1e9);
   });
 
