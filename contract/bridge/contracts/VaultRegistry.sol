@@ -14,6 +14,8 @@ abstract contract VaultRegistry is ICollateral {
         uint256 issued;
         uint256 toBeIssued;
         uint256  toBeRedeemed;
+        uint256 replaceCollateral;
+        uint256 toBeReplaced;
         address[] depositAddresses;
     }
     mapping(address => Vault) public vaults;
@@ -33,6 +35,8 @@ abstract contract VaultRegistry is ICollateral {
     event DecreaseToBeIssuedTokens(address indexed vaultId, uint256 amount);
     event IssueTokens(address indexed vaultId, uint256 amount);
     event RedeemTokens(address indexed vaultId, uint256 amount);
+    event IncreaseToBeReplacedTokens(address indexed vaultId, uint256 amount);
+    event DecreaseToBeReplacedTokens(address indexed vaultId, uint256 amount);
 
     function registerVault(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
         external
@@ -164,5 +168,50 @@ abstract contract VaultRegistry is ICollateral {
         vault.issued += amount;
         vault.toBeIssued -= amount;
         emit IssueTokens(vaultId, amount);
+    }
+
+    function increaseToBeReplacedTokens(address vaultId, uint256 btcAmount, uint256 collateral) internal returns (uint256 amount, uint256 collateral) {
+        Vault storage vault = vaults[vaultId];
+
+        require(!!vault, 'The Vault cannot be found');
+
+        // The vault’s increased toBeReplaceedTokens MUST NOT exceed issuedTokens - toBeRedeemedTokens.
+        uint256 replacableTokens = vault.issued - vault.toBeRedeem - vault.toBeReplace;
+        uint256 amount = btcAmount > replacableTokens ? replacableTokens : btcAmount;
+        require(amount <= 0, 'Could not withdraw to-be-replaced tokens because it was already zero');
+
+        // An amount of griefingCollateral * (tokenIncrease / btcAmount) MUST be locked by this transaction.
+        uint256 griefingCollateral = collateral * (replacableTokens / btcAmount);
+
+        // TODO: added support for increased collateral value
+        require(msg.value == griefingCollateral, 'The provided collateral is wrong');
+
+        vault.toBeReplaced += amount;
+        vault.replaceCollateral += griefingCollateral;
+
+        emit IncreaseToBeReplacedTokens(vaultId, amount);
+
+        return (amount, griefingCollateral);
+    }
+
+    function decreaseToBeReplacedTokens(address vaultId, uint256 tokens) internal returns (uint256 amount, uint256 collateral) {
+        Vault storage vault = vaults[vaultId];
+
+        require(!!vault, 'The Vault cannot be found');
+
+        // tokenDecrease = min(toBeReplacedTokens, tokens)
+        uint256 tokenDecrease = vault.toBeReplacedTokens > tokens ? tokens : vault.toBeReplacedTokens;
+
+        require(tokenDecrease > 0, 'tokenDecrease should be non zero');
+
+        vault.toBeReplaced -= tokenDecrease;
+
+        uint collateralDecrease = (tokenDecrease / vault.toBeReplacedTokens) * vault.replaceCollateral;
+
+        vault.replaceCollateral -= collateralDecrease;
+
+        emit DecreaseToBeReplacedTokens(vaultId, tokenDecrease);
+
+        return (tokenDecrease, collateralDecrease);
     }
 }
