@@ -5,6 +5,7 @@ pragma solidity ^0.6.12;
 import {ICollateral} from "./Collateral.sol";
 import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
 import {ExchangeRateOracle} from "./ExchangeRateOracle.sol";
+import Math from "@openzeppelin/contracts/math/Math.sol";
 
 abstract contract VaultRegistry is ICollateral {
     struct Vault {
@@ -37,6 +38,7 @@ abstract contract VaultRegistry is ICollateral {
     event RedeemTokens(address indexed vaultId, uint256 amount);
     event IncreaseToBeReplacedTokens(address indexed vaultId, uint256 amount);
     event DecreaseToBeReplacedTokens(address indexed vaultId, uint256 amount);
+    event ReplaceTokens(address indexed oldVaultId, address indexed newVaultId, uint256 tokens, uint256 collateral);
 
     function registerVault(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
         external
@@ -82,8 +84,19 @@ abstract contract VaultRegistry is ICollateral {
                 vault.btcPublicKeyY,
                 issueId
             );
+
+        require(!vault.depositAddresses[derivedKey], 'This btc address already used');
         vault.depositAddresses.push(derivedKey);
+
         return derivedKey;
+    }
+
+    function insertVaultDepositAddress(address vault_id, address btc_address) internal {
+        Vault storage vault = vaults[vaultId];
+        require(!!vault, 'The Vault cannot be found');
+        require(!vault.depositAddresses[btc_address], 'This btc address already used');
+
+        vault.depositAddresses.push(btc_address);
     }
 
     function updatePublicKey(
@@ -170,48 +183,82 @@ abstract contract VaultRegistry is ICollateral {
         emit IssueTokens(vaultId, amount);
     }
 
-    function increaseToBeReplacedTokens(address vaultId, uint256 btcAmount, uint256 collateral) internal returns (uint256 amount, uint256 collateral) {
-        Vault storage vault = vaults[vaultId];
+    function calculateCollateral(uint256 collateral, uint256 numerator, uint256 denominator) internal returns (uint256 amount) {
+        if(!numerator && !denominator) {
+            return collateral;
+        }
 
-        require(!!vault, 'The Vault cannot be found');
+        uint256 amount = collateral * numerator / denominator;
 
-        // The vault’s increased toBeReplaceedTokens MUST NOT exceed issuedTokens - toBeRedeemedTokens.
-        uint256 replacableTokens = vault.issued - vault.toBeRedeem - vault.toBeReplace;
-        uint256 amount = btcAmount > replacableTokens ? replacableTokens : btcAmount;
-        require(amount <= 0, 'Could not withdraw to-be-replaced tokens because it was already zero');
-
-        // An amount of griefingCollateral * (tokenIncrease / btcAmount) MUST be locked by this transaction.
-        uint256 griefingCollateral = collateral * (replacableTokens / btcAmount);
-
-        // TODO: added support for increased collateral value
-        require(msg.value == griefingCollateral, 'The provided collateral is wrong');
-
-        vault.toBeReplaced += amount;
-        vault.replaceCollateral += griefingCollateral;
-
-        emit IncreaseToBeReplacedTokens(vaultId, amount);
-
-        return (amount, griefingCollateral);
+        return amount;
     }
 
-    function decreaseToBeReplacedTokens(address vaultId, uint256 tokens) internal returns (uint256 amount, uint256 collateral) {
+    function requestableToBeReplacedTokens(address vaultId) internal returns (uint256 amount) {
+        Vault storage vault = vaults[vaultId];
+        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+
+        uint256 requestableIncrease = vault.issued - vault.toBeRedeem - vault.toBeReplace;
+
+        return requestableIncrease;
+    }
+
+    function tryIncreaseToBeReplacedTokens(address vaultId, uint256 tokens, uint256 collateral) internal returns (uint256 newToBeReplaced, uint256 newReplaceCollateral) {
         Vault storage vault = vaults[vaultId];
 
-        require(!!vault, 'The Vault cannot be found');
+        uint256 requestableIncrease = requestableToBeReplacedTokens(vaultId);
 
-        // tokenDecrease = min(toBeReplacedTokens, tokens)
-        uint256 tokenDecrease = vault.toBeReplacedTokens > tokens ? tokens : vault.toBeReplacedTokens;
+        require(tokens <= requestableIncrease, 'Could not increase to-be-replaced tokens because it is more than issued amount');
 
-        require(tokenDecrease > 0, 'tokenDecrease should be non zero');
+        vault.toBeReplaced += tokens;
+        vault.replaceCollateral += collateral;
 
-        vault.toBeReplaced -= tokenDecrease;
+        emit IncreaseToBeReplacedTokens(vaultId, tokens);
 
-        uint collateralDecrease = (tokenDecrease / vault.toBeReplacedTokens) * vault.replaceCollateral;
+        return (vault.toBeReplaced, vault.replaceCollateral);
+    }
 
-        vault.replaceCollateral -= collateralDecrease;
+    function decreaseToBeReplacedTokens(address vaultId, uint256 tokens) internal returns (uint256 usedTokens, uint256 usedCollateral) {
+        Vault storage vault = vaults[vaultId];
+        require(vault.btcPublicKeyX != 0, "vaultNotExist");
 
-        emit DecreaseToBeReplacedTokens(vaultId, tokenDecrease);
+        uint256 usedTokens = Math.min(vault.toBeReplaced, tokens);
 
-        return (tokenDecrease, collateralDecrease);
+        uint256 calculatedCollateral = calculateCollateral(vault.replaceCollateral, usedTokens, vault.toBeReplaced);
+        uint256 usedCollateral = Math.min(vault.replaceCollateral, calculatedCollateral);
+
+        vault.toBeReplaced -= usedTokens;
+        vault.replaceCollateral -= usedCollateral;
+
+        emit DecreaseToBeReplacedTokens(vaultId, usedTokens);
+
+        return(usedTokens, usedCollateral);
+    }
+
+    function replaceTokens(address oldVaultId, address newVaultId, uint256 tokens, uint256 collateral) internal {
+        Vault storage oldVault = vaults[oldVaultId];
+        Vault storage newVault = vaults[newVaultId];
+
+        require(oldVault.btcPublicKeyX != 0, "vaultNotExist");
+        require(newVault.btcPublicKeyX != 0, "vaultNotExist");
+
+        // TODO: add liquidated functionality
+        // if old_vault.data.is_liquidated()
+
+        old_vault.issued -= tokens;
+        new_vault.issued += tokens;
+
+        emit ReplaceTokens(oldVaultId, newVaultId, tokens, collateral);
+    }
+
+    function tryDepositCollateral(address vaultId, uint256 amount) internal {
+        Vault storage vault = vaults[vaultId];
+        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+
+        ICollateral.lockCollateral(vaultId, amount);
+
+        // Self::increase_total_backing_collateral(amount)?;
+
+        // TODO: Deposit `amount` of stake in the pool
+        // ext::staking::deposit_stake::<T>(T::GetRewardsCurrencyId::get(), vault_id, vault_id, amount)?;
     }
 }

@@ -7,37 +7,38 @@ import {S_ReplaceRequest, RequestStatus} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
 import {ICollateral} from "./Collateral.sol";
 import {VaultRegistry} from "./VaultRegistry.sol";
+import Math from "@openzeppelin/contracts/math/Math.sol";
 
 abstract contract Replace is ICollateral, VaultRegistry {
 //    using BTCUtils for bytes;
 //    using BytesLib for bytes;
 
     event RequestReplace(
-        uint256 indexed replaceId,
         address indexed oldVault,
-        uint256 btcAmount
+        uint256 btcAmount,
+        uint256 griefingCollateral
     );
 
     event WithdrawReplace(
         address indexed oldVault,
-        uint256 indexed replaceId,
         uint256 withdrawnTokens,
-        uint256 withdrawnGriefingCollateral
+        uint256 withdrawnGriefingCollateral,
+        uint256 indexed replaceId
     );
 
     event AcceptReplace(
         uint256 indexed replaceId,
         address indexed oldVault,
         address indexed newVault,
-        address btcAddress,
         uint256 btcAmount,
-        uint256 collateral
+        uint256 collateral,
+        address btcAddress
     );
 
     event ExecuteReplace(
-        uint256 indexed replaceId,
         address indexed oldVault,
-        address indexed newVault
+        address indexed newVault,
+        uint256 indexed replaceId
     );
 
     event CancelReplace(
@@ -47,7 +48,7 @@ abstract contract Replace is ICollateral, VaultRegistry {
         uint256 slashedCollateral
     );
 
-    mapping(address => mapping(uint256 => S_ReplaceRequest)) public replaceRequests;
+    mapping(uint256 => S_ReplaceRequest) public replaceRequests;
 
     function getReplaceId(address user) private view returns (uint256) {
         //getSecureId
@@ -55,6 +56,19 @@ abstract contract Replace is ICollateral, VaultRegistry {
         uint256(
             keccak256(abi.encodePacked(user, blockhash(block.number - 1)))
         );
+    }
+
+    function getReplaceBtcDustValue() private returns(uint256) {
+        // TODO
+        return 0;
+    }
+
+    function getReplaceGriefingCollateral(uint256 amountBtc)
+    private
+    returns (uint256)
+    {
+        // TODO
+        return amountBtc;
     }
 
     function _requestReplace(
@@ -66,50 +80,146 @@ abstract contract Replace is ICollateral, VaultRegistry {
 
         // TODO: SECURITY CHECK (The oldVault MUST NOT be banned)
 
-        // TODO: The oldVault MUST request sufficient btcAmount to be replaced such that its total is above ReplaceBtcDustValue.
-        /*
-            ERR_AMOUNT_BELOW_BTC_DUST_VALUE
-            Message: “To be replaced amount is too small.”
-            Function: requestReplace, acceptReplace
-            Cause: The Vault requests or accepts an insufficient number of tokens.
-        */
+        uint256 requestableTokens = VaultRegistry.requestableToBeReplacedTokens(oldVaultId);
+        uint256 toBeReplacedIncrease = Math.min(requestableTokens, btcAmount);
 
-        uint256 replaceId = getIssueId(oldVaultId);
-        S_ReplaceRequest storage request = issueRequests[oldVaultId][issueId];
+        uint256 replaceCollateralIncrease = griefingCollateral;
 
-        require(request.status == RequestStatus.None, "This replace already created");
-
-        Vault storage vault = vaults[vaultId];
-
-        uint256 (increaseAmount, collateral) = VaultRegistry.increaseToBeReplacedTokens(oldVaultId, btcAmount, griefingCollateral);
-
-        {
-            request.oldVault = address(uint160(vaultId));
-            request.amount = increaseAmount;
-            request.griefingCollateral = collateral;
-            request.period = 2 days;
-            request.btcHeight = 0;
-            request.status = RequestStatus.Pending;
+        if(btcAmount > 0) {
+            replaceCollateralIncrease = VaultRegistry.calculateCollateral(griefingCollateral, toBeReplacedIncrease, btcAmount);
         }
 
-        emit RequestReplace(replaceId, oldVaultId, increaseAmount);
+        uint256 (totalToBeReplaced, totalGriefingCollateral) = VaultRegistry.tryIncreaseToBeReplacedTokens(vault_id, toBeReplacedIncrease, replaceCollateralIncrease);
+
+        // check that total-to-be-replaced is above the minimum. NOTE: this means that even
+        // a request with amount=0 is valid, as long the _total_ is above DUST. This might
+        // be the case if the vault just wants to increase the griefing collateral, for example.
+        uint256 dustValue = getReplaceBtcDustValue();
+        require(totalToBeReplaced >= dustValue, 'AmountBelowDustAmount');
+
+        // check that that the total griefing collateral is sufficient to back the total to-be-replaced amount
+        require(
+            getReplaceGriefingCollateral(totalToBeReplaced) <=
+            totalGriefingCollateral,
+            "InsufficientCollateral"
+        );
+
+        // Lock the oldVault’s griefing collateral. Note that this directly locks the amount
+        ICollateral.lockCollateral(oldVaultId, replaceCollateralIncrease);
+
+        emit RequestReplace(oldVaultId, toBeReplacedIncrease, replaceCollateralIncrease);
     }
 
-    function _withdrawReplace(address oldVaultId, uint256 replaceId, uint256 tokens) internal {
-        require(msg.sender == oldVaultId, 'Sender should be owner of OldVault');
+//    function _withdrawReplace(address oldVaultId, uint256 replaceId, uint256 tokens) internal {
+//        require(msg.sender == oldVaultId, 'Sender should be old Vault owner');
+//
+//        // TODO: SECURITY CHECK (The oldVault MUST NOT be banned)
+//
+//        S_ReplaceRequest storage request = issueRequests[oldVaultId][issueId];
+//        require(request.status == RequestStatus.Pending, "This replace status not pending");
+//
+//        uint256 (decreaseAmount, griefingCollateral) = VaultRegistry.decreaseToBeReplacedTokens(oldVaultId, btcAmount, griefingCollateral);
+//
+//        {
+//            request.amount -= decreaseAmount;
+//            request.griefingCollateral = griefingCollateral;
+//        }
+//
+//        emit WithdrawReplace(oldVaultId, replaceId, decreaseAmount, griefingCollateral);
+//    }
 
-        // TODO: SECURITY CHECK (The oldVault MUST NOT be banned)
+    function _acceptReplace(address oldVaultId, address newVaultId, uint256 btcAmount, uint256 collateral, address btcAddress) internal {
+        require(msg.sender == newVaultId, 'Sender should be new Vault owner');
+        require(oldVaultId != newVaultId, 'oldVault MUST NOT be equal to newVault');
 
-        S_ReplaceRequest storage request = issueRequests[oldVaultId][issueId];
-        require(request.status == RequestStatus.Pending, "This replace status not pending");
+        // TODO: The newVault’s free balance MUST be enough to lock collateral.
+        // TODO: SECURITY CHECK (The oldVault, newVault MUST NOT be banned)
 
-        uint256 (decreaseAmount, griefingCollateral) = VaultRegistry.decreaseToBeReplacedTokens(oldVaultId, btcAmount, griefingCollateral);
+        Vault oldVault = VaultRegistry.vaults[oldVaultId];
+        Vault newVault = VaultRegistry.vaults[newVaultId];
+
+        require(oldVault.btcPublicKeyX != 0, "vaultNotExist");
+        require(newVault.btcPublicKeyX != 0, "vaultNotExist");
+
+        VaultRegistry.insertVaultDepositAddress(newVaultId, btcAddress);
+
+        // decrease old-vault's to-be-replaced tokens
+        uint256 (redeemableTokens, griefingCollateral) = VaultRegistry.decreaseToBeReplacedTokens(oldVaultId, btcAmount);
+
+        // TODO: check amount_btc is above the minimum
+        uint256 dustValue = getReplaceBtcDustValue();
+        require(redeemableTokens >= dustValue, 'AmountBelowDustAmount');
+
+        // Calculate and lock the new-vault's additional collateral
+        uint256 actualNewVaultCollateral = VaultRegistry.calculateCollateral(collateral, redeemableTokens, btcAmount);
+
+        VaultRegistry.tryDepositCollateral(newVaultId, actualNewVaultCollateral);
+
+        // increase old-vault's to-be-redeemed tokens - this should never fail
+        VaultRegistry.tryIncreaseToBeRedeemedTokens(oldVaultId, redeemableTokens);
+
+        // increase new-vault's to-be-issued tokens - this will fail if there is insufficient collateral
+        VaultRegistry.tryIncreaseToBeIssuedTokens(newVaultId, redeemableTokens);
+
+        uint256 replaceId = getIssueId(oldVaultId);
+
+        S_ReplaceRequest storage replace = replaceRequests[replaceId];
+
+        require(replace.status == RequestStatus.None, "This replace already created");
 
         {
-            request.amount -= decreaseAmount;
-            request.griefingCollateral = griefingCollateral;
+            replace.oldVault = address(uint160(oldVaultId));
+            replace.newVault = address(uint160(newVaultId));
+            replace.amount = redeemableTokens;
+            replace.collateral = actualNewVaultCollateral;
+            replace.griefingCollateral = griefingCollateral;
+            replace.period = 2 days;
+            replace.btcHeight = 0;
+            replace.status = RequestStatus.Pending;
         }
 
-        emit WithdrawReplace(oldVaultId, replaceId, decreaseAmount, griefingCollateral);
+        emit AcceptReplace(
+            replaceId,
+            replace.oldVault,
+            replace.newVault,
+            replace.amount,
+            replace.collateral,
+            replace.btcAddress
+        );
+    }
+
+    function _executeReplace(uint256 replaceId, bytes memory _vout) {
+        // Retrieve the ReplaceRequest as per the replaceId parameter from Vaults in the VaultRegistry
+        S_ReplaceRequest storage replace = replaceRequests[replaceId];
+        require(replace.status == RequestStatus.Pending, "Wrong request status");
+
+        // NOTE: anyone can call this method provided the proof is correct
+        address oldVaultId = replace.oldVault;
+        address newVaultId = replace.newVault;
+
+        uint256 amountTransferred =
+            TxValidate.validateTransaction(
+                _vout,
+                0,
+                request.btcAddress,
+                replaceId
+            );
+
+        require (amountTransferred >= replace.amount, 'Transaction contain wrong btc amount');
+
+        // decrease old-vault's issued & to-be-redeemed tokens, and
+        // change new-vault's to-be-issued tokens to issued tokens
+        VaultRegistry.replaceTokens(oldVaultId, newVaultId, replace.amount, replace.collateral);
+
+        // if the old vault has not been liquidated, give it back its griefing collateral
+        ICollateral.releaseCollateral(oldVaultId, replace.griefingCollateral);
+
+        // Emit ExecuteReplace event.
+        emit ExecuteReplace(replaceId, oldVaultId, newVaultId);
+
+        // Remove replace request
+        {
+            replace.status = RequestStatus.Completed;
+        }
     }
 }
