@@ -157,3 +157,6 @@ venv/*
 .firebase
 .firebaserc
 firebase.json
+
+**/target/
+**/*.rs.bt
