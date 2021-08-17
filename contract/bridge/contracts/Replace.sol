@@ -7,7 +7,7 @@ import {S_ReplaceRequest, RequestStatus} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
 import {ICollateral} from "./Collateral.sol";
 import {VaultRegistry} from "./VaultRegistry.sol";
-import Math from "@openzeppelin/contracts/math/Math.sol";
+import {Math} from "@openzeppelin/contracts/math/Math.sol";
 
 abstract contract Replace is ICollateral, VaultRegistry {
 //    using BTCUtils for bytes;
@@ -36,9 +36,9 @@ abstract contract Replace is ICollateral, VaultRegistry {
     );
 
     event ExecuteReplace(
+        uint256 indexed replaceId,
         address indexed oldVault,
-        address indexed newVault,
-        uint256 indexed replaceId
+        address indexed newVault
     );
 
     event CancelReplace(
@@ -89,7 +89,7 @@ abstract contract Replace is ICollateral, VaultRegistry {
             replaceCollateralIncrease = VaultRegistry.calculateCollateral(griefingCollateral, toBeReplacedIncrease, btcAmount);
         }
 
-        uint256 (totalToBeReplaced, totalGriefingCollateral) = VaultRegistry.tryIncreaseToBeReplacedTokens(vault_id, toBeReplacedIncrease, replaceCollateralIncrease);
+        (uint256 totalToBeReplaced, uint256 totalGriefingCollateral) = VaultRegistry.tryIncreaseToBeReplacedTokens(oldVaultId, toBeReplacedIncrease, replaceCollateralIncrease);
 
         // check that total-to-be-replaced is above the minimum. NOTE: this means that even
         // a request with amount=0 is valid, as long the _total_ is above DUST. This might
@@ -135,8 +135,8 @@ abstract contract Replace is ICollateral, VaultRegistry {
         // TODO: The newVault’s free balance MUST be enough to lock collateral.
         // TODO: SECURITY CHECK (The oldVault, newVault MUST NOT be banned)
 
-        Vault oldVault = VaultRegistry.vaults[oldVaultId];
-        Vault newVault = VaultRegistry.vaults[newVaultId];
+        Vault storage oldVault = VaultRegistry.vaults[oldVaultId];
+        Vault storage newVault = VaultRegistry.vaults[newVaultId];
 
         require(oldVault.btcPublicKeyX != 0, "vaultNotExist");
         require(newVault.btcPublicKeyX != 0, "vaultNotExist");
@@ -144,7 +144,7 @@ abstract contract Replace is ICollateral, VaultRegistry {
         VaultRegistry.insertVaultDepositAddress(newVaultId, btcAddress);
 
         // decrease old-vault's to-be-replaced tokens
-        uint256 (redeemableTokens, griefingCollateral) = VaultRegistry.decreaseToBeReplacedTokens(oldVaultId, btcAmount);
+        (uint256 redeemableTokens, uint256 griefingCollateral) = VaultRegistry.decreaseToBeReplacedTokens(oldVaultId, btcAmount);
 
         // TODO: check amount_btc is above the minimum
         uint256 dustValue = getReplaceBtcDustValue();
@@ -161,7 +161,7 @@ abstract contract Replace is ICollateral, VaultRegistry {
         // increase new-vault's to-be-issued tokens - this will fail if there is insufficient collateral
         VaultRegistry.tryIncreaseToBeIssuedTokens(newVaultId, redeemableTokens);
 
-        uint256 replaceId = getIssueId(oldVaultId);
+        uint256 replaceId = getReplaceId(oldVaultId);
 
         S_ReplaceRequest storage replace = replaceRequests[replaceId];
 
@@ -188,7 +188,7 @@ abstract contract Replace is ICollateral, VaultRegistry {
         );
     }
 
-    function _executeReplace(uint256 replaceId, bytes memory _vout) {
+    function _executeReplace(uint256 replaceId, bytes memory _vout) internal {
         // Retrieve the ReplaceRequest as per the replaceId parameter from Vaults in the VaultRegistry
         S_ReplaceRequest storage replace = replaceRequests[replaceId];
         require(replace.status == RequestStatus.Pending, "Wrong request status");
@@ -201,7 +201,7 @@ abstract contract Replace is ICollateral, VaultRegistry {
             TxValidate.validateTransaction(
                 _vout,
                 0,
-                request.btcAddress,
+                replace.btcAddress,
                 replaceId
             );
 

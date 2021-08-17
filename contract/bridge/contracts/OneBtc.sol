@@ -10,7 +10,7 @@ import {Redeem} from "./Redeem.sol";
 import {Replace} from "./Replace.sol";
 import {IRelay} from "./IRelay.sol";
 
-contract OneBtc is ERC20, Issue, Redeem {
+contract OneBtc is ERC20, Issue, Redeem, Replace {
     IRelay public realy;
 
     constructor(IRelay _relay) public ERC20("OneBtc", "OneBtc") {
@@ -137,7 +137,7 @@ contract OneBtc is ERC20, Issue, Redeem {
         uint256 btcAmount,
         uint256 collateral,
         address btcAddress
-    ) extrnal {
+    ) external {
         return Replace._acceptReplace(oldVaultId, newVaultId, btcAmount, collateral, btcAddress);
     }
 

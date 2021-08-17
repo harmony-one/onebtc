@@ -5,7 +5,7 @@ pragma solidity ^0.6.12;
 import {ICollateral} from "./Collateral.sol";
 import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
 import {ExchangeRateOracle} from "./ExchangeRateOracle.sol";
-import Math from "@openzeppelin/contracts/math/Math.sol";
+import {Math} from "@openzeppelin/contracts/math/Math.sol";
 
 abstract contract VaultRegistry is ICollateral {
     struct Vault {
@@ -14,10 +14,10 @@ abstract contract VaultRegistry is ICollateral {
         uint256 collateral;
         uint256 issued;
         uint256 toBeIssued;
-        uint256  toBeRedeemed;
+        uint256 toBeRedeemed;
         uint256 replaceCollateral;
         uint256 toBeReplaced;
-        address[] depositAddresses;
+        mapping(address => bool) depositAddresses;
     }
     mapping(address => Vault) public vaults;
     uint256 public constant secureCollateralThreshold = 150; // 150%
@@ -86,17 +86,16 @@ abstract contract VaultRegistry is ICollateral {
             );
 
         require(!vault.depositAddresses[derivedKey], 'This btc address already used');
-        vault.depositAddresses.push(derivedKey);
+        vault.depositAddresses[derivedKey] = true;
 
         return derivedKey;
     }
 
-    function insertVaultDepositAddress(address vault_id, address btc_address) internal {
+    function insertVaultDepositAddress(address vaultId, address btcAddress) internal {
         Vault storage vault = vaults[vaultId];
-        require(!!vault, 'The Vault cannot be found');
-        require(!vault.depositAddresses[btc_address], 'This btc address already used');
-
-        vault.depositAddresses.push(btc_address);
+        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+        require(!vault.depositAddresses[btcAddress], 'This btc address already used');
+        vault.depositAddresses[btcAddress] = true;
     }
 
     function updatePublicKey(
@@ -124,10 +123,6 @@ abstract contract VaultRegistry is ICollateral {
         require(vault.btcPublicKeyX != 0, "vaultNotExist");
         vault.collateral -= amount;
         ICollateral.releaseCollateral(msg.sender, amount);
-    }
-
-    function calculateCollateral(uint256 collateral, uint256 numerator, uint256 denominator) internal pure returns(uint256){
-        return collateral*numerator/denominator;
     }
 
     function decreaseToBeIssuedTokens(address vaultId, uint256 amount) internal {
@@ -184,25 +179,23 @@ abstract contract VaultRegistry is ICollateral {
     }
 
     function calculateCollateral(uint256 collateral, uint256 numerator, uint256 denominator) internal returns (uint256 amount) {
-        if(!numerator && !denominator) {
+        if(numerator == 0 && denominator == 0) {
             return collateral;
         }
 
-        uint256 amount = collateral * numerator / denominator;
-
-        return amount;
+        return collateral * numerator / denominator;
     }
 
     function requestableToBeReplacedTokens(address vaultId) internal returns (uint256 amount) {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "vaultNotExist");
 
-        uint256 requestableIncrease = vault.issued - vault.toBeRedeem - vault.toBeReplace;
+        uint256 requestableIncrease = vault.issued - vault.toBeRedeemed - vault.toBeReplaced;
 
         return requestableIncrease;
     }
 
-    function tryIncreaseToBeReplacedTokens(address vaultId, uint256 tokens, uint256 collateral) internal returns (uint256 newToBeReplaced, uint256 newReplaceCollateral) {
+    function tryIncreaseToBeReplacedTokens(address vaultId, uint256 tokens, uint256 collateral) internal returns (uint256, uint256) {
         Vault storage vault = vaults[vaultId];
 
         uint256 requestableIncrease = requestableToBeReplacedTokens(vaultId);
@@ -241,11 +234,11 @@ abstract contract VaultRegistry is ICollateral {
         require(oldVault.btcPublicKeyX != 0, "vaultNotExist");
         require(newVault.btcPublicKeyX != 0, "vaultNotExist");
 
-        // TODO: add liquidated functionality
+        // TODO: add liquidation functionality
         // if old_vault.data.is_liquidated()
 
-        old_vault.issued -= tokens;
-        new_vault.issued += tokens;
+        oldVault.issued -= tokens;
+        newVault.issued += tokens;
 
         emit ReplaceTokens(oldVaultId, newVaultId, tokens, collateral);
     }
