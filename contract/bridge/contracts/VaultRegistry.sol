@@ -91,11 +91,25 @@ abstract contract VaultRegistry is ICollateral {
         return derivedKey;
     }
 
-    function insertVaultDepositAddress(address vaultId, address btcAddress) internal {
+    function insertVaultDepositAddress(
+        address vaultId,
+        uint256 btcPublicKeyX,
+        uint256 btcPublicKeyY,
+        uint256 replaceId
+    ) internal returns(address) {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "vaultNotExist");
+
+        address btcAddress = BitcoinKeyDerivation.derivate(
+            btcPublicKeyX,
+            btcPublicKeyY,
+            replaceId
+        );
+
         require(!vault.depositAddresses[btcAddress], 'This btc address already used');
         vault.depositAddresses[btcAddress] = true;
+
+        return btcAddress;
     }
 
     function updatePublicKey(
@@ -162,8 +176,9 @@ abstract contract VaultRegistry is ICollateral {
     }
 
     function calculateMaxWrappedFromCollateralForThreshold(uint256 collateral, uint256 threshold) public view returns(uint256) {
-        uint256 collateralInWrapped = oracle.collateralToWrapped(collateral);
-        return collateralInWrapped*100/threshold;
+        // TODO - fix oracle.collateralToWrapped
+        // uint256 collateralInWrapped = oracle.collateralToWrapped(collateral);
+        return collateral*100/threshold;
     }
 
     function issuableTokens(address vaultId) public view returns(uint256) {

@@ -127,8 +127,8 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         address payable oldVaultId,
         uint256 btcAmount,
         uint256 griefingCollateral
-    ) external {
-        return Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
+    ) external payable {
+        Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
     }
 
     function acceptReplace(
@@ -136,9 +136,17 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         address newVaultId,
         uint256 btcAmount,
         uint256 collateral,
-        address btcAddress
-    ) external {
-        return Replace._acceptReplace(oldVaultId, newVaultId, btcAmount, collateral, btcAddress);
+        uint256 btcPublicKeyX,
+        uint256 btcPublicKeyY
+    ) external payable {
+        Replace._acceptReplace(
+            oldVaultId,
+            newVaultId,
+            btcAmount,
+            collateral,
+            btcPublicKeyX,
+            btcPublicKeyY
+        );
     }
 
     function executeReplace(

@@ -128,7 +128,14 @@ abstract contract Replace is ICollateral, VaultRegistry {
 //        emit WithdrawReplace(oldVaultId, replaceId, decreaseAmount, griefingCollateral);
 //    }
 
-    function _acceptReplace(address oldVaultId, address newVaultId, uint256 btcAmount, uint256 collateral, address btcAddress) internal {
+    function _acceptReplace(
+        address oldVaultId,
+        address newVaultId,
+        uint256 btcAmount,
+        uint256 collateral,
+        uint256 btcPublicKeyX,
+        uint256 btcPublicKeyY
+    ) internal {
         require(msg.sender == newVaultId, 'Sender should be new Vault owner');
         require(oldVaultId != newVaultId, 'oldVault MUST NOT be equal to newVault');
 
@@ -140,8 +147,6 @@ abstract contract Replace is ICollateral, VaultRegistry {
 
         require(oldVault.btcPublicKeyX != 0, "vaultNotExist");
         require(newVault.btcPublicKeyX != 0, "vaultNotExist");
-
-        VaultRegistry.insertVaultDepositAddress(newVaultId, btcAddress);
 
         // decrease old-vault's to-be-replaced tokens
         (uint256 redeemableTokens, uint256 griefingCollateral) = VaultRegistry.decreaseToBeReplacedTokens(oldVaultId, btcAmount);
@@ -163,6 +168,8 @@ abstract contract Replace is ICollateral, VaultRegistry {
 
         uint256 replaceId = getReplaceId(oldVaultId);
 
+        address btcAddress = VaultRegistry.insertVaultDepositAddress(newVaultId, btcPublicKeyX, btcPublicKeyY, replaceId);
+
         S_ReplaceRequest storage replace = replaceRequests[replaceId];
 
         require(replace.status == RequestStatus.None, "This replace already created");
@@ -171,6 +178,7 @@ abstract contract Replace is ICollateral, VaultRegistry {
             replace.oldVault = address(uint160(oldVaultId));
             replace.newVault = address(uint160(newVaultId));
             replace.amount = redeemableTokens;
+            replace.btcAddress = btcAddress;
             replace.collateral = actualNewVaultCollateral;
             replace.griefingCollateral = griefingCollateral;
             replace.period = 2 days;
