@@ -133,10 +133,37 @@ contract("Replace unit test", (accounts) => {
     assert.equal(collateral.toString(), reqEvent.args.collateral.toString());
 
     this.replaceBtcAddress = reqEvent.args.btcAddress.toString();
-    this.replaceId = reqEvent.args.replaceId.toString();
+    this.replaceId = reqEvent.args.replaceId;
   });
 
-  // it("Execute Replace", async function() {
-  //
-  // });
+  it("Execute Replace", async function () {
+    const btcAmount = 0.001 * 1e8;
+    const replaceId = this.replaceId;
+    const btcAddress = this.replaceBtcAddress;
+
+    const btcBase58 = bitcoin.address.toBase58Check(
+      Buffer.from(btcAddress.slice(2), "hex"),
+      0
+    );
+    const btcTx = issueTxMock(replaceId, btcBase58, btcAmount);
+    const btcBlockNumberMock = 1000;
+    const btcTxIndexMock = 2;
+    const heightAndIndex = (btcBlockNumberMock << 32) | btcTxIndexMock;
+    const headerMock = Buffer.alloc(0);
+    const proofMock = Buffer.alloc(0);
+
+    const req = await this.OneBtc.executeReplace(
+      replaceId,
+      proofMock,
+      btcTx.toBuffer(),
+      heightAndIndex,
+      headerMock
+    );
+
+    const reqEvent = req.logs.filter((log) => log.event == "ExecuteReplace")[0];
+
+    assert.equal(this.vaultId.toString(), reqEvent.args.oldVault.toString());
+    assert.equal(this.newVaultId.toString(), reqEvent.args.newVault.toString());
+    assert.equal(this.replaceId.toString(), reqEvent.args.replaceId.toString());
+  });
 });
