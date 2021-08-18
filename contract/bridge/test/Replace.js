@@ -82,8 +82,6 @@ contract("Replace unit test", (accounts) => {
       (log) => log.event == "RequestReplace"
     )[0];
 
-    this.replaceId = IssueEvent.args.replaceId.toString();
-
     assert.equal(this.vaultId.toString(), IssueEvent.args.oldVault.toString());
     assert.equal(btcAmount.toString(), IssueEvent.args.btcAmount.toString());
     assert.equal(
@@ -128,13 +126,14 @@ contract("Replace unit test", (accounts) => {
 
     const reqEvent = req.logs.filter((log) => log.event == "AcceptReplace")[0];
 
-    assert.equal(this.replaceId.toString(), reqEvent.args.replaceId.toString());
+    // assert.equal(this.replaceId.toString(), reqEvent.args.replaceId.toString());
     assert.equal(this.vaultId.toString(), reqEvent.args.oldVault.toString());
     assert.equal(this.newVaultId.toString(), reqEvent.args.newVault.toString());
     assert.equal(btcAmount.toString(), reqEvent.args.btcAmount.toString());
     assert.equal(collateral.toString(), reqEvent.args.collateral.toString());
 
     this.replaceBtcAddress = reqEvent.args.btcAddress.toString();
+    this.replaceId = reqEvent.args.replaceId.toString();
   });
 
   // it("Execute Replace", async function() {
