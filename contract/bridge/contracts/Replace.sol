@@ -22,8 +22,7 @@ abstract contract Replace is ICollateral, VaultRegistry {
     event WithdrawReplace(
         address indexed oldVault,
         uint256 withdrawnTokens,
-        uint256 withdrawnGriefingCollateral,
-        uint256 indexed replaceId
+        uint256 withdrawnGriefingCollateral
     );
 
     event AcceptReplace(
@@ -110,23 +109,18 @@ abstract contract Replace is ICollateral, VaultRegistry {
         emit RequestReplace(oldVaultId, toBeReplacedIncrease, replaceCollateralIncrease);
     }
 
-//    function _withdrawReplace(address oldVaultId, uint256 replaceId, uint256 tokens) internal {
-//        require(msg.sender == oldVaultId, 'Sender should be old Vault owner');
-//
-//        // TODO: SECURITY CHECK (The oldVault MUST NOT be banned)
-//
-//        S_ReplaceRequest storage request = issueRequests[oldVaultId][issueId];
-//        require(request.status == RequestStatus.Pending, "This replace status not pending");
-//
-//        uint256 (decreaseAmount, griefingCollateral) = VaultRegistry.decreaseToBeReplacedTokens(oldVaultId, btcAmount, griefingCollateral);
-//
-//        {
-//            request.amount -= decreaseAmount;
-//            request.griefingCollateral = griefingCollateral;
-//        }
-//
-//        emit WithdrawReplace(oldVaultId, replaceId, decreaseAmount, griefingCollateral);
-//    }
+    function _withdrawReplace(address oldVaultId, uint256 btcAmount) internal {
+        require(msg.sender == oldVaultId, 'Sender should be old Vault owner');
+        // TODO: SECURITY CHECK (The oldVault MUST NOT be banned)
+
+        uint256 (withdrawnTokens, toWithdrawCollateral) = VaultRegistry.decreaseToBeReplacedTokens(oldVaultId, btcAmount);
+
+        ICollateral.releaseCollateral(oldVaultId, toWithdrawCollateral);
+
+        require(withdrawnTokens == 0, 'Withdraw tokens is zero');
+
+        emit WithdrawReplace(oldVaultId, withdrawnTokens, toWithdrawCollateral);
+    }
 
     function _acceptReplace(
         address oldVaultId,
