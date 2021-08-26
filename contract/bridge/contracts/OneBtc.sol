@@ -7,9 +7,10 @@ import {ValidateSPV} from "@interlay/bitcoin-spv-sol/contracts/ValidateSPV.sol";
 import {TransactionUtils} from "./TransactionUtils.sol";
 import {Issue} from "./Issue.sol";
 import {Redeem} from "./Redeem.sol";
+import {Replace} from "./Replace.sol";
 import {IRelay} from "./IRelay.sol";
 
-contract OneBtc is ERC20, Issue, Redeem {
+contract OneBtc is ERC20, Issue, Redeem, Replace {
     IRelay public realy;
 
     constructor(IRelay _relay) public ERC20("OneBtc", "OneBtc") {
@@ -122,4 +123,42 @@ contract OneBtc is ERC20, Issue, Redeem {
         ERC20._mint(receiver, amount);
     }
 
+    function requestReplace(
+        address payable oldVaultId,
+        uint256 btcAmount,
+        uint256 griefingCollateral
+    ) external payable {
+        Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
+    }
+
+    function acceptReplace(
+        address oldVaultId,
+        address newVaultId,
+        uint256 btcAmount,
+        uint256 collateral,
+        uint256 btcPublicKeyX,
+        uint256 btcPublicKeyY
+    ) external payable {
+        Replace._acceptReplace(
+            oldVaultId,
+            newVaultId,
+            btcAmount,
+            collateral,
+            btcPublicKeyX,
+            btcPublicKeyY
+        );
+    }
+
+    function executeReplace(
+        uint256 replaceId,
+        bytes calldata merkleProof,
+        bytes calldata rawTx, // avoid compiler error: stack too deep
+    //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
+        uint64 heightAndIndex,
+        bytes calldata header
+    ) external {
+        bytes memory _vout =
+        verifyTx(merkleProof, rawTx, heightAndIndex, header);
+        Replace._executeReplace(replaceId, _vout);
+    }
 }

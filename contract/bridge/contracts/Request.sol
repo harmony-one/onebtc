@@ -32,3 +32,16 @@ struct S_RedeemRequest {
     uint256 btcHeight;
     RequestStatus status;
 }
+
+struct S_ReplaceRequest {
+    address payable oldVault;
+    address payable newVault;
+    uint256 collateral;
+    uint256 acceptTime;
+    uint256 amount;
+    address btcAddress;
+    uint256 griefingCollateral;
+    uint256 period;
+    uint256 btcHeight;
+    RequestStatus status;
+}
