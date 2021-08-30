@@ -87,7 +87,7 @@ contract SLA {
         return (amount / average) * maxSlaChange;
     }
 
-    function _liquidateSla(address vaultId) private returns (int256 deltaSla) {
+    function _liquidateSla(address vaultId) private returns (int256) {
         // TODO
         //Self::liquidateStake::<T::CollateralVaultRewards>(vaultId)?;
         //Self::liquidateStake::<T::WrappedVaultRewards>(vaultId)?;
