@@ -1,7 +1,18 @@
-# ONEBTC
+# ONEBTC Bridge
 
 ## Compilation
-`truffle compile`
+```
+npm run compile
+```
 
 ## Testing
-`truffle test`
+
+```
+npm run test
+```
+
+If you'd like to run a node with `ganache-cli` in your local, please install [ganache-cli](https://www.npmjs.com/package/ganache-cli) globally, and run the following command
+
+```
+npm run test:ganache
+```
