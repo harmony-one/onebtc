@@ -19,5 +19,11 @@
     "eslint-plugin-import": "^2.24.0",
     "ethereum-waffle": "^3.3.0",
     "prettier": "2.3.2"
+  },
+  "scripts": {
+    "compile": "truffle compile",
+    "test": "truffle test",
+    "test:ganache": "npm run serve:local & npm run test",
+    "serve:local": "ganache-cli --accounts 5 --defaultBalanceEther 500 --port 7545 --networkId 5777 --blockTime 0"
   }
 }
