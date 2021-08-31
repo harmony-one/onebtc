@@ -113,7 +113,7 @@ abstract contract Replace is ICollateral, VaultRegistry {
         require(msg.sender == oldVaultId, 'Sender should be old Vault owner');
         // TODO: SECURITY CHECK (The oldVault MUST NOT be banned)
 
-        uint256 (withdrawnTokens, toWithdrawCollateral) = VaultRegistry.decreaseToBeReplacedTokens(oldVaultId, btcAmount);
+        (uint256 withdrawnTokens, uint256 toWithdrawCollateral) = VaultRegistry.decreaseToBeReplacedTokens(oldVaultId, btcAmount);
 
         ICollateral.releaseCollateral(oldVaultId, toWithdrawCollateral);
 

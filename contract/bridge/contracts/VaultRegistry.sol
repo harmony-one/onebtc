@@ -225,7 +225,7 @@ abstract contract VaultRegistry is ICollateral {
         return (vault.toBeReplaced, vault.replaceCollateral);
     }
 
-    function decreaseToBeReplacedTokens(address vaultId, uint256 tokens) internal returns (uint256 usedTokens, uint256 usedCollateral) {
+    function decreaseToBeReplacedTokens(address vaultId, uint256 tokens) internal returns (uint256, uint256) {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "vaultNotExist");
 
