@@ -7,6 +7,8 @@ import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
 import {ExchangeRateOracle} from "./ExchangeRateOracle.sol";
 import {Math} from "@openzeppelin/contracts/math/Math.sol";
 
+enum VaultStatus {Active, Liquidated, CommittedTheft}
+
 abstract contract VaultRegistry is ICollateral {
     struct Vault {
         uint256 btcPublicKeyX;
@@ -17,11 +19,16 @@ abstract contract VaultRegistry is ICollateral {
         uint256 toBeRedeemed;
         uint256 replaceCollateral;
         uint256 toBeReplaced;
+        uint256 liquidatedCollateral;
+        VaultStatus status;
+
         mapping(address => bool) depositAddresses;
     }
     mapping(address => Vault) public vaults;
     uint256 public constant secureCollateralThreshold = 150; // 150%
     ExchangeRateOracle oracle;
+
+    address liquidationVaultId;
 
     event RegisterVault(
         address indexed vaultId,
@@ -225,7 +232,7 @@ abstract contract VaultRegistry is ICollateral {
         return (vault.toBeReplaced, vault.replaceCollateral);
     }
 
-    function decreaseToBeReplacedTokens(address vaultId, uint256 tokens) internal returns (uint256 usedTokens, uint256 usedCollateral) {
+    function decreaseToBeReplacedTokens(address vaultId, uint256 tokens) internal returns (uint256, uint256) {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "vaultNotExist");
 
@@ -268,5 +275,33 @@ abstract contract VaultRegistry is ICollateral {
 
         // TODO: Deposit `amount` of stake in the pool
         // ext::staking::deposit_stake::<T>(T::GetRewardsCurrencyId::get(), vault_id, vault_id, amount)?;
+    }
+
+    function isLiquidated(uint256 vaultId) public view returns (bool) {
+        Vault storage vault = vaults[vaultId];
+        return vault.status == VaultStatus.Liquidated;
+    }
+
+    function transferFunds(address from, address to, uint256 tokens) internal {
+        return ICollateral.release(from, to, tokens);
+    }
+
+    function cancelReplaceTokens(address oldVaultId, address newVaultId, uint256 tokens) internal {
+        Vault storage oldVault = vaults[oldVaultId];
+        Vault storage newVault = vaults[newVaultId];
+
+        uint toBeTransferred = 0;
+
+        if (isLiquidated(oldVaultId)) {
+            toBeTransferred = calculateCollateral(oldVault.liquidatedCollateral, tokens, oldVault.toBeRedeemed);
+
+            oldVault.liquidatedCollateral -= toBeTransferred;
+
+            // transfer old-vault's collateral to liquidation_vault
+            transferFunds(oldVaultId, liquidationVaultId, toBeTransferred);
+        }
+
+        oldVault.toBeRedeemed -= tokens;
+        newVault.issued -= tokens;
     }
 }

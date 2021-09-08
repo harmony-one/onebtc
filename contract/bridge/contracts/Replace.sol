@@ -224,4 +224,49 @@ abstract contract Replace is ICollateral, VaultRegistry {
             replace.status = RequestStatus.Completed;
         }
     }
+
+    function _cancelReplace(uint256 replaceId) internal {
+        // Retrieve the ReplaceRequest as per the replaceId parameter from Vaults in the VaultRegistry
+        S_ReplaceRequest storage replace = replaceRequests[replaceId];
+        require(replace.status == RequestStatus.Pending, "Wrong request status");
+
+        // TODO: add validate - only cancellable after the request has expired
+//        ensure!(
+//            ext::btc_relay::has_request_expired::<T>(
+//            replace.accept_time,
+//            replace.btc_height,
+//            Self::replace_period().max(replace.period)
+//            )?,
+//            Error::<T>::ReplacePeriodNotExpired
+//        );
+
+        address newVaultId = replace.newVault;
+        require(msg.sender == newVaultId, 'Only cancellable by new_vault');
+
+        // decrease old-vault's to-be-redeemed tokens, and
+        // decrease new-vault's to-be-issued tokens
+        VaultRegistry.cancelReplaceTokens(replace.oldVault, replace.newVault, replace.amount);
+
+        // TODO: slash old-vault's griefing collateral
+//        VaultRegistry.transferFunds(
+//            T::GetGriefingCollateralCurrencyId::get(),
+//            CurrencySource::Griefing(replace.old_vault.clone()),
+//            CurrencySource::FreeBalance(new_vault_id.clone()),
+//            replace.griefing_collateral,
+//        );
+
+        // if the new_vault locked additional collateral especially for this replace,
+        // release it if it does not cause him to be undercollateralized
+        if (!VaultRegistry.isVaultLiquidated(newVaultId) && VaultRegistry.isAllowedToWithdrawCollateral(newVaultId, replace.collateral)) {
+            VaultRegistry.forceWithdrawCollateral(replace.newVault, replace.collateral);
+        }
+
+        // Remove the ReplaceRequest from ReplaceRequests
+        {
+            replace.status = RequestStatus.Canceled;
+        }
+
+        // Emit CancelReplace event.
+        emit CancelReplace(replaceId, replace.oldVault, newVaultId, replace.griefingCollateral);
+    }
 }
