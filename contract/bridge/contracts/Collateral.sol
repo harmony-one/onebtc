@@ -2,7 +2,11 @@
 
 pragma solidity ^0.6.12;
 
+import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+
 abstract contract ICollateral {
+    using SafeMath for uint256;
+
     event LockCollateral(address sender, uint256 amount);
     event ReleaseCollateral(address sender, uint256 amount);
     event SlashCollateral(address sender, address receiver, uint256 amount);
@@ -15,7 +19,7 @@ abstract contract ICollateral {
 
     function lockCollateral(address sender, uint256 amount) internal {
         require(msg.value >= amount, "InvalidCollateral");
-        CollateralBalances[sender] += amount;
+        CollateralBalances[sender] = CollateralBalances[sender].add(amount);
         emit LockCollateral(sender, amount);
     }
 
@@ -25,10 +29,10 @@ abstract contract ICollateral {
         uint256 amount
     ) private {
         require(
-            CollateralBalances[sender] - CollateralUsed[sender] >= amount,
+            CollateralBalances[sender].sub(CollateralUsed[sender]) >= amount,
             "InSufficientCollateral"
         );
-        CollateralBalances[sender] -= amount;
+        CollateralBalances[sender] = CollateralBalances[sender].sub(amount);
         address payable _to = address(uint160(to));
         _to.transfer(amount);
     }
@@ -48,11 +52,11 @@ abstract contract ICollateral {
     }
 
     function getFreeCollateral(address vaultId) internal view returns(uint256) {
-        return CollateralBalances[vaultId] - CollateralUsed[vaultId];
+        return CollateralBalances[vaultId].sub(CollateralUsed[vaultId]);
     }
 
     function useCollateralInc(address vaultId, uint256 amount) internal {
-        CollateralUsed[vaultId] += amount;
+        CollateralUsed[vaultId] = CollateralUsed[vaultId].add(amount);
         require(
             CollateralBalances[vaultId] >= CollateralUsed[vaultId],
             "InSufficientCollateral"
@@ -61,6 +65,6 @@ abstract contract ICollateral {
 
     function useCollateralDec(address vaultId, uint256 amount) internal {
         require(CollateralUsed[vaultId] >= amount, "InSufficientCollateral");
-        CollateralUsed[vaultId] -= amount;
+        CollateralUsed[vaultId] = CollateralUsed[vaultId].sub(amount);
     }
 }
