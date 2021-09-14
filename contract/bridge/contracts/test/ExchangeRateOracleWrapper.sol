@@ -81,7 +81,7 @@ contract ExchangeRateOracleWrapper {
     @notice Returns the latest BTC/ONE exchange rate, as received from the external data sources.
     @return uint256 (aggregate) exchange rate value
     */
-    function getExchageRate() public view returns (uint256) {
+    function getExchangeRate() public view returns (uint256) {
         require (now - lastExchangeRateTime > MAX_DELAY, "ERR_MISSING_EXCHANGE_RATE");
 
         return exchangeRate;
@@ -93,7 +93,7 @@ contract ExchangeRateOracleWrapper {
     * @return BTC amount
     */
     function collateralToWrapped(uint256 amount) public view returns(uint256) {
-        uint256 rate = getExchageRate();
+        uint256 rate = getExchangeRate();
         return amount/rate;
     }
 
@@ -103,7 +103,7 @@ contract ExchangeRateOracleWrapper {
     * @return ONE amount
     */
     function wrappedToCollateral(uint256 amount) public view returns(uint256) {
-        uint256 rate = getExchageRate();
+        uint256 rate = getExchangeRate();
         return amount*rate;
     }
 }
