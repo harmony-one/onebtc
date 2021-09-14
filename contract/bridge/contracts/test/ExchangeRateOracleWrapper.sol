@@ -9,12 +9,12 @@ The Exchange Rate Oracle receives a continuous data feed on the exchange rate be
 
 pragma solidity ^0.6.12;
 
-contract ExchangeRateOracle {
+contract ExchangeRateOracleWrapper {
     uint256 constant MAX_DELAY = 1000;
     uint256 public lastExchangeRateTime;
     uint256 exchangeRate;
     uint256 satoshiPerBytes;
-    mapping (address => bool) authorizedOracles;
+    mapping(address => bool) public authorizedOracles;
 
     event SetExchangeRate(
         address oracle,
@@ -32,7 +32,14 @@ contract ExchangeRateOracle {
     );
 
     constructor() public {
-        authorizedOracles[0x5B38Da6a701c568545dCfcB03FcB875f56beddC4] = true;
+    }
+
+    /**
+     * @notice add authorized oracle
+     * @param _oracle authorized oracle address to add
+     */
+    function addAuthorizedOracle(address _oracle) public {
+        authorizedOracles[_oracle] = true;
     }
 
     /**
