@@ -147,7 +147,7 @@ abstract contract VaultRegistry is ICollateral {
 
     function tryIncreaseToBeIssuedTokens(address vaultId, uint256 amount) internal returns(bool) {
         uint256 issuableTokens = issuableTokens(vaultId);
-        if(issuableTokens > amount) return false; // ExceedingVaultLimit
+        if(issuableTokens < amount) return false; // ExceedingVaultLimit
         Vault storage vault = vaults[vaultId];
         vault.toBeIssued += amount;
         emit IncreaseToBeIssuedTokens(vaultId, amount);
