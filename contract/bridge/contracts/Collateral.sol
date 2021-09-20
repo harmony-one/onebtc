@@ -34,7 +34,8 @@ abstract contract ICollateral {
         );
         CollateralBalances[sender] = CollateralBalances[sender].sub(amount);
         address payable _to = address(uint160(to));
-        _to.transfer(amount);
+        (bool sent, ) = _to.call.value(amount)("");
+        require(sent, "Transfer failed.");
     }
 
     function releaseCollateral(address sender, uint256 amount) internal {
