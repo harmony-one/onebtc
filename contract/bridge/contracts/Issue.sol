@@ -7,10 +7,12 @@ import {S_IssueRequest, RequestStatus} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
 import {ICollateral} from "./Collateral.sol";
 import {VaultRegistry} from "./VaultRegistry.sol";
+import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
 abstract contract Issue is ICollateral, VaultRegistry {
     using BTCUtils for bytes;
     using BytesLib for bytes;
+    using SafeMath for uint256;
 
     event IssueRequest(
         uint256 indexed issueId,
@@ -21,7 +23,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
         address btcAddress
     );
     event IssueComplete(
-        uint256 indexed issudeId,
+        uint256 indexed issuedId,
         address indexed requester,
         address indexed vaultId,
         uint256 amount,
@@ -29,7 +31,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
         address btcAddress
     );
     event IssueCancel(
-        uint256 indexed issudeId,
+        uint256 indexed issuedId,
         address indexed requester,
         address indexed vaultId,
         uint256 amount,
@@ -74,7 +76,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
         uint256 confiscatedGriefingCollateral
     ) internal {
         issue.fee = getIssueFee(transferredBtc);
-        issue.amount = transferredBtc - issue.fee;
+        issue.amount = transferredBtc.sub(issue.fee);
         emit IssueAmountChange(
             issueId,
             issue.amount,
@@ -104,7 +106,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
         uint256 issueId = getIssueId(requester);
         address btcAddress = VaultRegistry.registerDepositAddress(vaultId, issueId);
         uint256 fee = getIssueFee(amountRequested);
-        uint256 amountUser = amountRequested - fee;
+        uint256 amountUser = amountRequested.sub(fee);
         S_IssueRequest storage request = issueRequests[requester][issueId];
         require(request.status == RequestStatus.None, "invalid request");
         {
@@ -150,7 +152,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
                 request.btcAddress,
                 issueId
             );
-        uint256 expectedTotalAmount = request.amount + request.fee;
+        uint256 expectedTotalAmount = request.amount.add(request.fee);
         if (amountTransferred < expectedTotalAmount) {
             // only the requester of the issue can execute payments with different amounts
             require(msg.sender == request.requester, "InvalidExecutor");
@@ -167,7 +169,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
                 releasedCollateral
             );
             uint256 slashedCollateral =
-                request.griefingCollateral - releasedCollateral;
+                request.griefingCollateral.sub(releasedCollateral);
             ICollateral.slashCollateral(
                 request.requester,
                 request.vault,
@@ -186,7 +188,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
             ); // ICollateral::
             if (amountTransferred > expectedTotalAmount) {
                 uint256 surplusBtc =
-                    amountTransferred - expectedTotalAmount;
+                    amountTransferred.sub(expectedTotalAmount);
                 if (
                     VaultRegistry.tryIncreaseToBeIssuedTokens(
                         request.vault,
@@ -206,7 +208,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
                 }
             }
         }
-        uint256 total = request.amount + request.fee;
+        uint256 total = request.amount.add(request.fee);
         VaultRegistry.issueTokens(request.vault, total);
         issueOneBTC(request.vault, request.fee);
         issueOneBTC(request.requester, request.amount);
@@ -230,7 +232,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
             "request is completed"
         );
         require(
-            block.timestamp > request.opentime + request.period,
+            block.timestamp > request.opentime.add(request.period),
             "TimeNotExpired"
         );
         request.status = RequestStatus.Cancelled;
