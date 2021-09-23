@@ -1,4 +1,5 @@
 const BN = require("bn.js");
+const { expectRevert } = require("@openzeppelin/test-helpers");
 
 const OneBtc = artifacts.require("OneBtc");
 const RelayMock = artifacts.require("RelayMock");
@@ -19,6 +20,40 @@ contract("Issue unit test", (accounts) => {
     this.OneBtcBalanceVault = 0;
   });
 
+  it("Error on requestIssue with the exceeding vault limit", async function () {
+    const IssueAmount = Math.floor(10 * 1e8 * 100 / 150) + 1; // threshold = 150
+
+    await expectRevert(this.OneBtc.requestIssue(IssueAmount, this.vaultId, {
+      from: this.issueRequester,
+      value: IssueAmount,
+    }), 'ExceedingVaultLimit');
+  });
+
+  it("Register Vault with 10 Wei Collateral", async function () {
+    const VaultEcPair = bitcoin.ECPair.makeRandom({ compressed: false });
+    const pubX = bn(VaultEcPair.publicKey.slice(1, 33));
+    const pubY = bn(VaultEcPair.publicKey.slice(33, 65));
+
+    const collateral = 10 * 1e8;
+    await this.OneBtc.registerVault(pubX, pubY, {
+      from: this.vaultId,
+      value: collateral,
+    });
+    const vault = await this.OneBtc.vaults(this.vaultId);
+    assert.equal(pubX.toString(), vault.btcPublicKeyX.toString());
+    assert.equal(pubX.toString(), vault.btcPublicKeyX.toString());
+    assert.equal(collateral, vault.collateral.toString());
+  });
+
+  it("Error on requestIssue with the insufficient collateral", async function () {
+    const IssueAmount = 1 * 1e8;
+
+    await expectRevert(this.OneBtc.requestIssue(IssueAmount+1, this.vaultId, {
+      from: this.issueRequester,
+      value: IssueAmount,
+    }), 'InsufficientCollateral');
+  });
+
   it("Issue 1 BTC", async function () {
     const IssueAmount = 1 * 1e8;
     const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {
@@ -34,13 +69,13 @@ contract("Issue unit test", (accounts) => {
       Buffer.from(btcAddress.slice(2), "hex"),
       0
     );
-    const btcTx = issueTxMock(issueId, btcBase58, IssueAmount);
+    const btcTx = issueTxMock(issueId, btcBase58, Number(IssueAmount));
     const btcBlockNumberMock = 1000;
     const btcTxIndexMock = 2;
     const heightAndIndex = (btcBlockNumberMock << 32) | btcTxIndexMock;
     const headerMock = Buffer.alloc(0);
     const proofMock = Buffer.alloc(0);
-    await this.OneBtc.executeIssue(
+    const ExecuteReq = await this.OneBtc.executeIssue(
       this.issueRequester,
       issueId,
       proofMock,
@@ -53,6 +88,11 @@ contract("Issue unit test", (accounts) => {
     this.OneBtcBalanceVault = await this.OneBtc.balanceOf(this.vaultId);
     assert.equal(this.OneBtcBalance.toString(), IssueEvent.args.amount.toString());
     assert.equal(this.OneBtcBalanceVault.toString(), IssueEvent.args.fee.toString());
+
+    const ExecuteEvent = ExecuteReq.logs.filter(
+      (log) => log.event == "IssueComplete"
+    )[0];
+    assert.equal(ExecuteEvent.args.issuedId.toString(), issueId.toString());
   });
 
   it("Error on requester is not a executor of issue call", async function () {
@@ -130,5 +170,24 @@ contract("Issue unit test", (accounts) => {
     this.OneBtcBalanceVault = await this.OneBtc.balanceOf(this.vaultId);
     assert.equal(this.OneBtcBalance.toString(), (Number(beforeOneBtcBalance)+IssueEvent.args.amount/4).toString());
     assert.equal(this.OneBtcBalanceVault.toString(), (Number(beforeOneBtcBalanceVault) + IssueEvent.args.fee/4).toString());
+  });
+
+  it("Error on cancelIssue with the invalid cancel period", async function () {
+    const IssueAmount = 1 * 1e8;
+    const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {
+      from: this.issueRequester,
+      value: IssueAmount,
+    });
+    const IssueEvent = IssueReq.logs.filter(
+      (log) => log.event == "IssueRequest"
+    )[0];
+    const issueId = IssueEvent.args.issueId;
+    const btcAddress = IssueEvent.args.btcAddress;
+    const btcBase58 = bitcoin.address.toBase58Check(
+      Buffer.from(btcAddress.slice(2), "hex"),
+      0
+    );
+
+    await expectRevert(this.OneBtc.cancelIssue(this.issueRequester, issueId), 'TimeNotExpired');
   });
 });
