@@ -16,8 +16,8 @@ contract SecurityModule {
         BTC_RELAY_OFFLINE
     }
 
-    event RecoverFromErrors(StatusCode code, ErrorCode code);
-    
+    event RecoverFromErrors(StatusCode code, ErrorCode[] code);
+
     uint256 BridgeStatus;
     uint256 Nonce;
     uint256 ActiveBlockCount;
