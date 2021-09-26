@@ -33,38 +33,35 @@ module.exports = {
 
   networks: {
     test: {
-      host: 'localhost',
-      port: 7545,
-      network_id: '5777',
+      host: "localhost",
+      port: 9545,
+      network_id: "5777",
       // gas: 4712388
       // host: "127.0.0.1",
       // port: 8545,
       // network_id: '*',
-      accounts: 5,
-      defaultEtherBalance: 500,
-      blockTime: 0
     },
 
     local: {
-      host: 'localhost',
+      host: "localhost",
       port: 7545,
-      network_id: '5777',
+      network_id: "5777",
       // gas: 4712388
       // host: "127.0.0.1",
       // port: 8545,
       // network_id: '*',
       accounts: 5,
       defaultEtherBalance: 500,
-      blockTime: 0
+      blockTime: 0,
     },
 
     develop: {
       host: "127.0.0.1",
       port: 8545,
-      network_id: '*',
+      network_id: "*",
       accounts: 5,
       defaultEtherBalance: 500,
-      blockTime: 0
+      blockTime: 0,
     },
   },
 
@@ -76,14 +73,15 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.6.12+commit.27d51765",    // Fetch exact version from solc-bin (default: truffle's version)
-      settings: {          // See the solidity docs for advice about optimization and evmVersion
+      version: "0.6.12+commit.27d51765", // Fetch exact version from solc-bin (default: truffle's version)
+      settings: {
+        // See the solidity docs for advice about optimization and evmVersion
         optimizer: {
           enabled: true,
-          runs: 200
+          runs: 200,
         },
-      //  evmVersion: "byzantium"
-      }
-    }
-  }
+        //  evmVersion: "byzantium",
+      },
+    },
+  },
 };
