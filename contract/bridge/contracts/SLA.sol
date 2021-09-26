@@ -2,7 +2,12 @@
 
 pragma solidity ^0.6.12;
 
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
 contract SLA {
+
+    using SafeMath for uint256;
+
     event UpdateVaultSLA(
         address indexed vaultId,
         uint256 boundedNewSla,
@@ -51,6 +56,7 @@ contract SLA {
 
     mapping(address => SlaData) VaultSLA;
     mapping(address => SlaData) StakedRelayerSLA;
+    mapping(address => bool) VaultTrue;
 
     function _executeIssueSlaChange(uint256 amount) private returns (uint256) {
         uint256 count = TotalIssueCount + 1;
@@ -145,7 +151,29 @@ contract SLA {
         emit UpdateVaultSLA(vaultId, boundedNewSla, int256(deltaSla));
     }
 
-    function SlashVault(address account) internal returns (uint256) {}
+    function SlashVault(address account) internal returns (uint256) {
+        SlaData vault = VaultSLA[account];
+        uint256 slaTarget = vault.vaultTargetSla;
+        uint256 sla = vaule.sla;
+        uint256 liquidateThreshold = vault.liquidate;
+        uint256 premiumRedeemThreshold = vault.vaultRedeemFailure; 
 
-    function updateSLA(address account, uint256 delta) internal {}
+        uint256 realSlashed = premiumRedeemThreshold.sub(liquidateThreshold).div(slaTarget).mul(sla).add(liquidateThreshold);
+        
+        return realSlashed;
+    }
+
+    function updateSLA(address account, int256 delta) internal {
+        SlaData storage vault;
+        if(VaultTrue[address]){
+            vault = VaultSLA[address];
+                    vault.sla  = int256(vault).sla + delta;
+                    UpdateVaultSLA(account, vault.sla, delta);
+        }        
+        else {
+            vault = StakedRelayerSLA[address];
+            vault.sla  = int256(vault).sla + delta;
+            UpdateRelayerSLA(account, vault.sla, delta);
+        }
+    }
 }
