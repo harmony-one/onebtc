@@ -1,5 +1,6 @@
 const BN = require("bn.js");
 const { expectRevert } = require("@openzeppelin/test-helpers");
+const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 
 const OneBtc = artifacts.require("OneBtc");
 const RelayMock = artifacts.require("RelayMock");
@@ -7,6 +8,22 @@ const { issueTxMock } = require("./mock/btcTxMock");
 
 const bitcoin = require("bitcoinjs-lib");
 const bn = (b) => BigInt(`0x${b.toString("hex")}`);
+
+web3.extend({
+  property: "miner",
+  methods: [
+    {
+      name: "incTime",
+      call: "evm_increaseTime",
+      params: 1,
+    },
+    {
+      name: "mine",
+      call: "evm_mine",
+      params: 0,
+    },
+  ],
+});
 
 contract("Issue unit test", (accounts) => {
   before(async function () {
@@ -69,7 +86,7 @@ contract("Issue unit test", (accounts) => {
       Buffer.from(btcAddress.slice(2), "hex"),
       0
     );
-    const btcTx = issueTxMock(issueId, btcBase58, Number(IssueAmount));
+    const btcTx = issueTxMock(issueId, btcBase58, IssueAmount);
     const btcBlockNumberMock = 1000;
     const btcTxIndexMock = 2;
     const heightAndIndex = (btcBlockNumberMock << 32) | btcTxIndexMock;
@@ -93,6 +110,22 @@ contract("Issue unit test", (accounts) => {
       (log) => log.event == "IssueComplete"
     )[0];
     assert.equal(ExecuteEvent.args.issuedId.toString(), issueId.toString());
+
+    // should not execute the request which has been already used
+    await expectRevert(this.OneBtc.executeIssue(
+      this.issueRequester,
+      issueId,
+      proofMock,
+      btcTx.toBuffer(),
+      heightAndIndex,
+      headerMock
+    ), 'request is completed');
+
+    // should not cancel the request which has been already completed
+    await expectRevert(this.OneBtc.cancelIssue(
+      this.issueRequester,
+      issueId
+    ), 'request is completed');
   });
 
   it("Error on requester is not a executor of issue call", async function () {
@@ -189,5 +222,32 @@ contract("Issue unit test", (accounts) => {
     );
 
     await expectRevert(this.OneBtc.cancelIssue(this.issueRequester, issueId), 'TimeNotExpired');
+  });
+
+  it("Cancel issue", async function () {
+    const IssueAmount = 1 * 1e8;
+    const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {
+      from: this.issueRequester,
+      value: IssueAmount,
+    });
+    const IssueEvent = IssueReq.logs.filter(
+      (log) => log.event == "IssueRequest"
+    )[0];
+    const issueId = IssueEvent.args.issueId;
+    const btcAddress = IssueEvent.args.btcAddress;
+    const btcBase58 = bitcoin.address.toBase58Check(
+      Buffer.from(btcAddress.slice(2), "hex"),
+      0
+    );
+
+    // increase time
+    await web3.miner.incTime(Number(3600 *24 * 2 + 1)); // valid expire time = after 2 days
+    await web3.miner.mine();
+
+    const CancelReq = await this.OneBtc.cancelIssue(this.issueRequester, issueId);
+    const CancelEvent = CancelReq.logs.filter(
+      (log) => log.event == "IssueCancel"
+    )[0];
+    assert.equal(CancelEvent.args.issuedId.toString(), issueId.toString());
   });
 });
