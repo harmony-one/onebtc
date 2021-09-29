@@ -20,7 +20,7 @@
 # -- Project information -----------------------------------------------------
 
 project = u'BTC Bridge Spec'
-copyright = u'2021, Harmony'
+copyright = u'2021, Interlay'
 author = u'Harmony'
 
 # The short X.Y version
