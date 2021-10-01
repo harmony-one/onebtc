@@ -1,5 +1,6 @@
 const BN = require("bn.js");
 const { expectRevert } = require("@openzeppelin/test-helpers");
+const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 
 const OneBtc = artifacts.require("OneBtc");
 const RelayMock = artifacts.require("RelayMock");
@@ -7,6 +8,22 @@ const { issueTxMock } = require("./mock/btcTxMock");
 
 const bitcoin = require("bitcoinjs-lib");
 const bn = (b) => BigInt(`0x${b.toString("hex")}`);
+
+web3.extend({
+  property: "miner",
+  methods: [
+    {
+      name: "incTime",
+      call: "evm_increaseTime",
+      params: 1,
+    },
+    {
+      name: "mine",
+      call: "evm_mine",
+      params: 0,
+    },
+  ],
+});
 
 contract("Redeem unit test", (accounts) => {
   before(async function () {
@@ -107,5 +124,73 @@ contract("Redeem unit test", (accounts) => {
       heightAndIndex,
       headerMock
     );
+
+    const ExecuteEvent = ExecuteReq.logs.filter(
+      (log) => log.event == "RedeemComplete"
+    )[0];
+    this.OneBtcBalanceVault = await this.OneBtc.balanceOf(this.vaultId);
+    assert.equal(this.OneBtcBalanceVault.toString(), (Number(beforeOneBtcBalanceVault) + Number(ExecuteEvent.args.fee)).toString());
+    assert.equal(this.redeemRequester, ExecuteEvent.args.requester);
+
+    // should not execute the request which has been already used
+    await expectRevert(this.OneBtc.executeRedeem(
+      this.redeemRequester,
+      redeemId,
+      proofMock,
+      btcTx.toBuffer(),
+      heightAndIndex,
+      headerMock
+    ), 'request is completed');
+
+    // should not cancel the request which has been already completed
+    await expectRevert(this.OneBtc.cancelRedeem(
+      this.redeemRequester,
+      redeemId
+    ), 'request is completed');
+  });
+
+  it("Error on cancelRedeem with the invalid cancel period", async function () {
+    // Transfer 1 OneBTC
+    const RedeemAmount = 1 * 1e8;
+    await this.OneBtc.transfer(this.redeemRequester, RedeemAmount, { from: this.issueRequester });
+
+    // Redeem 1 OneBTC
+    const RedeemReq = await this.OneBtc.requestRedeem(RedeemAmount, this.redeemBtcAddress, this.vaultId, {
+      from: this.redeemRequester
+    });
+    const RedeemEvent = RedeemReq.logs.filter(
+      (log) => log.event == "RedeemRequest"
+    )[0];
+    const redeemId = RedeemEvent.args.redeemId;
+
+    await expectRevert(this.OneBtc.cancelRedeem(
+      this.redeemRequester,
+      redeemId,
+    ), 'TimeNotExpired');
+  });
+
+  it("Cancel Redeem", async function () {
+    // Transfer 1 OneBTC
+    const RedeemAmount = 1 * 1e8;
+    await this.OneBtc.transfer(this.redeemRequester, RedeemAmount, { from: this.issueRequester });
+
+    // Redeem 1 OneBTC
+    const RedeemReq = await this.OneBtc.requestRedeem(RedeemAmount, this.redeemBtcAddress, this.vaultId, {
+      from: this.redeemRequester
+    });
+    const RedeemEvent = RedeemReq.logs.filter(
+      (log) => log.event == "RedeemRequest"
+    )[0];
+    const redeemId = RedeemEvent.args.redeemId;
+
+    // increase time
+    await web3.miner.incTime(Number(3600 *24 * 2 + 1)); // valid expire time = after 2 days
+    await web3.miner.mine();
+
+    const CancelReq = await this.OneBtc.cancelRedeem(this.redeemRequester, redeemId);
+    const CancelEvent = CancelReq.logs.filter(
+      (log) => log.event == "RedeemCancel"
+    )[0];
+    assert.equal(CancelEvent.args.redeemId.toString(), redeemId.toString());
   });
 });
