@@ -9,94 +9,61 @@ The Exchange Rate Oracle receives a continuous data feed on the exchange rate be
 
 pragma solidity ^0.6.12;
 
+import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
+import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/Math.sol";
+
 contract ExchangeRateOracle {
+    using SafeMath for uint256;
+
     uint256 constant MAX_DELAY = 1000;
-    uint256 public lastExchangeRateTime;
-    uint256 exchangeRate;
-    uint256 satoshiPerBytes;
-    mapping (address => bool) authorizedOracles;
 
-    event SetExchangeRate(
-        address oracle,
-        uint256 rate
-    );
-
-    event SetSatoshiPerByte(
-        uint256 fee,
-        uint256 inclusionEstimate
-    );
-
-    event recoverFromORACLEOFFLINE(
-        address oracle,
-        uint256 rate
-    );
+    AggregatorV3Interface internal oneUSD;
+    AggregatorV3Interface internal btcUSD;
 
     constructor() public {
-        authorizedOracles[0x5B38Da6a701c568545dCfcB03FcB875f56beddC4] = true;
-    }
-
-    /**
-    @notice Set the latest (aggregate) BTC/ONE exchange rate. This function invokes a check of vault collateral rates in the Vault Registry component.
-    @param oracle the oracle account calling this function. Must be pre-authorized and tracked in this component!
-    @param rate the u128 BTC/ONE exchange rate.
-    */
-    function setExchangeRate(address oracle, uint256 rate) public {
-        require(authorizedOracles[oracle], "ERR_INVALID_ORACLE_SOURCE");
-
-        exchangeRate = rate;
-
-        if (lastExchangeRateTime - now > MAX_DELAY) {
-            emit recoverFromORACLEOFFLINE(oracle, rate);
-        }
-
-        lastExchangeRateTime = now;
-
-        emit SetExchangeRate(oracle, rate);
-    }
-
-    /**
-    @notice Set the Satoshi per bytes fee
-    @param fee the Satoshi per byte fee.
-    @param inclusionEstimate the estimated inclusion time.
-    */
-    function setSatoshiPerBytes(uint256 fee, uint256 inclusionEstimate) public {
-        // 1. The BTC Bridge status in the Security component MUST be set to RUNNING:0.
-        // TODO require()
-
-        require(authorizedOracles[msg.sender], "ERR_INVALID_ORACLE_SOURCE");
-
-        satoshiPerBytes = inclusionEstimate;
-
-        emit SetSatoshiPerByte(fee, inclusionEstimate);
+        oneUSD = AggregatorV3Interface(
+            0xcEe686F89bc0dABAd95AEAAC980aE1d97A075FAD
+        );
+        btcUSD = AggregatorV3Interface(
+            0xEF637736B220a58C661bfF4b71e03ca898DCC0Bd
+        );
     }
 
     /**
     @notice Returns the latest BTC/ONE exchange rate, as received from the external data sources.
     @return uint256 (aggregate) exchange rate value
     */
-    function getExchangeRate() public view returns (uint256) {
-        require (now - lastExchangeRateTime > MAX_DELAY, "ERR_MISSING_EXCHANGE_RATE");
+    function getExchangeRate() private view returns (uint256) {
+        (, int256 onePrice, , uint256 oneTimeStamp, ) = oneUSD
+            .latestRoundData();
+        (, int256 btcPrice, , uint256 btcTimeStamp, ) = btcUSD
+            .latestRoundData();
 
-        return exchangeRate;
+        uint256 minTimeStamp = Math.min(oneTimeStamp, btcTimeStamp);
+        // oldest timestamp should be within the max delay
+        require(now - minTimeStamp > MAX_DELAY, "ERR_MISSING_EXCHANGE_RATE");
+
+        return (uint256(btcPrice)).div(uint256(onePrice));
     }
 
     /**
-    * @notice Get BTC amount by ONE.
-    * @param amount collateral(ONE) amount
-    * @return BTC amount
-    */
-    function collateralToWrapped(uint256 amount) public view returns(uint256) {
+     * @notice Get BTC amount by ONE.
+     * @param amount collateral(ONE) amount
+     * @return BTC amount
+     */
+    function collateralToWrapped(uint256 amount) public view returns (uint256) {
         uint256 rate = getExchangeRate();
-        return amount/rate;
+        return amount.div(rate);
     }
 
     /**
-    * @notice Get ONE amount by BTC.
-    * @param amount BTC amount
-    * @return ONE amount
-    */
-    function wrappedToCollateral(uint256 amount) public view returns(uint256) {
+     * @notice Get ONE amount by BTC.
+     * @param amount BTC amount
+     * @return ONE amount
+     */
+    function wrappedToCollateral(uint256 amount) public view returns (uint256) {
         uint256 rate = getExchangeRate();
-        return amount*rate;
+        return amount.mul(rate);
     }
 }
