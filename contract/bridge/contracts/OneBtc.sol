@@ -2,7 +2,8 @@
 
 pragma solidity 0.6.12;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ValidateSPV} from "@interlay/bitcoin-spv-sol/contracts/ValidateSPV.sol";
 import {TransactionUtils} from "./TransactionUtils.sol";
 import {Issue} from "./Issue.sol";
@@ -10,10 +11,17 @@ import {Redeem} from "./Redeem.sol";
 import {Replace} from "./Replace.sol";
 import {IRelay} from "./IRelay.sol";
 
-contract OneBtc is ERC20, Issue, Redeem, Replace {
+contract OneBtc is
+    ERC20Upgradeable,
+    Issue,
+    Redeem,
+    Replace,
+    PausableUpgradeable
+{
     IRelay public realy;
 
-    constructor(IRelay _relay) public ERC20("OneBtc", "OneBtc") {
+    function initialize(IRelay _relay) external initializer {
+        __ERC20_init("OneBtc", "OneBtc");
         _setupDecimals(8);
         realy = _relay;
     }
@@ -46,6 +54,7 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
     function requestIssue(uint256 amountRequested, address vaultId)
         external
         payable
+        whenNotPaused
     {
         Issue._requestIssue(msg.sender, amountRequested, vaultId, msg.value);
     }
@@ -58,7 +67,7 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
         uint64 heightAndIndex,
         bytes calldata header
-    ) external {
+    ) external whenNotPaused {
         bytes memory _vout = verifyTx(
             merkleProof,
             rawTx,
@@ -68,7 +77,10 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         Issue._executeIssue(requester, issueId, _vout);
     }
 
-    function cancelIssue(address requester, uint256 issueId) external {
+    function cancelIssue(address requester, uint256 issueId)
+        external
+        whenNotPaused
+    {
         Issue._cancelIssue(requester, issueId);
     }
 
@@ -76,7 +88,7 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         uint256 amountOneBtc,
         address btcAddress,
         address vaultId
-    ) external {
+    ) external whenNotPaused {
         Redeem._requestRedeem(msg.sender, amountOneBtc, btcAddress, vaultId);
     }
 
@@ -87,7 +99,7 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         bytes calldata rawTx,
         uint64 heightAndIndex,
         bytes calldata header
-    ) external {
+    ) external whenNotPaused {
         bytes memory _vout = verifyTx(
             merkleProof,
             rawTx,
@@ -97,7 +109,10 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         Redeem._executeRedeem(requester, redeemId, _vout);
     }
 
-    function cancelRedeem(address requester, uint256 redeemId) external {
+    function cancelRedeem(address requester, uint256 redeemId)
+        external
+        whenNotPaused
+    {
         Redeem._cancelRedeem(requester, redeemId);
     }
 
@@ -105,33 +120,32 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         internal
         override(Redeem)
     {
-        //ERC20(this).transferFrom(from, address(this), amount);
-        ERC20._transfer(msg.sender, address(this), amount);
+        ERC20Upgradeable._transfer(msg.sender, address(this), amount);
     }
 
     function burnLockedOneBTC(uint256 amount) internal override(Redeem) {
-        ERC20._burn(address(this), amount);
+        ERC20Upgradeable._burn(address(this), amount);
     }
 
     function releaseLockedOneBTC(address receiver, uint256 amount)
         internal
         override(Redeem)
     {
-        ERC20._transfer(address(this), receiver, amount);
+        ERC20Upgradeable._transfer(address(this), receiver, amount);
     }
 
     function issueOneBTC(address receiver, uint256 amount)
         internal
         override(Issue)
     {
-        ERC20._mint(receiver, amount);
+        ERC20Upgradeable._mint(receiver, amount);
     }
 
     function requestReplace(
         address payable oldVaultId,
         uint256 btcAmount,
         uint256 griefingCollateral
-    ) external payable {
+    ) external payable whenNotPaused {
         Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
     }
 
@@ -142,7 +156,7 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         uint256 collateral,
         uint256 btcPublicKeyX,
         uint256 btcPublicKeyY
-    ) external payable {
+    ) external payable whenNotPaused {
         Replace._acceptReplace(
             oldVaultId,
             newVaultId,
@@ -160,7 +174,7 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
         uint64 heightAndIndex,
         bytes calldata header
-    ) external {
+    ) external whenNotPaused {
         bytes memory _vout = verifyTx(
             merkleProof,
             rawTx,

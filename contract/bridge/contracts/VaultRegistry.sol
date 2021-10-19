@@ -5,11 +5,11 @@ pragma solidity 0.6.12;
 import {ICollateral} from "./Collateral.sol";
 import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
 import {ExchangeRateOracle} from "./ExchangeRateOracle.sol";
-import {Math} from "@openzeppelin/contracts/math/Math.sol";
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 
 abstract contract VaultRegistry is ICollateral {
-    using SafeMath for uint256;
+    using SafeMathUpgradeable for uint256;
 
     struct Vault {
         uint256 btcPublicKeyX;
@@ -268,14 +268,14 @@ abstract contract VaultRegistry is ICollateral {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "vaultNotExist");
 
-        uint256 usedTokens = Math.min(vault.toBeReplaced, tokens);
+        uint256 usedTokens = MathUpgradeable.min(vault.toBeReplaced, tokens);
 
         uint256 calculatedCollateral = calculateCollateral(
             vault.replaceCollateral,
             usedTokens,
             vault.toBeReplaced
         );
-        uint256 usedCollateral = Math.min(
+        uint256 usedCollateral = MathUpgradeable.min(
             vault.replaceCollateral,
             calculatedCollateral
         );

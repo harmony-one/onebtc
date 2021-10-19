@@ -7,7 +7,7 @@ import {ReplaceRequest, RequestStatus} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
 import {ICollateral} from "./Collateral.sol";
 import {VaultRegistry} from "./VaultRegistry.sol";
-import {Math} from "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 
 abstract contract Replace is ICollateral, VaultRegistry {
     //    using BTCUtils for bytes;
@@ -85,7 +85,7 @@ abstract contract Replace is ICollateral, VaultRegistry {
         uint256 requestableTokens = VaultRegistry.requestableToBeReplacedTokens(
             oldVaultId
         );
-        uint256 toBeReplacedIncrease = Math.min(requestableTokens, btcAmount);
+        uint256 toBeReplacedIncrease = MathUpgradeable.min(requestableTokens, btcAmount);
 
         uint256 replaceCollateralIncrease = griefingCollateral;
 

@@ -3,7 +3,7 @@
 pragma solidity 0.6.12;
 import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
-import {Math} from "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 import {ValidateSPV} from "@interlay/bitcoin-spv-sol/contracts/ValidateSPV.sol";
 
 library TxValidate {
@@ -15,7 +15,7 @@ library TxValidate {
         address recipientBtcAddress
     ) private pure returns (uint256 btcAmount, uint256 opReturn) {
         (, uint256 _nVouts) = txVout.parseVarInt();
-        uint256 voutCount = Math.min(_nVouts, 3);
+        uint256 voutCount = MathUpgradeable.min(_nVouts, 3);
         bytes memory OP_RETURN_DATA;
         address btcAddress;
         for (uint256 i = 0; i < voutCount; i++) {

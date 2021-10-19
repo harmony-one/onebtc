@@ -1,8 +1,8 @@
 {
   "dependencies": {
     "@interlay/bitcoin-spv-sol": "^3.2.2",
-    "@openzeppelin/contracts": "3.1.0",
     "@openzeppelin/test-helpers": "^0.5.11",
+    "@openzeppelin/contracts-upgradeable": "3.4.2",
     "bitcoinjs-lib": "^5.2.0",
     "@harmony-js/core": "^0.1.57",
     "@truffle/hdwallet-provider": "^1.2.1",
@@ -16,7 +16,10 @@
     "bip39": "3.0.4",
     "bip32": "2.0.6",
     "typedarray-to-buffer": "4.0.0",
-    "@chainlink/contracts": "0.2.2"
+    "@chainlink/contracts": "0.2.2",
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@openzeppelin/hardhat-upgrades": "^1.10.0",
+    "hardhat": "^2.6.2"
   },
   "devDependencies": {
     "bn.js": "^5.2.0",
@@ -24,7 +27,12 @@
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.24.0",
     "ethereum-waffle": "^3.3.0",
-    "prettier": "2.3.2"
+    "prettier": "2.3.2",
+    "@chainlink/contracts": "0.2.2",
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@openzeppelin/hardhat-upgrades": "^1.10.0",
+    "hardhat": "^2.6.2",
+    "@openzeppelin/contracts-upgradeable": "3.4.2"
   },
   "scripts": {
     "compile": "truffle compile",

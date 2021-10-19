@@ -2,15 +2,17 @@
 
 pragma solidity ^0.6.12;
 
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import {ValidateSPV} from "@interlay/bitcoin-spv-sol/contracts/ValidateSPV.sol";
 import {IRelay} from "./IRelay.sol";
 
 /// @title BTC Relay
-contract Relay is IRelay {
-    using SafeMath for uint256;
+contract Relay is IRelay, Initializable, PausableUpgradeable {
+    using SafeMathUpgradeable for uint256;
     using BytesLib for bytes;
     using BTCUtils for bytes;
 
@@ -77,10 +79,10 @@ contract Relay is IRelay {
     * @param header Genesis block header
     * @param height Genesis block height
     */
-    constructor(
+    function __Relay__initialize(
         bytes memory header,
         uint32 height
-    ) public {
+    ) public virtual initializer {
         require(header.length == 80, ERR_INVALID_HEADER_SIZE);
         require(height > 0, ERR_INVALID_GENESIS_HEIGHT);
         bytes32 digest = header.hash256();
@@ -191,14 +193,14 @@ contract Relay is IRelay {
     /**
      * @dev See {IRelay-submitBlockHeader}.
      */
-    function submitBlockHeader(bytes calldata header) external override {
+    function submitBlockHeader(bytes calldata header) external override whenNotPaused {
         _submitBlockHeader(header);
     }
 
     /**
      * @dev See {IRelay-submitBlockHeaderBatch}.
      */
-    function submitBlockHeaderBatch(bytes calldata headers) external override {
+    function submitBlockHeaderBatch(bytes calldata headers) external override whenNotPaused {
         require(headers.length % 80 == 0, ERR_INVALID_HEADER_BATCH);
 
         for (uint256 i = 0; i < headers.length / 80; i = i.add(1)) {

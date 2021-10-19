@@ -7,12 +7,12 @@ import {IssueRequest, RequestStatus} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
 import {ICollateral} from "./Collateral.sol";
 import {VaultRegistry} from "./VaultRegistry.sol";
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 
 abstract contract Issue is ICollateral, VaultRegistry {
     using BTCUtils for bytes;
     using BytesLib for bytes;
-    using SafeMath for uint256;
+    using SafeMathUpgradeable for uint256;
 
     event IssueRequested(
         uint256 indexed issueId,
@@ -129,7 +129,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
         ICollateral.lockCollateral(
             request.requester,
             request.griefingCollateral
-        ); // ICollateral::
+        );
         emit IssueRequested(
             issueId,
             requester,

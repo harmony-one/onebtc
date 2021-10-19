@@ -10,18 +10,21 @@ The Exchange Rate Oracle receives a continuous data feed on the exchange rate be
 pragma solidity 0.6.12;
 
 import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 
-contract ExchangeRateOracle {
-    using SafeMath for uint256;
+contract ExchangeRateOracle is Initializable, OwnableUpgradeable {
+    using SafeMathUpgradeable for uint256;
 
     uint256 constant MAX_DELAY = 1000;
 
     AggregatorV3Interface internal oneUSD;
     AggregatorV3Interface internal btcUSD;
 
-    constructor() public {
+    function initialize() external initializer {
+        __Ownable_init();
         oneUSD = AggregatorV3Interface(
             0xcEe686F89bc0dABAd95AEAAC980aE1d97A075FAD
         );
@@ -40,7 +43,7 @@ contract ExchangeRateOracle {
         (, int256 btcPrice, , uint256 btcTimeStamp, ) = btcUSD
             .latestRoundData();
 
-        uint256 minTimeStamp = Math.min(oneTimeStamp, btcTimeStamp);
+        uint256 minTimeStamp = MathUpgradeable.min(oneTimeStamp, btcTimeStamp);
         // oldest timestamp should be within the max delay
         require(now - minTimeStamp > MAX_DELAY, "ERR_MISSING_EXCHANGE_RATE");
 
