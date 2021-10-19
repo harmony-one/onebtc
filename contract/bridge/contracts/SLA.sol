@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
 contract SLA {
     event UpdateVaultSLA(
@@ -8,6 +8,7 @@ contract SLA {
         uint256 boundedNewSla,
         int256 deltaSla
     );
+
     event UpdateRelayerSLA(
         address indexed relayerId,
         uint256 newSla,

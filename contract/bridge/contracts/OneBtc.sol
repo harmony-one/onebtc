@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ValidateSPV} from "@interlay/bitcoin-spv-sol/contracts/ValidateSPV.sol";
@@ -34,8 +34,9 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
             6,
             true
         );
-        TransactionUtils.Transaction memory btcTx =
-            TransactionUtils.extractTx(rawTx);
+        TransactionUtils.Transaction memory btcTx = TransactionUtils.extractTx(
+            rawTx
+        );
         require(btcTx.locktime == 0, "locktime must zero!");
         // check version?
         // btcTx.version
@@ -58,8 +59,12 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         uint64 heightAndIndex,
         bytes calldata header
     ) external {
-        bytes memory _vout =
-            verifyTx(merkleProof, rawTx, heightAndIndex, header);
+        bytes memory _vout = verifyTx(
+            merkleProof,
+            rawTx,
+            heightAndIndex,
+            header
+        );
         Issue._executeIssue(requester, issueId, _vout);
     }
 
@@ -72,12 +77,7 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         address btcAddress,
         address vaultId
     ) external {
-        Redeem._requestRedeem(
-            msg.sender,
-            amountOneBtc,
-            btcAddress,
-            vaultId
-        );
+        Redeem._requestRedeem(msg.sender, amountOneBtc, btcAddress, vaultId);
     }
 
     function executeRedeem(
@@ -88,8 +88,12 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         uint64 heightAndIndex,
         bytes calldata header
     ) external {
-        bytes memory _vout =
-            verifyTx(merkleProof, rawTx, heightAndIndex, header);
+        bytes memory _vout = verifyTx(
+            merkleProof,
+            rawTx,
+            heightAndIndex,
+            header
+        );
         Redeem._executeRedeem(requester, redeemId, _vout);
     }
 
@@ -153,12 +157,16 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         uint256 replaceId,
         bytes calldata merkleProof,
         bytes calldata rawTx, // avoid compiler error: stack too deep
-    //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
+        //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
         uint64 heightAndIndex,
         bytes calldata header
     ) external {
-        bytes memory _vout =
-        verifyTx(merkleProof, rawTx, heightAndIndex, header);
+        bytes memory _vout = verifyTx(
+            merkleProof,
+            rawTx,
+            heightAndIndex,
+            header
+        );
         Replace._executeReplace(replaceId, _vout);
     }
 }

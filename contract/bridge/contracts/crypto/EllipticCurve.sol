@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
 /**
  * @title Elliptic Curve Library
@@ -124,12 +124,11 @@ library EllipticCurve {
         );
 
         // x^3 + ax + b
-        uint256 y2 =
-            addmod(
-                mulmod(_x, mulmod(_x, _x, _pp), _pp),
-                addmod(mulmod(_x, _aa, _pp), _bb, _pp),
-                _pp
-            );
+        uint256 y2 = addmod(
+            mulmod(_x, mulmod(_x, _x, _pp), _pp),
+            addmod(mulmod(_x, _aa, _pp), _bb, _pp),
+            _pp
+        );
         y2 = expMod(y2, (_pp + 1) / 4, _pp);
         // uint256 cmp = yBit ^ y_ & 1;
         uint256 y = (y2 + _prefix) % 2 == 0 ? y2 : _pp - y2;
@@ -324,12 +323,11 @@ library EllipticCurve {
         uint256 qx = addmod(mulmod(hr[1], hr[1], _pp), _pp - hr[3], _pp);
         qx = addmod(qx, _pp - mulmod(2, mulmod(zs[0], hr[2], _pp), _pp), _pp);
         // qy = -s1*z1*h^3+r(u1*h^2 -x^3)
-        uint256 qy =
-            mulmod(
-                hr[1],
-                addmod(mulmod(zs[0], hr[2], _pp), _pp - qx, _pp),
-                _pp
-            );
+        uint256 qy = mulmod(
+            hr[1],
+            addmod(mulmod(zs[0], hr[2], _pp), _pp - qx, _pp),
+            _pp
+        );
         qy = addmod(qy, _pp - mulmod(zs[1], hr[3], _pp), _pp);
         // qz = h*z1*z2
         uint256 qz = mulmod(hr[0], mulmod(_z1, _z2, _pp), _pp);
@@ -370,8 +368,11 @@ library EllipticCurve {
         // s
         uint256 s = mulmod(4, mulmod(_x, y, _pp), _pp);
         // m
-        uint256 m =
-            addmod(mulmod(3, x, _pp), mulmod(_aa, mulmod(z, z, _pp), _pp), _pp);
+        uint256 m = addmod(
+            mulmod(3, x, _pp),
+            mulmod(_aa, mulmod(z, z, _pp), _pp),
+            _pp
+        );
 
         // x, y, z at this point will be reassigned and rather represent qx, qy, qz from the paper
         // This allows to reduce the gas cost and stack footprint of the algorithm

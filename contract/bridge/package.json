@@ -10,7 +10,13 @@
     "eth-ens-namehash": "^2.0.8",
     "solium": "^1.2.5",
     "truffle": "^5.1.66",
-    "web3-utils": "^1.3.4"
+    "web3-utils": "^1.3.4",
+    "keccak256": "1.0.3",
+    "secp256k1": "4.0.2",
+    "bip39": "3.0.4",
+    "bip32": "2.0.6",
+    "typedarray-to-buffer": "4.0.0",
+    "@chainlink/contracts": "0.2.2"
   },
   "devDependencies": {
     "bn.js": "^5.2.0",

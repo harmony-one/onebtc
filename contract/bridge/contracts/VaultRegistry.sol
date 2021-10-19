@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
 import {ICollateral} from "./Collateral.sol";
 import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
@@ -22,6 +22,7 @@ abstract contract VaultRegistry is ICollateral {
         uint256 toBeReplaced;
         mapping(address => bool) depositAddresses;
     }
+    
     mapping(address => Vault) public vaults;
     uint256 public constant secureCollateralThreshold = 150; // 150%
     ExchangeRateOracle oracle;
@@ -41,7 +42,12 @@ abstract contract VaultRegistry is ICollateral {
     event RedeemTokens(address indexed vaultId, uint256 amount);
     event IncreaseToBeReplacedTokens(address indexed vaultId, uint256 amount);
     event DecreaseToBeReplacedTokens(address indexed vaultId, uint256 amount);
-    event ReplaceTokens(address indexed oldVaultId, address indexed newVaultId, uint256 tokens, uint256 collateral);
+    event ReplaceTokens(
+        address indexed oldVaultId,
+        address indexed newVaultId,
+        uint256 tokens,
+        uint256 collateral
+    );
 
     function registerVault(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
         external
@@ -50,19 +56,11 @@ abstract contract VaultRegistry is ICollateral {
         address vaultId = msg.sender;
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX == 0, "vaultExist");
-        require(
-            btcPublicKeyX != 0 && btcPublicKeyY != 0,
-            "invalidPubkey"
-        );
+        require(btcPublicKeyX != 0 && btcPublicKeyY != 0, "invalidPubkey");
         vault.btcPublicKeyX = btcPublicKeyX;
         vault.btcPublicKeyY = btcPublicKeyY;
         lockAdditionalCollateral();
-        emit RegisterVault(
-            vaultId,
-            msg.value,
-            btcPublicKeyX,
-            btcPublicKeyY
-        );
+        emit RegisterVault(vaultId, msg.value, btcPublicKeyX, btcPublicKeyY);
     }
 
     function toBeRedeemed(address vaultId) public view returns (uint256) {
@@ -81,14 +79,16 @@ abstract contract VaultRegistry is ICollateral {
     {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "vaultNotExist");
-        address derivedKey =
-            BitcoinKeyDerivation.derivate(
-                vault.btcPublicKeyX,
-                vault.btcPublicKeyY,
-                issueId
-            );
+        address derivedKey = BitcoinKeyDerivation.derivate(
+            vault.btcPublicKeyX,
+            vault.btcPublicKeyY,
+            issueId
+        );
 
-        require(!vault.depositAddresses[derivedKey], 'This btc address already used');
+        require(
+            !vault.depositAddresses[derivedKey],
+            "This btc address already used"
+        );
         vault.depositAddresses[derivedKey] = true;
 
         return derivedKey;
@@ -99,7 +99,7 @@ abstract contract VaultRegistry is ICollateral {
         uint256 btcPublicKeyX,
         uint256 btcPublicKeyY,
         uint256 replaceId
-    ) internal returns(address) {
+    ) internal returns (address) {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "vaultNotExist");
 
@@ -109,16 +109,18 @@ abstract contract VaultRegistry is ICollateral {
             replaceId
         );
 
-        require(!vault.depositAddresses[btcAddress], 'This btc address already used');
+        require(
+            !vault.depositAddresses[btcAddress],
+            "This btc address already used"
+        );
         vault.depositAddresses[btcAddress] = true;
 
         return btcAddress;
     }
 
-    function updatePublicKey(
-        uint256 btcPublicKeyX,
-        uint256 btcPublicKeyY
-    ) external {
+    function updatePublicKey(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
+        external
+    {
         address vaultId = msg.sender;
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "vaultNotExist");
@@ -142,31 +144,39 @@ abstract contract VaultRegistry is ICollateral {
         ICollateral.releaseCollateral(msg.sender, amount);
     }
 
-    function decreaseToBeIssuedTokens(address vaultId, uint256 amount) internal {
+    function decreaseToBeIssuedTokens(address vaultId, uint256 amount)
+        internal
+    {
         Vault storage vault = vaults[vaultId];
         vault.toBeIssued = vault.toBeIssued.sub(amount);
         emit DecreaseToBeIssuedTokens(vaultId, amount);
     }
 
-    function tryIncreaseToBeIssuedTokens(address vaultId, uint256 amount) internal returns(bool) {
+    function tryIncreaseToBeIssuedTokens(address vaultId, uint256 amount)
+        internal
+        returns (bool)
+    {
         uint256 issuableTokens = issuableTokens(vaultId);
-        if(issuableTokens < amount) return false; // ExceedingVaultLimit
+        if (issuableTokens < amount) return false; // ExceedingVaultLimit
         Vault storage vault = vaults[vaultId];
         vault.toBeIssued = vault.toBeIssued.add(amount);
         emit IncreaseToBeIssuedTokens(vaultId, amount);
         return true;
     }
 
-    function tryIncreaseToBeRedeemedTokens(address vaultId, uint256 amount) internal returns(bool) {
+    function tryIncreaseToBeRedeemedTokens(address vaultId, uint256 amount)
+        internal
+        returns (bool)
+    {
         uint256 redeemable = redeemableTokens(vaultId);
-        if(amount > redeemable) return false; // ExceedingVaultLimit
+        if (amount > redeemable) return false; // ExceedingVaultLimit
         Vault storage vault = vaults[vaultId];
         vault.toBeRedeemed = vault.toBeRedeemed.add(amount);
         emit IncreaseToBeRedeemedTokens(vaultId, amount);
         return true;
     }
 
-    function redeemableTokens(address vaultId) internal returns(uint256) {
+    function redeemableTokens(address vaultId) internal returns (uint256) {
         Vault storage vault = vaults[vaultId];
         return vault.issued.sub(vault.toBeRedeemed);
     }
@@ -178,15 +188,22 @@ abstract contract VaultRegistry is ICollateral {
         emit RedeemTokens(vaultId, amount);
     }
 
-    function calculateMaxWrappedFromCollateralForThreshold(uint256 collateral, uint256 threshold) public view returns(uint256) {
+    function calculateMaxWrappedFromCollateralForThreshold(
+        uint256 collateral,
+        uint256 threshold
+    ) public view returns (uint256) {
         // TODO - fix oracle.collateralToWrapped
         // uint256 collateralInWrapped = oracle.collateralToWrapped(collateral);
         return collateral.mul(100).div(threshold);
     }
 
-    function issuableTokens(address vaultId) public view returns(uint256) {
+    function issuableTokens(address vaultId) public view returns (uint256) {
         uint256 freeCollateral = ICollateral.getFreeCollateral(vaultId);
-        return calculateMaxWrappedFromCollateralForThreshold(freeCollateral, secureCollateralThreshold);
+        return
+            calculateMaxWrappedFromCollateralForThreshold(
+                freeCollateral,
+                secureCollateralThreshold
+            );
     }
 
     function issueTokens(address vaultId, uint256 amount) internal {
@@ -196,29 +213,45 @@ abstract contract VaultRegistry is ICollateral {
         emit IssueTokens(vaultId, amount);
     }
 
-    function calculateCollateral(uint256 collateral, uint256 numerator, uint256 denominator) internal returns (uint256 amount) {
-        if(numerator == 0 && denominator == 0) {
+    function calculateCollateral(
+        uint256 collateral,
+        uint256 numerator,
+        uint256 denominator
+    ) internal returns (uint256 amount) {
+        if (numerator == 0 && denominator == 0) {
             return collateral;
         }
 
         return collateral.mul(numerator).div(denominator);
     }
 
-    function requestableToBeReplacedTokens(address vaultId) internal returns (uint256 amount) {
+    function requestableToBeReplacedTokens(address vaultId)
+        internal
+        returns (uint256 amount)
+    {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "vaultNotExist");
 
-        uint256 requestableIncrease = vault.issued.sub(vault.toBeRedeemed).sub(vault.toBeReplaced);
+        uint256 requestableIncrease = vault.issued.sub(vault.toBeRedeemed).sub(
+            vault.toBeReplaced
+        );
 
         return requestableIncrease;
     }
 
-    function tryIncreaseToBeReplacedTokens(address vaultId, uint256 tokens, uint256 collateral) internal returns (uint256, uint256) {
+    function tryIncreaseToBeReplacedTokens(
+        address vaultId,
+        uint256 tokens,
+        uint256 collateral
+    ) internal returns (uint256, uint256) {
         Vault storage vault = vaults[vaultId];
 
         uint256 requestableIncrease = requestableToBeReplacedTokens(vaultId);
 
-        require(tokens <= requestableIncrease, 'Could not increase to-be-replaced tokens because it is more than issued amount');
+        require(
+            tokens <= requestableIncrease,
+            "Could not increase to-be-replaced tokens because it is more than issued amount"
+        );
 
         vault.toBeReplaced = vault.toBeReplaced.add(tokens);
         vault.replaceCollateral = vault.replaceCollateral.add(collateral);
@@ -228,24 +261,39 @@ abstract contract VaultRegistry is ICollateral {
         return (vault.toBeReplaced, vault.replaceCollateral);
     }
 
-    function decreaseToBeReplacedTokens(address vaultId, uint256 tokens) internal returns (uint256, uint256) {
+    function decreaseToBeReplacedTokens(address vaultId, uint256 tokens)
+        internal
+        returns (uint256, uint256)
+    {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "vaultNotExist");
 
         uint256 usedTokens = Math.min(vault.toBeReplaced, tokens);
 
-        uint256 calculatedCollateral = calculateCollateral(vault.replaceCollateral, usedTokens, vault.toBeReplaced);
-        uint256 usedCollateral = Math.min(vault.replaceCollateral, calculatedCollateral);
+        uint256 calculatedCollateral = calculateCollateral(
+            vault.replaceCollateral,
+            usedTokens,
+            vault.toBeReplaced
+        );
+        uint256 usedCollateral = Math.min(
+            vault.replaceCollateral,
+            calculatedCollateral
+        );
 
         vault.toBeReplaced = vault.toBeReplaced.sub(usedTokens);
         vault.replaceCollateral = vault.replaceCollateral.sub(usedCollateral);
 
         emit DecreaseToBeReplacedTokens(vaultId, usedTokens);
 
-        return(usedTokens, usedCollateral);
+        return (usedTokens, usedCollateral);
     }
 
-    function replaceTokens(address oldVaultId, address newVaultId, uint256 tokens, uint256 collateral) internal {
+    function replaceTokens(
+        address oldVaultId,
+        address newVaultId,
+        uint256 tokens,
+        uint256 collateral
+    ) internal {
         Vault storage oldVault = vaults[oldVaultId];
         Vault storage newVault = vaults[newVaultId];
 

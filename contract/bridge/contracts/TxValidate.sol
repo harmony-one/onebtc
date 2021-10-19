@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import {Math} from "@openzeppelin/contracts/math/Math.sol";
@@ -46,8 +46,10 @@ library TxValidate {
         address recipientBtcAddress,
         uint256 opReturnId
     ) internal pure returns (uint256) {
-        (uint256 extrPaymentValue, uint256 extrOpReturn) =
-            extractPaymentValueAndOpReturn(txVout, recipientBtcAddress);
+        (
+            uint256 extrPaymentValue,
+            uint256 extrOpReturn
+        ) = extractPaymentValueAndOpReturn(txVout, recipientBtcAddress);
         require(extrOpReturn == opReturnId, "InvalidOpReturn");
         require(extrPaymentValue >= minimumBtc, "InsufficientValue");
         return extrPaymentValue;

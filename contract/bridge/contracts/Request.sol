@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
-enum RequestStatus {None, Pending, Completed, Cancelled}
+pragma solidity 0.6.12;
+enum RequestStatus {
+    None,
+    Pending,
+    Completed,
+    Cancelled
+}
 
-struct S_IssueRequest {
+struct IssueRequest {
     address payable vault; // vault one address
     uint256 opentime;
     address payable requester;
@@ -17,7 +22,7 @@ struct S_IssueRequest {
     RequestStatus status;
 }
 
-struct S_RedeemRequest {
+struct RedeemRequest {
     address vault;
     uint256 opentime;
     uint256 period;
@@ -33,7 +38,7 @@ struct S_RedeemRequest {
     RequestStatus status;
 }
 
-struct S_ReplaceRequest {
+struct ReplaceRequest {
     address payable oldVault;
     address payable newVault;
     uint256 collateral;

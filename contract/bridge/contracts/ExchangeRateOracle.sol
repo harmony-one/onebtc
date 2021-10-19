@@ -7,10 +7,10 @@ https://onebtc-dev.web.app/spec/oracle.html
 The Exchange Rate Oracle receives a continuous data feed on the exchange rate between BTC and ONE.
 */
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
 import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 
 contract ExchangeRateOracle {

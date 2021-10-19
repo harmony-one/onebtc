@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
 import {ValidateSPV} from "@interlay/bitcoin-spv-sol/contracts/ValidateSPV.sol";
-//import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 
@@ -33,15 +32,17 @@ library TransactionUtils {
 
         uint256 vinsPos = pos;
 
-        (uint256 varIntLen, uint256 numInputs) =
-            rawTx.slice(pos, length - pos).parseVarInt();
+        (uint256 varIntLen, uint256 numInputs) = rawTx
+            .slice(pos, length - pos)
+            .parseVarInt();
         pos += varIntLen + 1;
 
         for (uint256 i = 0; i < numInputs; i++) {
             pos += 36; // skip outpoint
             // read varInt for script sig
-            (uint256 scriptSigvarIntLen, uint256 scriptSigLen) =
-                rawTx.slice(pos, length - pos).parseVarInt();
+            (uint256 scriptSigvarIntLen, uint256 scriptSigLen) = rawTx
+                .slice(pos, length - pos)
+                .parseVarInt();
 
             pos += (scriptSigvarIntLen +
                 1 + // skip varInt

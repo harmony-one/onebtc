@@ -7,7 +7,7 @@ https://onebtc-dev.web.app/spec/oracle.html
 The Exchange Rate Oracle receives a continuous data feed on the exchange rate between BTC and ONE.
 */
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
 contract ExchangeRateOracleWrapper {
     uint256 constant MAX_DELAY = 1000;
@@ -16,23 +16,13 @@ contract ExchangeRateOracleWrapper {
     uint256 satoshiPerBytes;
     mapping(address => bool) public authorizedOracles;
 
-    event SetExchangeRate(
-        address oracle,
-        uint256 rate
-    );
+    event SetExchangeRate(address oracle, uint256 rate);
 
-    event SetSatoshiPerByte(
-        uint256 fee,
-        uint256 inclusionEstimate
-    );
+    event SetSatoshiPerByte(uint256 fee, uint256 inclusionEstimate);
 
-    event recoverFromORACLEOFFLINE(
-        address oracle,
-        uint256 rate
-    );
+    event recoverFromORACLEOFFLINE(address oracle, uint256 rate);
 
-    constructor() public {
-    }
+    constructor() public {}
 
     /**
      * @notice add authorized oracle
@@ -82,28 +72,31 @@ contract ExchangeRateOracleWrapper {
     @return uint256 (aggregate) exchange rate value
     */
     function getExchangeRate() public view returns (uint256) {
-        require (now - lastExchangeRateTime > MAX_DELAY, "ERR_MISSING_EXCHANGE_RATE");
+        require(
+            now - lastExchangeRateTime > MAX_DELAY,
+            "ERR_MISSING_EXCHANGE_RATE"
+        );
 
         return exchangeRate;
     }
 
     /**
-    * @notice Get BTC amount by ONE.
-    * @param amount collateral(ONE) amount
-    * @return BTC amount
-    */
-    function collateralToWrapped(uint256 amount) public view returns(uint256) {
+     * @notice Get BTC amount by ONE.
+     * @param amount collateral(ONE) amount
+     * @return BTC amount
+     */
+    function collateralToWrapped(uint256 amount) public view returns (uint256) {
         uint256 rate = getExchangeRate();
-        return amount/rate;
+        return amount / rate;
     }
 
     /**
-    * @notice Get ONE amount by BTC.
-    * @param amount BTC amount
-    * @return ONE amount
-    */
-    function wrappedToCollateral(uint256 amount) public view returns(uint256) {
+     * @notice Get ONE amount by BTC.
+     * @param amount BTC amount
+     * @return ONE amount
+     */
+    function wrappedToCollateral(uint256 amount) public view returns (uint256) {
         uint256 rate = getExchangeRate();
-        return amount*rate;
+        return amount * rate;
     }
 }

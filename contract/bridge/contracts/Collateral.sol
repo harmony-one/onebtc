@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 abstract contract ICollateral {
     using SafeMath for uint256;
@@ -13,7 +13,7 @@ abstract contract ICollateral {
     mapping(address => uint256) public CollateralBalances;
     mapping(address => uint256) public CollateralUsed; // for vaults
 
-    function TotalCollateral() external view returns (uint256) {
+    function totalCollateral() external view returns (uint256) {
         return address(this).balance;
     }
 
@@ -52,7 +52,11 @@ abstract contract ICollateral {
         emit SlashCollateral(from, to, amount);
     }
 
-    function getFreeCollateral(address vaultId) internal view returns(uint256) {
+    function getFreeCollateral(address vaultId)
+        internal
+        view
+        returns (uint256)
+    {
         return CollateralBalances[vaultId].sub(CollateralUsed[vaultId]);
     }
 

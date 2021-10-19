@@ -39,7 +39,7 @@ contract("Replace unit test", (accounts) => {
       value: IssueAmount,
     });
     const IssueEvent = IssueReq.logs.filter(
-      (log) => log.event == "IssueRequest"
+      (log) => log.event == "IssueRequested"
     )[0];
     const issueId = IssueEvent.args.issueId;
     const btcAddress = IssueEvent.args.btcAddress;

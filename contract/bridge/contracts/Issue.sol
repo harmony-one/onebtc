@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
-import {S_IssueRequest, RequestStatus} from "./Request.sol";
+import {IssueRequest, RequestStatus} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
 import {ICollateral} from "./Collateral.sol";
 import {VaultRegistry} from "./VaultRegistry.sol";
@@ -14,7 +14,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
     using BytesLib for bytes;
     using SafeMath for uint256;
 
-    event IssueRequest(
+    event IssueRequested(
         uint256 indexed issueId,
         address indexed requester,
         address indexed vaultId,
@@ -22,7 +22,8 @@ abstract contract Issue is ICollateral, VaultRegistry {
         uint256 fee,
         address btcAddress
     );
-    event IssueComplete(
+
+    event IssueCompleted(
         uint256 indexed issuedId,
         address indexed requester,
         address indexed vaultId,
@@ -30,7 +31,8 @@ abstract contract Issue is ICollateral, VaultRegistry {
         uint256 fee,
         address btcAddress
     );
-    event IssueCancel(
+
+    event IssueCanceled(
         uint256 indexed issuedId,
         address indexed requester,
         address indexed vaultId,
@@ -38,20 +40,24 @@ abstract contract Issue is ICollateral, VaultRegistry {
         uint256 fee,
         address btcAddress
     );
-    event IssueAmountChange(
+
+    event IssueAmountChanged(
         uint256 indexed issuedId,
         uint256 amount,
         uint256 fee,
         uint256 confiscatedGriefingCollateral
     );
-    mapping(address => mapping(uint256 => S_IssueRequest)) public issueRequests;
+
+    mapping(address => mapping(uint256 => IssueRequest)) public issueRequests;
 
     function issueOneBTC(address receiver, uint256 amount) internal virtual;
 
-    function getIssueFee(
-        uint256 amountRequested
-    ) private pure returns (uint256) {
-        return amountRequested*2/1000;
+    function getIssueFee(uint256 amountRequested)
+        private
+        pure
+        returns (uint256)
+    {
+        return (amountRequested * 2) / 1000;
     }
 
     function getIssueId(address user) private view returns (uint256) {
@@ -71,13 +77,13 @@ abstract contract Issue is ICollateral, VaultRegistry {
 
     function updateIssueAmount(
         uint256 issueId,
-        S_IssueRequest storage issue,
+        IssueRequest storage issue,
         uint256 transferredBtc,
         uint256 confiscatedGriefingCollateral
     ) internal {
         issue.fee = getIssueFee(transferredBtc);
         issue.amount = transferredBtc.sub(issue.fee);
-        emit IssueAmountChange(
+        emit IssueAmountChanged(
             issueId,
             issue.amount,
             issue.fee,
@@ -92,22 +98,21 @@ abstract contract Issue is ICollateral, VaultRegistry {
         uint256 griefingCollateral
     ) internal {
         require(
-            getIssueGriefingCollateral(amountRequested) <=
-                griefingCollateral,
+            getIssueGriefingCollateral(amountRequested) <= griefingCollateral,
             "InsufficientCollateral"
         );
         require(
-            VaultRegistry.tryIncreaseToBeIssuedTokens(
-                vaultId,
-                amountRequested
-            ),
+            VaultRegistry.tryIncreaseToBeIssuedTokens(vaultId, amountRequested),
             "ExceedingVaultLimit"
         );
         uint256 issueId = getIssueId(requester);
-        address btcAddress = VaultRegistry.registerDepositAddress(vaultId, issueId);
+        address btcAddress = VaultRegistry.registerDepositAddress(
+            vaultId,
+            issueId
+        );
         uint256 fee = getIssueFee(amountRequested);
         uint256 amountUser = amountRequested.sub(fee);
-        S_IssueRequest storage request = issueRequests[requester][issueId];
+        IssueRequest storage request = issueRequests[requester][issueId];
         require(request.status == RequestStatus.None, "invalid request");
         {
             request.vault = address(uint160(vaultId));
@@ -125,7 +130,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
             request.requester,
             request.griefingCollateral
         ); // ICollateral::
-        emit IssueRequest(
+        emit IssueRequested(
             issueId,
             requester,
             vaultId,
@@ -140,36 +145,35 @@ abstract contract Issue is ICollateral, VaultRegistry {
         uint256 issueId,
         bytes memory _vout
     ) internal {
-        S_IssueRequest storage request = issueRequests[requester][issueId];
+        IssueRequest storage request = issueRequests[requester][issueId];
         require(
             request.status == RequestStatus.Pending,
             "request is completed"
         );
-        uint256 amountTransferred =
-            TxValidate.validateTransaction(
-                _vout,
-                0,
-                request.btcAddress,
-                issueId
-            );
+        uint256 amountTransferred = TxValidate.validateTransaction(
+            _vout,
+            0,
+            request.btcAddress,
+            issueId
+        );
         uint256 expectedTotalAmount = request.amount.add(request.fee);
         if (amountTransferred < expectedTotalAmount) {
             // only the requester of the issue can execute payments with different amounts
             require(msg.sender == request.requester, "InvalidExecutor");
             uint256 deficit = expectedTotalAmount - amountTransferred;
             VaultRegistry.decreaseToBeIssuedTokens(request.vault, deficit);
-            uint256 releasedCollateral =
-                VaultRegistry.calculateCollateral(
-                    request.griefingCollateral,
-                    amountTransferred,
-                    expectedTotalAmount
-                );
+            uint256 releasedCollateral = VaultRegistry.calculateCollateral(
+                request.griefingCollateral,
+                amountTransferred,
+                expectedTotalAmount
+            );
             ICollateral.releaseCollateral(
                 request.requester,
                 releasedCollateral
             );
-            uint256 slashedCollateral =
-                request.griefingCollateral.sub(releasedCollateral);
+            uint256 slashedCollateral = request.griefingCollateral.sub(
+                releasedCollateral
+            );
             ICollateral.slashCollateral(
                 request.requester,
                 request.vault,
@@ -187,20 +191,14 @@ abstract contract Issue is ICollateral, VaultRegistry {
                 request.griefingCollateral
             ); // ICollateral::
             if (amountTransferred > expectedTotalAmount) {
-                uint256 surplusBtc =
-                    amountTransferred.sub(expectedTotalAmount);
+                uint256 surplusBtc = amountTransferred.sub(expectedTotalAmount);
                 if (
                     VaultRegistry.tryIncreaseToBeIssuedTokens(
                         request.vault,
                         surplusBtc
                     )
                 ) {
-                    updateIssueAmount(
-                        issueId,
-                        request,
-                        amountTransferred,
-                        0
-                    );
+                    updateIssueAmount(issueId, request, amountTransferred, 0);
                 } else {
                     // vault does not have enough collateral to accept the over payment, so refund.
                     // TODO requestRefund
@@ -215,7 +213,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
         request.status = RequestStatus.Completed;
         // TODO: update sla
         // sla.eventUpdateVaultSla(request.vault, total);
-        emit IssueComplete(
+        emit IssueCompleted(
             issueId,
             requester,
             request.vault,
@@ -226,7 +224,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
     }
 
     function _cancelIssue(address requester, uint256 issueId) internal {
-        S_IssueRequest storage request = issueRequests[requester][issueId];
+        IssueRequest storage request = issueRequests[requester][issueId];
         require(
             request.status == RequestStatus.Pending,
             "request is completed"
@@ -245,7 +243,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
             request.vault,
             request.amount + request.fee
         );
-        emit IssueCancel(
+        emit IssueCanceled(
             issueId,
             requester,
             request.vault,
