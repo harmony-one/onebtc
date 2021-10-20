@@ -161,4 +161,4 @@ firebase.json
 **/target/
 **/*.rs.bt
 
-.openzeppelin/
+.openzeppelin/unknown-31337.json
