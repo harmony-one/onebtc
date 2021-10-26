@@ -3,7 +3,6 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ValidateSPV} from "@interlay/bitcoin-spv-sol/contracts/ValidateSPV.sol";
 import {TransactionUtils} from "./TransactionUtils.sol";
 import {Issue} from "./Issue.sol";
@@ -11,13 +10,7 @@ import {Redeem} from "./Redeem.sol";
 import {Replace} from "./Replace.sol";
 import {IRelay} from "./IRelay.sol";
 
-contract OneBtc is
-    ERC20Upgradeable,
-    Issue,
-    Redeem,
-    Replace,
-    PausableUpgradeable
-{
+contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
     IRelay public realy;
 
     function initialize(IRelay _relay) external initializer {
@@ -54,7 +47,6 @@ contract OneBtc is
     function requestIssue(uint256 amountRequested, address vaultId)
         external
         payable
-        whenNotPaused
     {
         Issue._requestIssue(msg.sender, amountRequested, vaultId, msg.value);
     }
@@ -67,7 +59,7 @@ contract OneBtc is
         //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
         uint64 heightAndIndex,
         bytes calldata header
-    ) external whenNotPaused {
+    ) external {
         bytes memory _vout = verifyTx(
             merkleProof,
             rawTx,
@@ -77,10 +69,7 @@ contract OneBtc is
         Issue._executeIssue(requester, issueId, _vout);
     }
 
-    function cancelIssue(address requester, uint256 issueId)
-        external
-        whenNotPaused
-    {
+    function cancelIssue(address requester, uint256 issueId) external {
         Issue._cancelIssue(requester, issueId);
     }
 
@@ -88,7 +77,7 @@ contract OneBtc is
         uint256 amountOneBtc,
         address btcAddress,
         address vaultId
-    ) external whenNotPaused {
+    ) external {
         Redeem._requestRedeem(msg.sender, amountOneBtc, btcAddress, vaultId);
     }
 
@@ -99,7 +88,7 @@ contract OneBtc is
         bytes calldata rawTx,
         uint64 heightAndIndex,
         bytes calldata header
-    ) external whenNotPaused {
+    ) external {
         bytes memory _vout = verifyTx(
             merkleProof,
             rawTx,
@@ -109,10 +98,7 @@ contract OneBtc is
         Redeem._executeRedeem(requester, redeemId, _vout);
     }
 
-    function cancelRedeem(address requester, uint256 redeemId)
-        external
-        whenNotPaused
-    {
+    function cancelRedeem(address requester, uint256 redeemId) external {
         Redeem._cancelRedeem(requester, redeemId);
     }
 
@@ -145,7 +131,7 @@ contract OneBtc is
         address payable oldVaultId,
         uint256 btcAmount,
         uint256 griefingCollateral
-    ) external payable whenNotPaused {
+    ) external payable {
         Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
     }
 
@@ -156,7 +142,7 @@ contract OneBtc is
         uint256 collateral,
         uint256 btcPublicKeyX,
         uint256 btcPublicKeyY
-    ) external payable whenNotPaused {
+    ) external payable {
         Replace._acceptReplace(
             oldVaultId,
             newVaultId,
@@ -174,7 +160,7 @@ contract OneBtc is
         //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
         uint64 heightAndIndex,
         bytes calldata header
-    ) external whenNotPaused {
+    ) external {
         bytes memory _vout = verifyTx(
             merkleProof,
             rawTx,
