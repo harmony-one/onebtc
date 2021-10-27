@@ -1,5 +1,5 @@
 const RelayMock = artifacts.require("RelayMock");
 
-module.exports = function(deployer) {
-    deployer.deploy(RelayMock);
+module.exports = async function(deployer) {
+    await deployer.deploy(RelayMock);
 };
