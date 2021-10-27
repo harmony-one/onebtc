@@ -2,9 +2,10 @@
 
 pragma solidity 0.6.12;
 
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 
-abstract contract ICollateral {
+abstract contract ICollateral is Initializable {
     using SafeMathUpgradeable for uint256;
 
     event LockCollateral(address sender, uint256 amount);
@@ -72,4 +73,6 @@ abstract contract ICollateral {
         require(CollateralUsed[vaultId] >= amount, "InSufficientCollateral");
         CollateralUsed[vaultId] = CollateralUsed[vaultId].sub(amount);
     }
+
+    uint256[45] private __gap;
 }
