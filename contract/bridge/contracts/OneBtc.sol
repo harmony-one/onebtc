@@ -14,7 +14,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
     IRelay public realy;
 
     function initialize(IRelay _relay) external initializer {
-        __ERC20_init("OneBtc", "OneBtc");
+        __ERC20_init("Harmony Bitcoin", "1BTC");
         _setupDecimals(8);
         realy = _relay;
     }
