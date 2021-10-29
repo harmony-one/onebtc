@@ -61,6 +61,10 @@ abstract contract ICollateral is Initializable {
         return CollateralBalances[vaultId].sub(CollateralUsed[vaultId]);
     }
 
+    function getTotalCollateral(address vaultId) internal view returns (uint256) {
+        return CollateralUsed[vaultId].add(CollateralBalances[vaultId]);
+    }
+
     function useCollateralInc(address vaultId, uint256 amount) internal {
         CollateralUsed[vaultId] = CollateralUsed[vaultId].add(amount);
         require(

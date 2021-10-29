@@ -21,11 +21,12 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 toBeRedeemed;
         uint256 replaceCollateral;
         uint256 toBeReplaced;
+        uint256 liquidatedCollateral;
         mapping(address => bool) depositAddresses;
     }
-    
+
     mapping(address => Vault) public vaults;
-    uint256 public constant secureCollateralThreshold = 150; // 150%
+    uint256 public constant SECURE_COLLATERAL_THRESHOLD = 150; // 150%
     ExchangeRateOracle oracle;
 
     event RegisterVault(
@@ -49,6 +50,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 tokens,
         uint256 collateral
     );
+    event LiquidateVault();
 
     function registerVault(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
         external
@@ -64,15 +66,15 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         emit RegisterVault(vaultId, msg.value, btcPublicKeyX, btcPublicKeyY);
     }
 
-    function toBeRedeemed(address vaultId) public view returns (uint256) {
-        Vault storage vault = vaults[vaultId];
-        return vault.toBeRedeemed;
-    }
+    // function toBeRedeemed(address vaultId) public view returns (uint256) {
+    //     Vault storage vault = vaults[vaultId];
+    //     return vault.toBeRedeemed;
+    // }
 
-    function issued(address vaultId) public view returns (uint256) {
-        Vault storage vault = vaults[vaultId];
-        return vault.issued;
-    }
+    // function issued(address vaultId) public view returns (uint256) {
+    //     Vault storage vault = vaults[vaultId];
+    //     return vault.issued;
+    // }
 
     function registerDepositAddress(address vaultId, uint256 issueId)
         internal
@@ -189,21 +191,11 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         emit RedeemTokens(vaultId, amount);
     }
 
-    function calculateMaxWrappedFromCollateralForThreshold(
-        uint256 collateral,
-        uint256 threshold
-    ) public view returns (uint256) {
-        // TODO - fix oracle.collateralToWrapped
-        // uint256 collateralInWrapped = oracle.collateralToWrapped(collateral);
-        return collateral.mul(100).div(threshold);
-    }
-
     function issuableTokens(address vaultId) public view returns (uint256) {
         uint256 freeCollateral = ICollateral.getFreeCollateral(vaultId);
         return
-            calculateMaxWrappedFromCollateralForThreshold(
-                freeCollateral,
-                secureCollateralThreshold
+            oracle.collateralToWrapped(
+                freeCollateral.mul(100).div(SECURE_COLLATERAL_THRESHOLD)
             );
     }
 
@@ -322,5 +314,97 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         // ext::staking::deposit_stake::<T>(T::GetRewardsCurrencyId::get(), vault_id, vault_id, amount)?;
     }
 
+<<<<<<< HEAD
     uint256[45] private __gap;
+=======
+    function slashForToBeRedeemed(address vaultId, uint256 amount) private {
+        Vault storage vault = vaults[vaultId];
+        uint256 collateral = MathUpgradeable.min(vault.collateral, amount);
+        vault.liquidatedCollateral = vault.liquidatedCollateral.add(collateral);
+        // TODO: what to do with slashable collateral corresponding to to-be-redeemed tokens?
+    }
+
+    function slashToLiquidationVault(address vaultId, uint256 amount) private {
+        Vault storage vault = vaults[vaultId];
+        Vault storage liquidateVault = vaults[address(this)];
+        liquidateVault.collateral = liquidateVault.collateral.add(amount);
+        vault.collateral = vault.collateral.sub(amount);
+        // slash collateral
+        ICollateral.slashCollateral(vaultId, address(this), amount);
+        ICollateral.lockCollateral(address(this), amount); // TODO; double check
+    }
+
+    function backedTokens(address vaultId) private returns (uint256) {
+        Vault storage vault = vaults[vaultId];
+        return vault.issued.add(vault.toBeIssued);
+    }
+
+    function getUsedCollateral(address vaultId) private returns (uint256) {
+        Vault storage vault = vaults[vaultId];
+        uint256 issuedTokens = backedTokens(vaultId);
+        uint256 collateralForIssuedTokens = issuedTokens.mul(
+            SECURE_COLLATERAL_THRESHOLD
+        );
+        return MathUpgradeable.min(vault.collateral, collateralForIssuedTokens);
+    }
+
+    function liquidate(address vaultId, address reporterId) private {
+        Vault storage vault = vaults[vaultId];
+
+        // pay the theft report reward to reporter
+
+        // liquidate at most SECURE_THRESHOLD * collateral
+        // liquidated collateral = collateral held for the issued + to be issued
+        uint256 liquidatedCollateral = getUsedCollateral(vaultId);
+
+        // collateral tokens = total backed tokens
+        uint256 collateralTokens = backedTokens(vaultId);
+
+        // liquidate collateral excluding to be redeemed =
+        // liquidate collateral * (collateral tokens - to be redeemed tokens) / collateral tokens
+        uint256 ratio = collateralTokens.sub(vault.toBeRedeemed).div(
+            collateralTokens
+        );
+        uint256 liquidatedCollateralExcludingToBeRedeemed = liquidatedCollateral
+            .mul(ratio);
+
+        // collateral for to be redeemed = liquidated collateral - liquidate collateral excluding to be redeemed
+        uint256 collateralForToBeRedeemed = liquidatedCollateral -
+            liquidatedCollateralExcludingToBeRedeemed;
+
+        // slash collateral for the to_be_redeemed tokens
+        slashForToBeRedeemed(vaultId, collateralForToBeRedeemed);
+
+        // slash collateral used for issued + to_be_issued to the liquidation vault
+        slashToLiquidationVault(
+            vaultId,
+            liquidatedCollateralExcludingToBeRedeemed
+        );
+
+        // copy tokens to liquidation vault
+        address liquidationVaultId = address(this);
+        Vault storage liquidationVault = vaults[liquidationVaultId];
+
+        // increase issued, to be issued, and to be redeemed tokens from vault to liquidationVault
+        liquidationVault.issued = liquidationVault.issued.add(vault.issued);
+        liquidationVault.toBeIssued = liquidationVault.toBeIssued.add(
+            vault.toBeIssued
+        );
+        liquidationVault.toBeRedeemed = liquidationVault.toBeRedeemed.add(
+            vault.toBeRedeemed
+        );
+
+        // clear the vault values
+        vault.issued = 0;
+        vault.toBeIssued = 0;
+        vault.toBeRedeemed = 0;
+    }
+
+    /**
+     * @dev Liquidate a vault by transferring all of its token balances to the liquidation vault.
+     */
+    function liquidateVault(address vaultId, address reporterId) internal {
+        liquidate(vaultId, reporterId);
+    }
+>>>>>>> aa1afa3702664b42e1c72838a82d704760afdfc5
 }
