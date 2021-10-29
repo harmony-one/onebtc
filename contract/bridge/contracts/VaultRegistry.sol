@@ -2,13 +2,14 @@
 
 pragma solidity 0.6.12;
 
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import {ICollateral} from "./Collateral.sol";
 import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
 import {ExchangeRateOracle} from "./ExchangeRateOracle.sol";
-import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 
-abstract contract VaultRegistry is ICollateral {
+abstract contract VaultRegistry is Initializable, ICollateral {
     using SafeMathUpgradeable for uint256;
 
     struct Vault {
@@ -312,7 +313,7 @@ abstract contract VaultRegistry is ICollateral {
         // TODO: Deposit `amount` of stake in the pool
         // ext::staking::deposit_stake::<T>(T::GetRewardsCurrencyId::get(), vault_id, vault_id, amount)?;
     }
-
+    
     function slashForToBeRedeemed(address vaultId, uint256 amount) private {
         Vault storage vault = vaults[vaultId];
         uint256 collateral = MathUpgradeable.min(vault.collateral, amount);
@@ -402,4 +403,6 @@ abstract contract VaultRegistry is ICollateral {
     function liquidateVault(address vaultId, address reporterId) internal {
         liquidate(vaultId, reporterId);
     }
+
+    uint256[45] private __gap;
 }
