@@ -313,10 +313,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         // TODO: Deposit `amount` of stake in the pool
         // ext::staking::deposit_stake::<T>(T::GetRewardsCurrencyId::get(), vault_id, vault_id, amount)?;
     }
-
-<<<<<<< HEAD
-    uint256[45] private __gap;
-=======
+    
     function slashForToBeRedeemed(address vaultId, uint256 amount) private {
         Vault storage vault = vaults[vaultId];
         uint256 collateral = MathUpgradeable.min(vault.collateral, amount);
@@ -406,5 +403,6 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     function liquidateVault(address vaultId, address reporterId) internal {
         liquidate(vaultId, reporterId);
     }
->>>>>>> aa1afa3702664b42e1c72838a82d704760afdfc5
+
+    uint256[45] private __gap;
 }
