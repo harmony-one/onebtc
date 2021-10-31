@@ -59,7 +59,7 @@ abstract contract Issue is Initializable, VaultRegistry, Request {
         pure
         returns (uint256)
     {
-        return (amountRequested * 2) / 1000;
+        return amountRequested.mul(2).div(1000);
     }
 
     function getIssueId(address user) private view returns (uint256) {

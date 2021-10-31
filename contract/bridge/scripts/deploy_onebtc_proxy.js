@@ -1,4 +1,3 @@
-require("dotenv").config();
 const { ethers } = require("hardhat");
 
 async function main() {
@@ -8,8 +7,7 @@ async function main() {
     );
 
     const OneBtc = await ethers.getContractFactory("OneBtc");
-    const oneBtc = await OneBtc.deploy();
-    await oneBtc.initialize(relay.address);
+    const oneBtc = await upgrades.deployProxy(OneBtc, [relay.address], { initializer: "initialize" });
 
     console.log("OneBtc deployed to:", oneBtc.address);
 }
