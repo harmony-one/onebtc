@@ -20,17 +20,9 @@ contract("SLA", (account) => {
   });
 
   it("_depositSlaChange()", async () => {
-    await contractInstance._depositSlaChange(10);
+    await contractInstance.depositSlaChange(10);
     const SLA = await contractInstance.getSLA();
 
     assert.equal(SLA, 10);
-  });
-  it("collateralToWrapped", async () => {
-    const rate = await contractInstance.collateralToWrapped(1000);
-    assert.equal(rate, 100);
-  });
-  it("wrapped To collateral", async () => {
-    const rate = await contractInstance.wrappedToCollateral(1000);
-    assert.equal(rate, 10000);
   });
 });
