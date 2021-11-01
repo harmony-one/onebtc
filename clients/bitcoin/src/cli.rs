@@ -1,7 +1,7 @@
 use crate::{BitcoinCore, Error};
 use bitcoincore_rpc::{bitcoin::Network, Auth};
-use std::{str::FromStr, time::Duration};
 use clap::Clap;
+use std::{str::FromStr, time::Duration};
 
 #[derive(Debug, Copy, Clone)]
 pub struct BitcoinNetwork(pub Network);
