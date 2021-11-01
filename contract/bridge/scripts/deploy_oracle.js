@@ -4,7 +4,7 @@ const web3 = new Web3();
 
 async function main() {
     const ExchangeRateOracle = await ethers.getContractFactory("ExchangeRateOracle");
-    const oracle = await ExchangeRateOracle.deploy();
+    const oracle = await upgrades.deployProxy(ExchangeRateOracle, [], { initializer: "initialize" });
 
     console.log("ExchangeRateOracle deployed to:", oracle.address);
 }

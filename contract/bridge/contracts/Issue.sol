@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
+
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
-import {IssueRequest, RequestStatus} from "./Request.sol";
+import {Request} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
 import {ICollateral} from "./Collateral.sol";
 import {VaultRegistry} from "./VaultRegistry.sol";
-import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 
-abstract contract Issue is ICollateral, VaultRegistry {
+abstract contract Issue is Initializable, VaultRegistry, Request {
     using BTCUtils for bytes;
     using BytesLib for bytes;
     using SafeMathUpgradeable for uint256;
@@ -57,7 +59,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
         pure
         returns (uint256)
     {
-        return (amountRequested * 2) / 1000;
+        return amountRequested.mul(2).div(1000);
     }
 
     function getIssueId(address user) private view returns (uint256) {
@@ -252,4 +254,6 @@ abstract contract Issue is ICollateral, VaultRegistry {
             request.btcAddress
         );
     }
+
+    uint256[45] private __gap;
 }

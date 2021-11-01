@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
@@ -11,7 +10,7 @@ import {ValidateSPV} from "@interlay/bitcoin-spv-sol/contracts/ValidateSPV.sol";
 import {IRelay} from "./IRelay.sol";
 
 /// @title BTC Relay
-contract Relay is IRelay, Initializable, PausableUpgradeable {
+contract Relay is IRelay, PausableUpgradeable {
     using SafeMathUpgradeable for uint256;
     using BytesLib for bytes;
     using BTCUtils for bytes;
@@ -379,4 +378,6 @@ contract Relay is IRelay, Initializable, PausableUpgradeable {
 
         return true;
     }
+
+    uint256[45] private __gap;
 }

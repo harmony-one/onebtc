@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
+import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
-import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 import {ValidateSPV} from "@interlay/bitcoin-spv-sol/contracts/ValidateSPV.sol";
 
 library TxValidate {
@@ -59,5 +59,25 @@ library TxValidate {
 
         require(extrPaymentValue >= minimumBtc, "InsufficientValue");
         return extrPaymentValue;
+    }
+
+    function extractOpReturnOnly(bytes memory txVout)
+        internal
+        pure
+        returns (uint256 opReturn)
+    {
+        (, uint256 _nVouts) = txVout.parseVarInt();
+        uint256 voutCount = MathUpgradeable.min(_nVouts, 3);
+        bytes memory OP_RETURN_DATA;
+        for (uint256 i = 0; i < voutCount; i++) {
+            bytes memory vout = txVout.extractOutputAtIndex(i);
+            if (OP_RETURN_DATA.length == 0) {
+                OP_RETURN_DATA = vout.extractOpReturnData();
+                if (OP_RETURN_DATA.length > 0) continue;
+            }
+        }
+
+        require(OP_RETURN_DATA.length > 0, "NoOpRetrun");
+        opReturn = OP_RETURN_DATA.bytesToUint();
     }
 }

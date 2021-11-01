@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
@@ -9,7 +10,7 @@ import {ValidateSPV} from "@interlay/bitcoin-spv-sol/contracts/ValidateSPV.sol";
 import {Relay} from "./Relay.sol";
 
 /// @title Testnet BTC Relay
-contract TestRelay is Relay {
+contract TestRelay is Initializable, Relay {
     using SafeMathUpgradeable for uint256;
     using BytesLib for bytes;
     using BTCUtils for bytes;
@@ -19,13 +20,6 @@ contract TestRelay is Relay {
     * @param header Genesis block header
     * @param height Genesis block height
     */
-    constructor(
-        bytes memory header,
-        uint32 height
-    ) public {
-        
-    }
-
     function initialize(
         bytes memory header,
         uint32 height
