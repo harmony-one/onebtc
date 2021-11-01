@@ -58,6 +58,16 @@ contract SLA {
     mapping(address => SlaData) StakedRelayerSLA;
     mapping(address => bool) VaultTrue;
 
+
+    /*
+    - adjust stake
+    - liquidate stake
+    - calculate slashed amount
+    - fixed point unsigned to signed
+    - wrapper to uint128
+    - currency to fixed point
+    */
+
     function _executeIssueSlaChange(uint256 amount) private returns (uint256) {
         uint256 count = TotalIssueCount + 1;
         TotalIssueCount = count;
@@ -97,7 +107,7 @@ contract SLA {
         // TODO
         //Self::liquidateStake::<T::CollateralVaultRewards>(vaultId)?;
         //Self::liquidateStake::<T::WrappedVaultRewards>(vaultId)?;
-        revert("TODO");
+        // revert("TODO");
         SlaData storage slaData = VaultSLA[vaultId];
         int256 deltaSla = -int256(slaData.sla);
         slaData.sla = 0;
@@ -151,7 +161,47 @@ contract SLA {
         emit UpdateVaultSLA(vaultId, boundedNewSla, int256(deltaSla));
     }
 
-    function SlashVault(address account) internal returns (uint256) {
+
+     function eventUpdateRelayerSla(
+        address relayerId,
+        VaultEvent eventType,
+        uint256 amount
+    ) internal {
+        SlaData storage slaData = StakedRelayerSLA[relayerId];
+        uint256 currentSla = slaData.sla;
+        uint256 deltaSla;
+        if (eventType == VaultEvent.RedeemFailure) {
+            deltaSla = slaData.vaultRedeemFailure;
+        } else if (eventType == VaultEvent.SubmitIssueProof) {
+            deltaSla = slaData.vaultSubmitIssueProof;
+        } else if (eventType == VaultEvent.Refund) {
+            deltaSla = slaData.vaultRefund;
+        } else if (eventType == VaultEvent.ExecuteIssue) {
+            deltaSla = _executeIssueSlaChange(amount);
+        } else if (eventType == VaultEvent.Deposit) {
+            deltaSla = _depositSlaChange(amount);
+        } else if (eventType == VaultEvent.Withdraw) {
+            deltaSla = _withdrawSlaChange(amount);
+        } else if (eventType == VaultEvent.Liquidate) {
+            _liquidateSla(relayerId);
+            return;
+        } else {
+            revert("unknown type");
+        }
+
+        uint256 newSla = currentSla + deltaSla;
+        uint256 maxSla = slaData.vaultTargetSla; // todo: check that this is indeed the max
+
+        uint256 boundedNewSla = limit(0, newSla, maxSla);
+        /*
+        Self::adjustStake::<T::CollateralVaultRewards>(vaultId, deltaSla)?;
+        Self::adjustStake::<T::WrappedVaultRewards>(vaultId, deltaSla)?;
+        */
+        slaData.sla = boundedNewSla;
+        emit UpdateVaultSLA(vaultId, boundedNewSla, int256(deltaSla));
+    }
+
+    function calculateSlashAmount(address account) internal returns (uint256) {
         SlaData vault = VaultSLA[account];
         uint256 slaTarget = vault.vaultTargetSla;
         uint256 sla = vaule.sla;
@@ -163,17 +213,36 @@ contract SLA {
         return realSlashed;
     }
 
-    function updateSLA(address account, int256 delta) internal {
+
+
+    function updateVaultSLA(address account, int256 delta) internal {
         SlaData storage vault;
-        if(VaultTrue[address]){
             vault = VaultSLA[address];
                     vault.sla  = int256(vault).sla + delta;
                     UpdateVaultSLA(account, vault.sla, delta);
-        }        
-        else {
+    }
+
+    function updateRelayerSla(address account, int256 delta) internal {
             vault = StakedRelayerSLA[address];
             vault.sla  = int256(vault).sla + delta;
             UpdateRelayerSLA(account, vault.sla, delta);
-        }
+
+    }
+
+    // for use in tests
+    function setVaultSla(uint256 vaultId,  uint256 sla){
+        VaultSLA[vauleId].sla = sla;
+    }
+
+    function setRelayerSla(uint256 vaultId, uint256 sla){
+        RelayerSla[valueId].sla = sla;
+    }
+
+    function getRelayerSla ( uint256 vaultId) returns (uint256){
+        return RelayerSla[vaultId].sla;
+    }
+
+    function getVauleSla(uint256 vauleId) returns (uint256 ){
+        return VauleSla[vauleId].sla;
     }
 }
