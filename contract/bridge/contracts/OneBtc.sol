@@ -20,24 +20,24 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
     }
 
     function verifyTx(
-        bytes calldata merkleProof,
+        uint32 height,
+        uint256 index,
         bytes calldata rawTx,
-        uint64 heightAndIndex,
-        bytes calldata header
-    ) private returns (bytes memory) {
+        bytes calldata header,
+        bytes calldata merkleProof
+    ) public returns (bytes memory) {
         bytes32 txId = rawTx.hash256();
         realy.verifyTx(
-            uint32(heightAndIndex >> 32),
-            heightAndIndex & type(uint32).max,
+            height,
+            index,
             txId,
             header,
             merkleProof,
-            6,
+            1,
             true
         );
-        TransactionUtils.Transaction memory btcTx = TransactionUtils.extractTx(
-            rawTx
-        );
+        TransactionUtils.Transaction memory btcTx =
+        TransactionUtils.extractTx(rawTx);
         require(btcTx.locktime == 0, "locktime must zero!");
         // check version?
         // btcTx.version
@@ -56,16 +56,14 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 issueId,
         bytes calldata merkleProof,
         bytes calldata rawTx, // avoid compiler error: stack too deep
-        //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
-        uint64 heightAndIndex,
+    //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
+        uint32 height,
+        uint256 index,
         bytes calldata header
     ) external {
-        bytes memory _vout = verifyTx(
-            merkleProof,
-            rawTx,
-            heightAndIndex,
-            header
-        );
+        bytes memory _vout =
+        verifyTx(height, index, rawTx, header, merkleProof);
+
         Issue._executeIssue(requester, issueId, _vout);
     }
 
@@ -86,15 +84,13 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 redeemId,
         bytes calldata merkleProof,
         bytes calldata rawTx,
-        uint64 heightAndIndex,
+        uint32 height,
+        uint256 index,
         bytes calldata header
     ) external {
-        bytes memory _vout = verifyTx(
-            merkleProof,
-            rawTx,
-            heightAndIndex,
-            header
-        );
+        bytes memory _vout =
+        verifyTx(height, index, rawTx, header, merkleProof);
+
         Redeem._executeRedeem(requester, redeemId, _vout);
     }
 
@@ -157,16 +153,12 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 replaceId,
         bytes calldata merkleProof,
         bytes calldata rawTx, // avoid compiler error: stack too deep
-        //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
-        uint64 heightAndIndex,
+    //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
+        uint32 height,
+        uint256 index,
         bytes calldata header
     ) external {
-        bytes memory _vout = verifyTx(
-            merkleProof,
-            rawTx,
-            heightAndIndex,
-            header
-        );
+        bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
         Replace._executeReplace(replaceId, _vout);
     }
 }

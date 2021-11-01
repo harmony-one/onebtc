@@ -154,7 +154,7 @@ abstract contract Issue is ICollateral, VaultRegistry {
             _vout,
             0,
             request.btcAddress,
-            issueId
+            0x0
         );
         uint256 expectedTotalAmount = request.amount.add(request.fee);
         if (amountTransferred < expectedTotalAmount) {
