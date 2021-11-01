@@ -2,7 +2,7 @@
 
 pragma solidity ^0.6.12;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract SLA {
 
@@ -16,7 +16,7 @@ contract SLA {
     event UpdateRelayerSLA(
         address indexed relayerId,
         uint256 newSla,
-        uint256 deltaSla
+        int256 deltaSla
     );
 
     enum VaultEvent {
@@ -68,7 +68,27 @@ contract SLA {
     - currency to fixed point
     */
 
-    function _executeIssueSlaChange(uint256 amount) private returns (uint256) {
+    constructor( uint256  _TotalIssueCount,
+    uint256  _LifetimeIssued,
+    uint256  _VaultExecuteIssueMaxSlaChange,
+    uint256  _VaultDepositMaxSlaChange,
+    uint256  _VaultWithdrawMaxSlaChange,
+    uint256  _AverageDepositCount,
+    uint256  _AverageDeposit,
+    uint256  _AverageWithdrawCount,
+    uint256  _AverageWithdraw) public {
+        TotalIssueCount = _TotalIssueCount;
+        LifetimeIssued = _LifetimeIssued;
+        VaultDepositMaxSlaChange = _VaultDepositMaxSlaChange;
+        VaultWithdrawMaxSlaChange = _VaultWithdrawMaxSlaChange;
+        AverageDeposit = _AverageDeposit;
+        AverageDepositCount = _AverageDepositCount;
+        AverageWithdraw = _AverageWithdraw;
+        AverageWithdrawCount = _AverageWithdrawCount;
+    }
+
+    
+    function _executeIssueSlaChange(uint256 amount) internal returns (uint256) {
         uint256 count = TotalIssueCount + 1;
         TotalIssueCount = count;
         uint256 total = LifetimeIssued + amount;
@@ -79,7 +99,12 @@ contract SLA {
         return (amount * maxSlaChange) / average;
     }
 
-    function _depositSlaChange(uint256 amount) private returns (uint256) {
+
+    // Calculates the potential sla change for a vault depositing collateral. The value will be
+    // clipped between 0 and VaultDepositMaxSlaChange, but it does not take into consideration
+    // Vault's current SLA. It can return a value > 0 when its sla is already at the maximum.
+    
+    function _depositSlaChange(uint256 amount) internal returns (uint256) {
         uint256 maxSlaChange = VaultDepositMaxSlaChange;
 
         uint256 count = AverageDepositCount + 1;
@@ -91,7 +116,7 @@ contract SLA {
         return (amount / average) * maxSlaChange;
     }
 
-    function _withdrawSlaChange(uint256 amount) private returns (uint256) {
+    function _withdrawSlaChange(uint256 amount) internal returns (uint256) {
         uint256 maxSlaChange = VaultWithdrawMaxSlaChange;
 
         uint256 count = AverageWithdrawCount + 1;
@@ -103,7 +128,7 @@ contract SLA {
         return (amount / average) * maxSlaChange;
     }
 
-    function _liquidateSla(address vaultId) private returns (int256) {
+    function _liquidateSla(address vaultId) internal returns (int256) {
         // TODO
         //Self::liquidateStake::<T::CollateralVaultRewards>(vaultId)?;
         //Self::liquidateStake::<T::WrappedVaultRewards>(vaultId)?;
@@ -118,7 +143,7 @@ contract SLA {
         uint256 min,
         uint256 cur,
         uint256 max
-    ) private pure returns (uint256) {
+    ) internal pure returns (uint256) {
         return cur > max ? max : (cur > min ? cur : min);
     }
 
@@ -198,13 +223,13 @@ contract SLA {
         Self::adjustStake::<T::WrappedVaultRewards>(vaultId, deltaSla)?;
         */
         slaData.sla = boundedNewSla;
-        emit UpdateVaultSLA(vaultId, boundedNewSla, int256(deltaSla));
+        emit UpdateVaultSLA(relayerId, boundedNewSla, int256(deltaSla));
     }
 
     function calculateSlashAmount(address account) internal returns (uint256) {
-        SlaData vault = VaultSLA[account];
+        SlaData memory vault = VaultSLA[account];
         uint256 slaTarget = vault.vaultTargetSla;
-        uint256 sla = vaule.sla;
+        uint256 sla = vault.sla;
         uint256 liquidateThreshold = vault.liquidate;
         uint256 premiumRedeemThreshold = vault.vaultRedeemFailure; 
 
@@ -213,36 +238,37 @@ contract SLA {
         return realSlashed;
     }
 
-
-
     function updateVaultSLA(address account, int256 delta) internal {
         SlaData storage vault;
-            vault = VaultSLA[address];
-                    vault.sla  = int256(vault).sla + delta;
-                    UpdateVaultSLA(account, vault.sla, delta);
+            vault = VaultSLA[account];
+
+            if(delta > 0){
+                vault.sla  = vault.sla + uint256(delta);
+            }
+            if(delta <0){
+                vault.sla = vault.sla - uint256(delta);
+            }
+            UpdateVaultSLA(account, vault.sla, delta);
     }
 
-    function updateRelayerSla(address account, int256 delta) internal {
-            vault = StakedRelayerSLA[address];
-            vault.sla  = int256(vault).sla + delta;
+    function _updateRelayerSla(address account, int256 delta) internal {
+           SlaData storage  vault = StakedRelayerSLA[account];
+                if(delta > 0){
+                vault.sla  = vault.sla + uint256(delta);
+            }
+            if(delta <0){
+                vault.sla = vault.sla - uint256(delta);
+            }
             UpdateRelayerSLA(account, vault.sla, delta);
 
     }
 
-    // for use in tests
-    function setVaultSla(uint256 vaultId,  uint256 sla){
-        VaultSLA[vauleId].sla = sla;
+
+    function getRelayerSla ( address vaultId) public view returns (uint256){
+        return StakedRelayerSLA[vaultId].sla;
     }
 
-    function setRelayerSla(uint256 vaultId, uint256 sla){
-        RelayerSla[valueId].sla = sla;
-    }
-
-    function getRelayerSla ( uint256 vaultId) returns (uint256){
-        return RelayerSla[vaultId].sla;
-    }
-
-    function getVauleSla(uint256 vauleId) returns (uint256 ){
-        return VauleSla[vauleId].sla;
+    function getVaultSla(address vaultId) public view returns (uint256 ){
+        return VaultSLA[vaultId].sla;
     }
 }
