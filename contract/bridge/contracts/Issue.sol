@@ -156,7 +156,7 @@ abstract contract Issue is Initializable, VaultRegistry, Request {
             _vout,
             0,
             request.btcAddress,
-            issueId
+            0x0
         );
         uint256 expectedTotalAmount = request.amount.add(request.fee);
         if (amountTransferred < expectedTotalAmount) {
