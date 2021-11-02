@@ -11,11 +11,10 @@ pragma solidity 0.6.12;
 
 import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 
-contract ExchangeRateOracle is Initializable, OwnableUpgradeable {
+contract ExchangeRateOracle is Initializable {
     using SafeMathUpgradeable for uint256;
 
     uint256 constant MAX_DELAY = 1000;
@@ -23,8 +22,7 @@ contract ExchangeRateOracle is Initializable, OwnableUpgradeable {
     AggregatorV3Interface internal oneUSD;
     AggregatorV3Interface internal btcUSD;
 
-    function initialize() external initializer {
-        __Ownable_init();
+    function initialize() public initializer {
         oneUSD = AggregatorV3Interface(
             0xcEe686F89bc0dABAd95AEAAC980aE1d97A075FAD
         );
@@ -60,7 +58,7 @@ contract ExchangeRateOracle is Initializable, OwnableUpgradeable {
      */
     function collateralToWrapped(uint256 amount) public view returns (uint256) {
         uint256 rate = getExchangeRate();
-        return amount.div(rate);
+        return amount.div(rate).mul(10**8).div(10**18);
     }
 
     /**
@@ -70,6 +68,6 @@ contract ExchangeRateOracle is Initializable, OwnableUpgradeable {
      */
     function wrappedToCollateral(uint256 amount) public view returns (uint256) {
         uint256 rate = getExchangeRate();
-        return amount.mul(rate);
+        return amount.mul(rate).mul(10**18).div(10**8);
     }
 }

@@ -9,62 +9,30 @@ The Exchange Rate Oracle receives a continuous data feed on the exchange rate be
 
 pragma solidity 0.6.12;
 
-contract ExchangeRateOracleWrapper {
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+
+contract ExchangeRateOracleWrapper is Initializable {
+    using SafeMathUpgradeable for uint256;
+
+    event SetExchangeRate(uint256 lastExchangeRateTime, uint256 exchangeRate);
+
     uint256 constant MAX_DELAY = 1000;
     uint256 public lastExchangeRateTime;
     uint256 exchangeRate;
-    uint256 satoshiPerBytes;
-    mapping(address => bool) public authorizedOracles;
 
-    event SetExchangeRate(address oracle, uint256 rate);
-
-    event SetSatoshiPerByte(uint256 fee, uint256 inclusionEstimate);
-
-    event recoverFromORACLEOFFLINE(address oracle, uint256 rate);
-
-    constructor() public {}
-
-    /**
-     * @notice add authorized oracle
-     * @param _oracle authorized oracle address to add
-     */
-    function addAuthorizedOracle(address _oracle) public {
-        authorizedOracles[_oracle] = true;
+    function initialize() public initializer {
     }
 
     /**
     @notice Set the latest (aggregate) BTC/ONE exchange rate. This function invokes a check of vault collateral rates in the Vault Registry component.
-    @param oracle the oracle account calling this function. Must be pre-authorized and tracked in this component!
-    @param rate the u128 BTC/ONE exchange rate.
+    @param rate uint256 BTC/ONE exchange rate.
     */
-    function setExchangeRate(address oracle, uint256 rate) public {
-        require(authorizedOracles[oracle], "ERR_INVALID_ORACLE_SOURCE");
-
+    function setExchangeRate(uint256 rate) public {
         exchangeRate = rate;
-
-        if (lastExchangeRateTime - now > MAX_DELAY) {
-            emit recoverFromORACLEOFFLINE(oracle, rate);
-        }
-
         lastExchangeRateTime = now;
 
-        emit SetExchangeRate(oracle, rate);
-    }
-
-    /**
-    @notice Set the Satoshi per bytes fee
-    @param fee the Satoshi per byte fee.
-    @param inclusionEstimate the estimated inclusion time.
-    */
-    function setSatoshiPerBytes(uint256 fee, uint256 inclusionEstimate) public {
-        // 1. The BTC Bridge status in the Security component MUST be set to RUNNING:0.
-        // TODO require()
-
-        require(authorizedOracles[msg.sender], "ERR_INVALID_ORACLE_SOURCE");
-
-        satoshiPerBytes = inclusionEstimate;
-
-        emit SetSatoshiPerByte(fee, inclusionEstimate);
+        emit SetExchangeRate(lastExchangeRateTime, exchangeRate);
     }
 
     /**
@@ -87,7 +55,7 @@ contract ExchangeRateOracleWrapper {
      */
     function collateralToWrapped(uint256 amount) public view returns (uint256) {
         uint256 rate = getExchangeRate();
-        return amount / rate;
+        return amount.div(rate).mul(10**8).div(10**18);
     }
 
     /**
@@ -97,6 +65,6 @@ contract ExchangeRateOracleWrapper {
      */
     function wrappedToCollateral(uint256 amount) public view returns (uint256) {
         uint256 rate = getExchangeRate();
-        return amount * rate;
+        return amount.mul(rate).div(10**8).mul(10**18);
     }
 }
