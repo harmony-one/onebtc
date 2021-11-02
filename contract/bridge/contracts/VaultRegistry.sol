@@ -58,30 +58,20 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     {
         address vaultId = msg.sender;
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX == 0, "vaultExist");
-        require(btcPublicKeyX != 0 && btcPublicKeyY != 0, "invalidPubkey");
+        require(vault.btcPublicKeyX == 0, "Vault already exist");
+        require(btcPublicKeyX != 0 && btcPublicKeyY != 0, "Invalid public key");
         vault.btcPublicKeyX = btcPublicKeyX;
         vault.btcPublicKeyY = btcPublicKeyY;
         lockAdditionalCollateral();
         emit RegisterVault(vaultId, msg.value, btcPublicKeyX, btcPublicKeyY);
     }
 
-    // function toBeRedeemed(address vaultId) public view returns (uint256) {
-    //     Vault storage vault = vaults[vaultId];
-    //     return vault.toBeRedeemed;
-    // }
-
-    // function issued(address vaultId) public view returns (uint256) {
-    //     Vault storage vault = vaults[vaultId];
-    //     return vault.issued;
-    // }
-
     function registerDepositAddress(address vaultId, uint256 issueId)
         internal
         returns (address)
     {
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+        require(vault.btcPublicKeyX != 0, "Vault does not exist");
         address derivedKey = BitcoinKeyDerivation.derivate(
             vault.btcPublicKeyX,
             vault.btcPublicKeyY,
@@ -90,7 +80,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
 
         require(
             !vault.depositAddresses[derivedKey],
-            "This btc address already used"
+            "The btc address is already used"
         );
         vault.depositAddresses[derivedKey] = true;
 
@@ -104,7 +94,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 replaceId
     ) internal returns (address) {
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+        require(vault.btcPublicKeyX != 0, "Vault does not exist");
 
         address btcAddress = BitcoinKeyDerivation.derivate(
             btcPublicKeyX,
@@ -114,7 +104,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
 
         require(
             !vault.depositAddresses[btcAddress],
-            "This btc address already used"
+            "The btc address is already used"
         );
         vault.depositAddresses[btcAddress] = true;
 
@@ -126,7 +116,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     {
         address vaultId = msg.sender;
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+        require(vault.btcPublicKeyX != 0, "Vault does not exist");
         vault.btcPublicKeyX = btcPublicKeyX;
         vault.btcPublicKeyY = btcPublicKeyY;
         emit VaultPublicKeyUpdate(vaultId, btcPublicKeyX, btcPublicKeyY);
@@ -135,14 +125,14 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     function lockAdditionalCollateral() public payable {
         address vaultId = msg.sender;
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+        require(vault.btcPublicKeyX != 0, "Vault does not exist");
         vault.collateral = vault.collateral.add(msg.value);
         ICollateral.lockCollateral(vaultId, msg.value);
     }
 
     function withdrawCollateral(uint256 amount) external {
         Vault storage vault = vaults[msg.sender];
-        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+        require(vault.btcPublicKeyX != 0, "Vault does not exist");
         vault.collateral = vault.collateral.sub(amount);
         ICollateral.releaseCollateral(msg.sender, amount);
     }
@@ -223,7 +213,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         returns (uint256 amount)
     {
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+        require(vault.btcPublicKeyX != 0, "Vault does not exist");
 
         uint256 requestableIncrease = vault.issued.sub(vault.toBeRedeemed).sub(
             vault.toBeReplaced
@@ -259,7 +249,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         returns (uint256, uint256)
     {
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+        require(vault.btcPublicKeyX != 0, "Vault does not exist");
 
         uint256 usedTokens = MathUpgradeable.min(vault.toBeReplaced, tokens);
 
@@ -290,8 +280,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         Vault storage oldVault = vaults[oldVaultId];
         Vault storage newVault = vaults[newVaultId];
 
-        require(oldVault.btcPublicKeyX != 0, "vaultNotExist");
-        require(newVault.btcPublicKeyX != 0, "vaultNotExist");
+        require(oldVault.btcPublicKeyX != 0, "Vault does not exist");
+        require(newVault.btcPublicKeyX != 0, "Vault does not exist");
 
         // TODO: add liquidation functionality
         // if old_vault.data.is_liquidated()
@@ -304,7 +294,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
 
     function tryDepositCollateral(address vaultId, uint256 amount) internal {
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "vaultNotExist");
+        require(vault.btcPublicKeyX != 0, "Vault does not exist");
 
         ICollateral.lockCollateral(vaultId, amount);
 

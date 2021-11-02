@@ -11,6 +11,7 @@ abstract contract ICollateral is Initializable {
     event LockCollateral(address sender, uint256 amount);
     event ReleaseCollateral(address sender, uint256 amount);
     event SlashCollateral(address sender, address receiver, uint256 amount);
+
     mapping(address => uint256) public CollateralBalances;
     mapping(address => uint256) public CollateralUsed; // for vaults
 
@@ -19,7 +20,7 @@ abstract contract ICollateral is Initializable {
     }
 
     function lockCollateral(address sender, uint256 amount) internal {
-        require(msg.value >= amount, "InvalidCollateral");
+        require(msg.value >= amount, "Invalid collateral");
         CollateralBalances[sender] = CollateralBalances[sender].add(amount);
         emit LockCollateral(sender, amount);
     }
@@ -31,12 +32,12 @@ abstract contract ICollateral is Initializable {
     ) private {
         require(
             CollateralBalances[sender].sub(CollateralUsed[sender]) >= amount,
-            "InSufficientCollateral"
+            "Insufficient collateral"
         );
         CollateralBalances[sender] = CollateralBalances[sender].sub(amount);
         address payable _to = address(uint160(to));
         (bool sent, ) = _to.call.value(amount)("");
-        require(sent, "Transfer failed.");
+        require(sent, "Transfer failed");
     }
 
     function releaseCollateral(address sender, uint256 amount) internal {
@@ -61,7 +62,11 @@ abstract contract ICollateral is Initializable {
         return CollateralBalances[vaultId].sub(CollateralUsed[vaultId]);
     }
 
-    function getTotalCollateral(address vaultId) internal view returns (uint256) {
+    function getTotalCollateral(address vaultId)
+        internal
+        view
+        returns (uint256)
+    {
         return CollateralUsed[vaultId].add(CollateralBalances[vaultId]);
     }
 
@@ -69,12 +74,12 @@ abstract contract ICollateral is Initializable {
         CollateralUsed[vaultId] = CollateralUsed[vaultId].add(amount);
         require(
             CollateralBalances[vaultId] >= CollateralUsed[vaultId],
-            "InSufficientCollateral"
+            "Insufficient collateral"
         );
     }
 
     function useCollateralDec(address vaultId, uint256 amount) internal {
-        require(CollateralUsed[vaultId] >= amount, "InSufficientCollateral");
+        require(CollateralUsed[vaultId] >= amount, "Insufficient collateral");
         CollateralUsed[vaultId] = CollateralUsed[vaultId].sub(amount);
     }
 

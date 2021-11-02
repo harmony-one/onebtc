@@ -4,12 +4,12 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
-import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
-import {Request} from "./Request.sol";
-import {TxValidate} from "./TxValidate.sol";
-import {ICollateral} from "./Collateral.sol";
-import {VaultRegistry} from "./VaultRegistry.sol";
+import "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
+import "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
+import "./Request.sol";
+import "./TxValidate.sol";
+import "./Collateral.sol";
+import "./VaultRegistry.sol";
 
 abstract contract Issue is Initializable, VaultRegistry, Request {
     using BTCUtils for bytes;
@@ -101,11 +101,11 @@ abstract contract Issue is Initializable, VaultRegistry, Request {
     ) internal {
         require(
             getIssueGriefingCollateral(amountRequested) <= griefingCollateral,
-            "InsufficientCollateral"
+            "Insufficient collateral"
         );
         require(
             VaultRegistry.tryIncreaseToBeIssuedTokens(vaultId, amountRequested),
-            "ExceedingVaultLimit"
+            "Amount requested exceeds vault limit"
         );
         uint256 issueId = getIssueId(requester);
         address btcAddress = VaultRegistry.registerDepositAddress(
@@ -115,7 +115,7 @@ abstract contract Issue is Initializable, VaultRegistry, Request {
         uint256 fee = getIssueFee(amountRequested);
         uint256 amountUser = amountRequested.sub(fee);
         IssueRequest storage request = issueRequests[requester][issueId];
-        require(request.status == RequestStatus.None, "invalid request");
+        require(request.status == RequestStatus.None, "Invalid issue request");
         {
             request.vault = address(uint160(vaultId));
             request.opentime = block.timestamp;
@@ -150,7 +150,7 @@ abstract contract Issue is Initializable, VaultRegistry, Request {
         IssueRequest storage request = issueRequests[requester][issueId];
         require(
             request.status == RequestStatus.Pending,
-            "request is completed"
+            "Request is already completed"
         );
         uint256 amountTransferred = TxValidate.validateTransaction(
             _vout,
@@ -161,7 +161,7 @@ abstract contract Issue is Initializable, VaultRegistry, Request {
         uint256 expectedTotalAmount = request.amount.add(request.fee);
         if (amountTransferred < expectedTotalAmount) {
             // only the requester of the issue can execute payments with different amounts
-            require(msg.sender == request.requester, "InvalidExecutor");
+            require(msg.sender == request.requester, "Invalid executor");
             uint256 deficit = expectedTotalAmount - amountTransferred;
             VaultRegistry.decreaseToBeIssuedTokens(request.vault, deficit);
             uint256 releasedCollateral = VaultRegistry.calculateCollateral(
@@ -180,7 +180,7 @@ abstract contract Issue is Initializable, VaultRegistry, Request {
                 request.requester,
                 request.vault,
                 slashedCollateral
-            ); // ICollateral::
+            );
             updateIssueAmount(
                 issueId,
                 request,
@@ -191,7 +191,7 @@ abstract contract Issue is Initializable, VaultRegistry, Request {
             ICollateral.releaseCollateral(
                 request.requester,
                 request.griefingCollateral
-            ); // ICollateral::
+            );
             if (amountTransferred > expectedTotalAmount) {
                 uint256 surplusBtc = amountTransferred.sub(expectedTotalAmount);
                 if (
@@ -229,18 +229,18 @@ abstract contract Issue is Initializable, VaultRegistry, Request {
         IssueRequest storage request = issueRequests[requester][issueId];
         require(
             request.status == RequestStatus.Pending,
-            "request is completed"
+            "Request is already completed"
         );
         require(
             block.timestamp > request.opentime.add(request.period),
-            "TimeNotExpired"
+            "Time not expired"
         );
         request.status = RequestStatus.Cancelled;
         ICollateral.slashCollateral(
             request.requester,
             request.vault,
             request.griefingCollateral
-        ); // ICollateral::
+        );
         VaultRegistry.decreaseToBeIssuedTokens(
             request.vault,
             request.amount + request.fee

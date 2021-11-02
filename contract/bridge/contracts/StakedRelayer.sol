@@ -17,17 +17,6 @@ contract StakedRelayer is Initializable, OwnableUpgradeable {
         bytes32 txId;
     }
 
-    string constant ERR_ALREADY_REPORTED =
-        "This txId has already been logged as a theft by the given Vault";
-    string constant ERR_VALID_REDEEM =
-        "The given transaction is a valid Redeem execution by the accused Vault";
-    string constant ERR_VALID_REPLACE =
-        "The given transaction is a valid Replace execution by the accused Vault";
-    string constant ERR_VALID_REFUND =
-        "The given transaction is a valid Refund execution by the accused Vault";
-    string constant ERR_VALID_MERGE_TRANSACTION =
-        "The given transaction is a valid 'UTXO merge' transaction by the accused Vault";
-
     event ReportVaultTheft(address indexed vaultId);
 
     event VaultDoublePayment(
@@ -40,7 +29,7 @@ contract StakedRelayer is Initializable, OwnableUpgradeable {
     IVaultRegistry public vaultRegistry;
     mapping(bytes32 => bool) public theftReports;
 
-    function __StakedRelayer__initialize(
+    function initialize(
         IRelay _relay,
         IVaultRegistry _vaultRegistry
     ) external initializer {
@@ -62,7 +51,7 @@ contract StakedRelayer is Initializable, OwnableUpgradeable {
 
         // check if already reported
         bytes32 reportKey = keccak256(abi.encodePacked(vaultId, txId));
-        require(theftReports[reportKey] == false, ERR_ALREADY_REPORTED);
+        require(theftReports[reportKey] == false, "This txId has already been logged as a theft by the given vault");
 
         // verify transaction inclusion using header and merkle proof
         relay.verifyTx(

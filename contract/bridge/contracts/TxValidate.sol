@@ -35,7 +35,7 @@ library TxValidate {
                 }
             }
         }
-        require(btcAddress == recipientBtcAddress, "InvalidRecipient");
+        require(btcAddress == recipientBtcAddress, "Invalid recipient");
 
         if(OP_RETURN_DATA.length > 0) {
             opReturn = OP_RETURN_DATA.bytesToUint();
@@ -54,10 +54,10 @@ library TxValidate {
         ) = extractPaymentValueAndOpReturn(txVout, recipientBtcAddress);
 
         if(opReturnId != 0x0) {
-            require(extrOpReturn == opReturnId, "InvalidOpReturn");
+            require(extrOpReturn == opReturnId, "Invalid OpReturn");
         }
 
-        require(extrPaymentValue >= minimumBtc, "InsufficientValue");
+        require(extrPaymentValue >= minimumBtc, "Insufficient BTC value");
         return extrPaymentValue;
     }
 
@@ -77,7 +77,7 @@ library TxValidate {
             }
         }
 
-        require(OP_RETURN_DATA.length > 0, "NoOpRetrun");
+        require(OP_RETURN_DATA.length > 0, "No OpRetrun");
         opReturn = OP_RETURN_DATA.bytesToUint();
     }
 }

@@ -79,7 +79,7 @@ abstract contract Replace is Initializable, VaultRegistry, Request {
     ) internal {
         require(
             msg.sender == oldVaultId,
-            "Sender should be owner of this Vault"
+            "Sender should be the owner of this Vault"
         );
 
         // TODO: SECURITY CHECK (The oldVault MUST NOT be banned)
@@ -112,13 +112,13 @@ abstract contract Replace is Initializable, VaultRegistry, Request {
         // a request with amount=0 is valid, as long the _total_ is above DUST. This might
         // be the case if the vault just wants to increase the griefing collateral, for example.
         uint256 dustValue = getReplaceBtcDustValue();
-        require(totalToBeReplaced >= dustValue, "AmountBelowDustAmount");
+        require(totalToBeReplaced >= dustValue, "Amount below dust amount");
 
         // check that that the total griefing collateral is sufficient to back the total to-be-replaced amount
         require(
             getReplaceGriefingCollateral(totalToBeReplaced) <=
                 totalGriefingCollateral,
-            "InsufficientCollateral"
+            "Insufficient collateral"
         );
 
         // Lock the oldVault’s griefing collateral. Note that this directly locks the amount
@@ -132,7 +132,7 @@ abstract contract Replace is Initializable, VaultRegistry, Request {
     }
 
     function _withdrawReplace(address oldVaultId, uint256 btcAmount) internal {
-        require(msg.sender == oldVaultId, "Sender should be old Vault owner");
+        require(msg.sender == oldVaultId, "Sender should be old vault owner");
         // TODO: SECURITY CHECK (The oldVault MUST NOT be banned)
 
         (uint256 withdrawnTokens, uint256 toWithdrawCollateral) = VaultRegistry
@@ -153,10 +153,10 @@ abstract contract Replace is Initializable, VaultRegistry, Request {
         uint256 btcPublicKeyX,
         uint256 btcPublicKeyY
     ) internal {
-        require(msg.sender == newVaultId, "Sender should be new Vault owner");
+        require(msg.sender == newVaultId, "Sender should be new vault owner");
         require(
             oldVaultId != newVaultId,
-            "oldVault MUST NOT be equal to newVault"
+            "Old vault must not be equal to new vault"
         );
 
         // TODO: The newVault’s free balance MUST be enough to lock collateral.
@@ -165,8 +165,8 @@ abstract contract Replace is Initializable, VaultRegistry, Request {
         Vault storage oldVault = VaultRegistry.vaults[oldVaultId];
         Vault storage newVault = VaultRegistry.vaults[newVaultId];
 
-        require(oldVault.btcPublicKeyX != 0, "vaultNotExist");
-        require(newVault.btcPublicKeyX != 0, "vaultNotExist");
+        require(oldVault.btcPublicKeyX != 0, "Vault does not exist");
+        require(newVault.btcPublicKeyX != 0, "Vault does not exist");
 
         // decrease old-vault's to-be-replaced tokens
         (uint256 redeemableTokens, uint256 griefingCollateral) = VaultRegistry
@@ -174,7 +174,7 @@ abstract contract Replace is Initializable, VaultRegistry, Request {
 
         // TODO: check amount_btc is above the minimum
         uint256 dustValue = getReplaceBtcDustValue();
-        require(redeemableTokens >= dustValue, "AmountBelowDustAmount");
+        require(redeemableTokens >= dustValue, "Amount below dust amount");
 
         // Calculate and lock the new-vault's additional collateral
         uint256 actualNewVaultCollateral = VaultRegistry.calculateCollateral(
@@ -256,7 +256,7 @@ abstract contract Replace is Initializable, VaultRegistry, Request {
 
         require(
             amountTransferred >= replace.amount,
-            "Transaction contain wrong btc amount"
+            "Transaction contains wrong btc amount"
         );
 
         // decrease old-vault's issued & to-be-redeemed tokens, and

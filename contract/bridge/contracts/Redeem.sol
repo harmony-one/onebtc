@@ -88,11 +88,11 @@ abstract contract Redeem is Initializable, VaultRegistry, Request {
 
         require(
             VaultRegistry.tryIncreaseToBeRedeemedTokens(vaultId, toBeBurnedBtc),
-            "InsufficientTokensCommitted"
+            "Insufficient tokens committed"
         );
         // TODO: decrease collateral
         RedeemRequest storage request = redeemRequests[requester][redeemId];
-        require(request.status == RequestStatus.None, "invalid request");
+        require(request.status == RequestStatus.None, "Invalid request");
         {
             request.vault = vaultId;
             request.opentime = block.timestamp;
@@ -126,7 +126,7 @@ abstract contract Redeem is Initializable, VaultRegistry, Request {
         RedeemRequest storage request = redeemRequests[requester][redeemId];
         require(
             request.status == RequestStatus.Pending,
-            "request is completed"
+            "Request is already completed"
         );
         TxValidate.validateTransaction(
             _vout,
@@ -156,11 +156,11 @@ abstract contract Redeem is Initializable, VaultRegistry, Request {
         RedeemRequest storage request = redeemRequests[requester][redeemId];
         require(
             request.status == RequestStatus.Pending,
-            "request is completed"
+            "Request is already completed"
         );
         require(
             block.timestamp > request.opentime + request.period,
-            "TimeNotExpired"
+            "Time not expired"
         );
         request.status = RequestStatus.Cancelled;
         releaseLockedOneBTC(request.requester, request.amountBtc + request.fee);

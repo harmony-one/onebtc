@@ -43,7 +43,7 @@ contract ExchangeRateOracle is Initializable {
 
         uint256 minTimeStamp = MathUpgradeable.min(oneTimeStamp, btcTimeStamp);
         // oldest timestamp should be within the max delay
-        require(now - minTimeStamp > MAX_DELAY, "ERR_MISSING_EXCHANGE_RATE");
+        require(now - minTimeStamp > MAX_DELAY, "Exchange rate available is too old");
 
         uint256 a = uint256(btcPrice);
         uint256 b = uint256(onePrice);
