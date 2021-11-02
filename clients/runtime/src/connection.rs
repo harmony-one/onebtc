@@ -1,31 +1,38 @@
-use crate::error::{Error, Web3Error};
+use crate::{
+    error::{Error, Web3Error},
+    web3::{Hmy, HmyNamespace},
+};
 
 use tokio::time::{sleep, timeout};
 use web3::{
-    transports::{Http, WebSocket},
+    transports::{Either, Http, WebSocket},
     Web3,
 };
 
 use std::time::Duration;
 
+pub type Transport = Either<WebSocket, Http>;
+
 const RETRY_TIMEOUT: Duration = Duration::from_millis(1000);
 
-pub(crate) fn new_http_client(url: &str) -> Result<Web3<Http>, Error> {
+pub(crate) fn new_http_client(url: &str) -> Result<Hmy<Transport>, Error> {
     let transport = Http::new(url)?;
+    let transport = Either::Right(transport);
     let http_client = Web3::new(transport);
-    Ok(http_client)
+    Ok(http_client.hmy())
 }
 
-pub(crate) async fn new_websocket_client(url: &str) -> Result<Web3<WebSocket>, Error> {
+pub(crate) async fn new_websocket_client(url: &str) -> Result<Hmy<Transport>, Error> {
     let transport = WebSocket::new(url).await?;
+    let transport = Either::Left(transport);
     let ws_client = Web3::new(transport);
-    Ok(ws_client)
+    Ok(ws_client.hmy())
 }
 
 pub(crate) async fn new_websocket_client_with_retry(
     url: &str,
     connection_timeout: Duration,
-) -> Result<Web3<WebSocket>, Error> {
+) -> Result<Hmy<Transport>, Error> {
     log::info!("Connecting to the btc-bridge...");
     timeout(connection_timeout, async move {
         loop {

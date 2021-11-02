@@ -1675,10 +1675,13 @@ dependencies = [
 name = "runtime"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "backoff",
+ "bitcoin 0.1.0",
  "futures",
  "hex-literal",
  "log 0.4.14",
+ "secp256k1",
  "serde_json",
  "thiserror",
  "tokio",
