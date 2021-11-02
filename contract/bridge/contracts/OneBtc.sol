@@ -11,12 +11,12 @@ import {Replace} from "./Replace.sol";
 import {IRelay} from "./IRelay.sol";
 
 contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
-    IRelay public realy;
+    IRelay public relay;
 
     function initialize(IRelay _relay) external initializer {
         __ERC20_init("Harmony Bitcoin", "1BTC");
         _setupDecimals(8);
-        realy = _relay;
+        relay = _relay;
     }
 
     function verifyTx(
@@ -27,7 +27,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         bytes calldata merkleProof
     ) public returns (bytes memory) {
         bytes32 txId = rawTx.hash256();
-        realy.verifyTx(
+        relay.verifyTx(
             height,
             index,
             txId,
