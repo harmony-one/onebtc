@@ -65,6 +65,6 @@ contract ExchangeRateOracleWrapper is Initializable {
      */
     function wrappedToCollateral(uint256 amount) public view returns (uint256) {
         uint256 rate = getExchangeRate();
-        return amount.mul(rate).div(10**8).mul(10**18);
+        return amount.mul(rate).mul(10**18).div(10**8);
     }
 }
