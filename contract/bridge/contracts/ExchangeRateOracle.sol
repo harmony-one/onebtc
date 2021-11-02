@@ -47,7 +47,10 @@ contract ExchangeRateOracle is Initializable, OwnableUpgradeable {
         // oldest timestamp should be within the max delay
         require(now - minTimeStamp > MAX_DELAY, "ERR_MISSING_EXCHANGE_RATE");
 
-        return (uint256(btcPrice)).div(uint256(onePrice));
+        uint256 a = uint256(btcPrice);
+        uint256 b = uint256(onePrice);
+
+        return a.div(b);
     }
 
     /**
