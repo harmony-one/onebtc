@@ -26,7 +26,6 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     mapping(address => Vault) public vaults;
-    uint256 public constant SECURE_COLLATERAL_THRESHOLD = 150; // 150%
     IExchangeRateOracle oracle;
 
     event RegisterVault(
@@ -64,6 +63,10 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         vault.btcPublicKeyY = btcPublicKeyY;
         lockAdditionalCollateral();
         emit RegisterVault(vaultId, msg.value, btcPublicKeyX, btcPublicKeyY);
+    }
+
+    function secureCollateralThreshold() private view returns (uint256) {
+        return 150;
     }
 
     function registerDepositAddress(address vaultId, uint256 issueId)
@@ -185,7 +188,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 freeCollateral = ICollateral.getFreeCollateral(vaultId);
         return
             oracle.collateralToWrapped(
-                freeCollateral.mul(100).div(SECURE_COLLATERAL_THRESHOLD)
+                freeCollateral.mul(100).div(secureCollateralThreshold())
             );
     }
 
@@ -330,7 +333,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         Vault storage vault = vaults[vaultId];
         uint256 issuedTokens = backedTokens(vaultId);
         uint256 collateralForIssuedTokens = issuedTokens.mul(
-            SECURE_COLLATERAL_THRESHOLD
+            secureCollateralThreshold()
         );
         return MathUpgradeable.min(vault.collateral, collateralForIssuedTokens);
     }
