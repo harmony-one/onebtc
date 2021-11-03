@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import {ICollateral} from "./Collateral.sol";
 import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
-import {ExchangeRateOracle} from "./ExchangeRateOracle.sol";
+import "./IExchangeRateOracle.sol";
 
 abstract contract VaultRegistry is Initializable, ICollateral {
     using SafeMathUpgradeable for uint256;
@@ -27,7 +27,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
 
     mapping(address => Vault) public vaults;
     uint256 public constant SECURE_COLLATERAL_THRESHOLD = 150; // 150%
-    ExchangeRateOracle oracle;
+    IExchangeRateOracle oracle;
 
     event RegisterVault(
         address indexed vaultId,

@@ -6,8 +6,13 @@ async function main() {
         process.env.HMY_RELAY_CONTRACT
     );
 
+    const ExchangeRateOracle = await ethers.getContractFactory("ExchangeRateOracle");
+    const oracle = await ExchangeRateOracle.attach(
+        process.env.EXCHANGE_RATE_ORACLE
+    );
+
     const OneBtc = await ethers.getContractFactory("OneBtc");
-    const oneBtc = await upgrades.deployProxy(OneBtc, [relay.address], { initializer: "initialize" });
+    const oneBtc = await upgrades.deployProxy(OneBtc, [relay.address, oracle.address], { initializer: "initialize" });
 
     console.log("OneBtc deployed to:", oneBtc.address);
 }

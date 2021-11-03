@@ -9,12 +9,12 @@ import {Issue} from "./Issue.sol";
 import {Redeem} from "./Redeem.sol";
 import {Replace} from "./Replace.sol";
 import {IRelay} from "./IRelay.sol";
-import "./ExchangeRateOracle.sol";
+import "./IExchangeRateOracle.sol";
 
 contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
     IRelay public relay;
 
-    function initialize(IRelay _relay, ExchangeRateOracle _oracle) external initializer {
+    function initialize(IRelay _relay, IExchangeRateOracle _oracle) external initializer {
         __ERC20_init("Harmony Bitcoin", "1BTC");
         _setupDecimals(8);
         relay = _relay;
