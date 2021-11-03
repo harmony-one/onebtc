@@ -48,7 +48,7 @@ contract("Collateral unit test", (accounts) => {
       errorMessage = e.message.split("Reason given: ")[1];
     }
 
-    assert.equal(errorMessage, "InvalidCollateral.");
+    assert.equal(errorMessage, "Invalid collateral.");
   });
 
   it("LockCollateral with 1 Gwei amount", async function () {
