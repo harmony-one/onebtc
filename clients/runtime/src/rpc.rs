@@ -64,3 +64,44 @@ pub trait VaultRegistry {
 
     async fn get_issuable_tokens(&self, vault_id: &Address) -> Result<U256, Error>;
 }
+
+#[async_trait]
+pub trait Redeem {
+    async fn execute_redeem(
+        &self,
+        requester: &Address,
+        redeem_id: U256,
+        markle_proof: &[u8],
+        raw_tx: &[u8],
+        height_and_index: u64,
+        header: &[u8],
+    ) -> Result<(), Error>;
+}
+
+#[async_trait]
+pub trait Replace {
+    async fn request_replace(
+        &self,
+        old_vault_id: &Address,
+        btc_amount: U256,
+        priefing_collateral: U256,
+    ) -> Result<(), Error>;
+
+    async fn accept_replace(
+        &self,
+        old_vault_id: &Address,
+        new_vault_id: &Address,
+        btc_amount: U256,
+        collateral: U256,
+        btc_pubkey: &BtcPublicKey,
+    ) -> Result<(), Error>;
+
+    async fn execute_replace(
+        &self,
+        replace_id: U256,
+        markle_proof: &[u8],
+        raw_tx: &[u8],
+        height_and_index: u64,
+        header: &[u8],
+    ) -> Result<(), Error>;
+}
