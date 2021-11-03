@@ -36,8 +36,8 @@ abstract contract ICollateral is Initializable {
         );
         CollateralBalances[sender] = CollateralBalances[sender].sub(amount);
         address payable _to = address(uint160(to));
-        (bool sent, ) = _to.call.value(amount)("");
-        require(sent, "Transfer failed");
+        (bool sent, ) = _to.call{value: amount}("");
+        require(sent, "Transfer failed.");
     }
 
     function releaseCollateral(address sender, uint256 amount) internal {
@@ -62,12 +62,8 @@ abstract contract ICollateral is Initializable {
         return CollateralBalances[vaultId].sub(CollateralUsed[vaultId]);
     }
 
-    function getTotalCollateral(address vaultId)
-        internal
-        view
-        returns (uint256)
-    {
-        return CollateralUsed[vaultId].add(CollateralBalances[vaultId]);
+    function getTotalCollateral(address vaultId) internal view returns (uint256) {
+        return CollateralBalances[vaultId];
     }
 
     function useCollateralInc(address vaultId, uint256 amount) internal {
