@@ -1,4 +1,4 @@
-use web3::types::{Address, U256};
+use hmy_web3::types::{Address, U256};
 
 use std::collections::HashMap;
 

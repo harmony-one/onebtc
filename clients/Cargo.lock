@@ -683,6 +683,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21e4590e13640f19f249fe3e4eca5113bc4289f2497710378190e7f4bd96f45b"
 
 [[package]]
+name = "hmy-web3"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "futures-timer",
+ "jsonrpc-core",
+ "serde",
+ "serde_json",
+ "tokio",
+ "web3",
+]
+
+[[package]]
 name = "http"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1680,12 +1693,12 @@ dependencies = [
  "bitcoin 0.1.0",
  "futures",
  "hex-literal",
+ "hmy-web3",
  "log 0.4.14",
  "secp256k1",
  "serde_json",
  "thiserror",
  "tokio",
- "web3",
 ]
 
 [[package]]

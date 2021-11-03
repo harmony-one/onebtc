@@ -3,9 +3,9 @@ use web3::{
     helpers::{self, CallFuture},
     types::{
         Address, Block, BlockId, BlockNumber, Bytes, CallRequest, Filter, Log, SyncState,
-        Transaction, TransactionId, TransactionReceipt, H256, U256, U64,
+        Transaction, TransactionId, TransactionReceipt, TransactionRequest, H256, U256, U64,
     },
-    Transport, Web3,
+    Transport,
 };
 
 /// Hmy namespace
@@ -373,6 +373,12 @@ impl<T: Transport> Hmy<T> {
         )
     }
 
+    /// Sends a transaction transaction
+    pub fn send_transaction(&self, tx: TransactionRequest) -> CallFuture<H256, T::Out> {
+        let tx = helpers::serialize(&tx);
+        CallFuture::new(self.transport.execute("eth_sendTransaction", vec![tx]))
+    }
+
     /// Sends a rlp-encoded signed transaction
     pub fn send_raw_transaction(&self, rlp: Bytes) -> CallFuture<H256, T::Out> {
         let rlp = helpers::serialize(&rlp);
@@ -382,16 +388,6 @@ impl<T: Transport> Hmy<T> {
     /// Get syncing status
     pub fn syncing(&self) -> CallFuture<SyncState, T::Out> {
         CallFuture::new(self.transport.execute("hmy_syncing", vec![]))
-    }
-}
-
-pub trait HmyNamespace<T: Transport>: Clone {
-    fn hmy(&self) -> Hmy<T>;
-}
-
-impl<T: Transport> HmyNamespace<T> for Web3<T> {
-    fn hmy(&self) -> Hmy<T> {
-        self.api()
     }
 }
 

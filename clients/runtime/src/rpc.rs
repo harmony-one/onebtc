@@ -3,14 +3,14 @@ use std::time::Duration;
 use crate::{
     bitcoin::PublicKey as BtcPublicKey,
     connection::{new_websocket_client, new_websocket_client_with_retry, Transport},
-    web3::Hmy,
     Error,
 };
 
 use async_trait::async_trait;
-use web3::{
+use hmy_web3::{
     signing::Key,
     types::{Address, U256},
+    Hmy,
 };
 
 #[derive(Clone)]

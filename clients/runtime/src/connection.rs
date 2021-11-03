@@ -1,13 +1,10 @@
-use crate::{
-    error::{Error, Web3Error},
-    web3::{Hmy, HmyNamespace},
-};
+use crate::error::{Error, Web3Error};
 
-use tokio::time::{sleep, timeout};
-use web3::{
+use hmy_web3::{
     transports::{Either, Http, WebSocket},
-    Web3,
+    Hmy, HmyNamespace, Web3,
 };
+use tokio::time::{sleep, timeout};
 
 use std::time::Duration;
 

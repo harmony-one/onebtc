@@ -1,6 +1,6 @@
+pub use hmy_web3::error::Error as Web3Error;
 use thiserror::Error;
 use tokio::time::error::Elapsed;
-pub use web3::error::Error as Web3Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -12,6 +12,7 @@ pub enum Error {
     RpcResponseError(#[from] Web3Error),
     #[error("Timeout: {0}")]
     TimeElapsed(#[from] Elapsed),
+    /// invalid output type requested by the caller
+    #[error("Invalid output type")]
+    InvalidOutputType(String),
 }
-
-impl Error {}
