@@ -2,16 +2,16 @@ use crate::{confirm, Hmy};
 
 use futures::Future;
 use web3::{
-    api::Namespace,
+    api::{Accounts, Namespace},
     contract::{
         self,
         tokens::{Detokenize, Tokenize},
         Options,
     },
-    error, ethabi,
+    error, ethabi, signing,
     types::{
-        Address, BlockId, Bytes, CallRequest, FilterBuilder, TransactionReceipt,
-        TransactionRequest, U256,
+        Address, BlockId, Bytes, CallRequest, FilterBuilder, TransactionParameters,
+        TransactionReceipt, TransactionRequest, U256,
     },
     Transport,
 };
@@ -222,54 +222,45 @@ impl<T: Transport> HmyContract<T> {
             })
             .collect::<contract::Result<Vec<R>>>()
     }
-}
 
-#[cfg(feature = "signing")]
-mod contract_signing {
-    use super::*;
-    use crate::{api::Accounts, signing, types::TransactionParameters};
+    pub async fn signed_call_with_confirmations(
+        &self,
+        func: &str,
+        params: impl Tokenize,
+        options: Options,
+        confirmations: usize,
+        key: impl signing::Key,
+    ) -> error::Result<TransactionReceipt> {
+        let poll_interval = Duration::from_secs(1);
 
-    impl<T: Transport> Contract<T> {
-        /// Execute a signed contract function and wait for confirmations
-        pub async fn signed_call_with_confirmations(
-            &self,
-            func: &str,
-            params: impl Tokenize,
-            options: Options,
-            confirmations: usize,
-            key: impl signing::Key,
-        ) -> crate::Result<TransactionReceipt> {
-            let poll_interval = time::Duration::from_secs(1);
-
-            let fn_data = self
-                .abi
-                .function(func)
-                .and_then(|function| function.encode_input(&params.into_tokens()))
-                // TODO [ToDr] SendTransactionWithConfirmation should support custom error type (so that we can return
-                // `contract::Error` instead of more generic `Error`.
-                .map_err(|err| crate::error::Error::Decoder(format!("{:?}", err)))?;
-            let accounts = Accounts::new(self.eth.transport().clone());
-            let mut tx = TransactionParameters {
-                nonce: options.nonce,
-                to: Some(self.address),
-                gas_price: options.gas_price,
-                data: Bytes(fn_data),
-                ..Default::default()
-            };
-            if let Some(gas) = options.gas {
-                tx.gas = gas;
-            }
-            if let Some(value) = options.value {
-                tx.value = value;
-            }
-            let signed = accounts.sign_transaction(tx, key).await?;
-            confirm::send_raw_transaction_with_confirmation(
-                self.eth.transport().clone(),
-                signed.raw_transaction,
-                poll_interval,
-                confirmations,
-            )
-            .await
+        let fn_data = self
+            .abi
+            .function(func)
+            .and_then(|function| function.encode_input(&params.into_tokens()))
+            // TODO [ToDr] SendTransactionWithConfirmation should support custom error type (so that we can return
+            // `contract::Error` instead of more generic `Error`.
+            .map_err(|err| crate::error::Error::Decoder(format!("{:?}", err)))?;
+        let accounts = Accounts::new(self.hmy.transport().clone());
+        let mut tx = TransactionParameters {
+            nonce: options.nonce,
+            to: Some(self.address),
+            gas_price: options.gas_price,
+            data: Bytes(fn_data),
+            ..Default::default()
+        };
+        if let Some(gas) = options.gas {
+            tx.gas = gas;
         }
+        if let Some(value) = options.value {
+            tx.value = value;
+        }
+        let signed = accounts.sign_transaction(tx, key).await?;
+        confirm::send_raw_transaction_with_confirmation(
+            self.hmy.transport().clone(),
+            signed.raw_transaction,
+            poll_interval,
+            confirmations,
+        )
+        .await
     }
 }
