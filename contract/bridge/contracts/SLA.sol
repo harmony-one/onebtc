@@ -48,7 +48,6 @@ contract SLA {
         uint256 withdraw;
         uint256 liquidate;
         uint256 sla;
-        uint256 vaultTargetSla;
     }
 
     uint256 public VaultSLATarget = 100;
@@ -147,7 +146,9 @@ contract SLA {
         return cur > max ? max : (cur > min ? cur : min);
     }
 
-    function eventUpdateVaultSla(
+    event data (uint256,uint256,uint256, uint256);
+
+    function _eventUpdateVaultSla(
         address vaultId,
         VaultEvent eventType,
         uint256 amount
@@ -171,11 +172,11 @@ contract SLA {
             _liquidateSla(vaultId);
             return;
         } else {
-            revert("unknow type");
+            revert("unknown type");
         }
 
         uint256 newSla = currentSla + deltaSla;
-        uint256 maxSla = slaData.vaultTargetSla; // todo: check that this is indeed the max
+        uint256 maxSla = VaultSLATarget; // todo: check that this is indeed the max
 
         uint256 boundedNewSla = limit(0, newSla, maxSla);
         /*
@@ -187,7 +188,7 @@ contract SLA {
     }
 
 
-     function eventUpdateRelayerSla(
+     function _eventUpdateRelayerSla(
         address relayerId,
         VaultEvent eventType,
         uint256 amount
@@ -215,7 +216,7 @@ contract SLA {
         }
 
         uint256 newSla = currentSla + deltaSla;
-        uint256 maxSla = slaData.vaultTargetSla; // todo: check that this is indeed the max
+        uint256 maxSla = VaultSLATarget; // todo: check that this is indeed the max
 
         uint256 boundedNewSla = limit(0, newSla, maxSla);
         /*
@@ -228,7 +229,7 @@ contract SLA {
 
     function calculateSlashAmount(address account) internal returns (uint256) {
         SlaData memory vault = VaultSLA[account];
-        uint256 slaTarget = vault.vaultTargetSla;
+        uint256 slaTarget = VaultSLATarget;
         uint256 sla = vault.sla;
         uint256 liquidateThreshold = vault.liquidate;
         uint256 premiumRedeemThreshold = vault.vaultRedeemFailure; 
