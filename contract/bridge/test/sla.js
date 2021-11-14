@@ -19,10 +19,39 @@ contract("SLA", (account) => {
     assert.equal(await contractInstance.getVaultSla(vaultId), 50);
   });
 
-  it("_depositSlaChange()", async () => {
-    await contractInstance.depositSlaChange(10);
-    const SLA = await contractInstance.getSLA();
+  it("deposit sla change - vault id : 4", async () => {
+    await contractInstance.eventUpdateVaultSla(vaultId, 4, 60);
+    const sla = await contractInstance.getVaultSla(vaultId);
+    assert.equal(sla.toNumber(), 70);
+  });
 
-    assert.equal(SLA, 10);
+  it("withdraw sla change - vault id: 5", async () => {
+    await contractInstance.eventUpdateVaultSla(vaultId, 5, 55);
+    const sla = await contractInstance.getVaultSla(vaultId);
+    assert.equal(sla.toNumber(), 90);
+  });
+
+  it("execute issue sla change - vault id: 3", async () => {
+    await contractInstance.eventUpdateVaultSla(vaultId, 3, 25);
+    const sla = await contractInstance.getVaultSla(vaultId);
+    assert.equal(sla.toNumber(), 90);
+  });
+
+  it("deposit sla change - relayer id : 4", async () => {
+    await contractInstance.eventUpdateRelayerSla(vaultId, 4, 60);
+    const sla = await contractInstance.getRelayerSla(vaultId);
+    assert.equal(sla.toNumber(), 50);
+  });
+
+  it("withdraw sla change - relayer id: 5", async () => {
+    await contractInstance.eventUpdateRelayerSla(vaultId, 5, 55);
+    const sla = await contractInstance.getRelayerSla(vaultId);
+    assert.equal(sla.toNumber(), 70);
+  });
+
+  it("execute issue sla change - relayer id: 3", async () => {
+    await contractInstance.eventUpdateRelayerSla(vaultId, 3, 25);
+    const sla = await contractInstance.getRelayerSla(vaultId);
+    assert.equal(sla.toNumber(), 70);
   });
 });

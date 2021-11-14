@@ -30,16 +30,13 @@ contract SLAWrapper is SLA {
       _AverageWithdrawCount,
       _AverageWithdraw) public {}
 
-    function depositSlaChange(uint256 amount) public returns (uint256) {
-        _depositSlaChange(amount);
+    function eventUpdateVaultSla(address vaultId, VaultEvent eventType,uint256 amount) public returns (uint256) {
+        _eventUpdateVaultSla(vaultId, eventType, amount);
     }
 
-    function executeIssusSlaChange(uint256 amount)  public returns (uint256){
-        _executeIssueSlaChange(amount);
-    }
 
-    function withdrawSlaChange(uint256 amount) public returns (uint256){
-        return _withdrawSlaChange(amount);
+    function eventUpdateRelayerSla(address vaultId, VaultEvent eventType,uint256 amount) public returns (uint256) {
+        _eventUpdateRelayerSla(vaultId, eventType, amount);
     }
 
     function updateRelayerSla(address account, int256 delta) public {
