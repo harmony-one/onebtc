@@ -13,11 +13,11 @@ The specification consists of two parts:
 
 ### BTC Bridge
 
-- [Website](https://harmony.github.io/onebtc-spec)
+- [Website](https://onebtc-dev.web.app)
 
 ### BTC-Relay
 
-- [Website](https://harmony.gitlab.io/onebtc-spec/btcrelay-spec/)
+- [Website](https://onebtc-relay.web.app)
 
 ## Contributing
 
