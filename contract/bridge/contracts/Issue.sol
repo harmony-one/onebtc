@@ -2,7 +2,6 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
@@ -11,7 +10,7 @@ import "./TxValidate.sol";
 import "./Collateral.sol";
 import "./VaultRegistry.sol";
 
-abstract contract Issue is Initializable, VaultRegistry, Request {
+abstract contract Issue is VaultRegistry, Request {
     using BTCUtils for bytes;
     using BytesLib for bytes;
     using SafeMathUpgradeable for uint256;

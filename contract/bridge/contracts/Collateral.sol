@@ -3,9 +3,8 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-abstract contract ICollateral is ReentrancyGuardUpgradeable {
+abstract contract ICollateral {
     using SafeMathUpgradeable for uint256;
 
     event LockCollateral(address sender, uint256 amount);
@@ -14,10 +13,6 @@ abstract contract ICollateral is ReentrancyGuardUpgradeable {
 
     mapping(address => uint256) public CollateralBalances;
     mapping(address => uint256) public CollateralUsed; // for vaults
-
-    function initialize() public initializer {
-        __ReentrancyGuard_init();
-    }
 
     function totalCollateral() external view returns (uint256) {
         return address(this).balance;
@@ -33,7 +28,7 @@ abstract contract ICollateral is ReentrancyGuardUpgradeable {
         address sender,
         address to,
         uint256 amount
-    ) private nonReentrant {
+    ) private {
         require(
             CollateralBalances[sender].sub(CollateralUsed[sender]) >= amount,
             "Insufficient collateral"
