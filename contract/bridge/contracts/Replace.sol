@@ -2,7 +2,6 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
@@ -11,7 +10,7 @@ import {TxValidate} from "./TxValidate.sol";
 import {ICollateral} from "./Collateral.sol";
 import {VaultRegistry} from "./VaultRegistry.sol";
 
-abstract contract Replace is Initializable, VaultRegistry, Request {
+abstract contract Replace is VaultRegistry, Request {
     //    using BTCUtils for bytes;
     //    using BytesLib for bytes;
 

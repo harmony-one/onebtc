@@ -2,10 +2,9 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 
-abstract contract ICollateral is Initializable {
+abstract contract ICollateral {
     using SafeMathUpgradeable for uint256;
 
     event LockCollateral(address sender, uint256 amount);

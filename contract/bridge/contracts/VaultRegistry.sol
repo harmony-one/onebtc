@@ -173,7 +173,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function redeemableTokens(address vaultId) internal returns (uint256) {
-        Vault storage vault = vaults[vaultId];
+        Vault memory vault = vaults[vaultId];
         return vault.issued.sub(vault.toBeRedeemed);
     }
 
@@ -215,7 +215,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         internal
         returns (uint256 amount)
     {
-        Vault storage vault = vaults[vaultId];
+        Vault memory vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
 
         uint256 requestableIncrease = vault.issued.sub(vault.toBeRedeemed).sub(
@@ -311,7 +311,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         Vault storage vault = vaults[vaultId];
         uint256 collateral = MathUpgradeable.min(vault.collateral, amount);
         vault.liquidatedCollateral = vault.liquidatedCollateral.add(collateral);
-        // TODO: what to do with slashable collateral corresponding to to-be-redeemed tokens?
+        // TODO: what to do with slashable collateral corresponding to to-be-redeemed tokens? - users can redeem as long as to-be-redeemed request is not cancelled.
+        // TODO: If to-be-redeemed request is not cancelled, the collateral corresonding to to-be-redeemed tokens will be slash and it will be transfered to the LiquidationVault so that users can redeem it on LiquidationVault, not old vault.
     }
 
     function slashToLiquidationVault(address vaultId, uint256 amount) private {
@@ -352,7 +353,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
 
         // liquidate collateral excluding to be redeemed =
         // liquidate collateral * (collateral tokens - to be redeemed tokens) / collateral tokens
-        uint256 ratio = collateralTokens.sub(vault.toBeRedeemed).div(
+        uint256 ratio = (collateralTokens.sub(vault.toBeRedeemed)).div(
             collateralTokens
         );
         uint256 liquidatedCollateralExcludingToBeRedeemed = liquidatedCollateral
@@ -380,14 +381,18 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         liquidationVault.toBeIssued = liquidationVault.toBeIssued.add(
             vault.toBeIssued
         );
-        liquidationVault.toBeRedeemed = liquidationVault.toBeRedeemed.add(
-            vault.toBeRedeemed
-        );
+        
+        // TODO: toBeRedeemed will be kept as long is the to-be-redeemed request is not cancelled.
+        // liquidationVault.toBeRedeemed = liquidationVault.toBeRedeemed.add(
+        //     vault.toBeRedeemed
+        // );
 
         // clear the vault values
         vault.issued = 0;
         vault.toBeIssued = 0;
-        vault.toBeRedeemed = 0;
+
+        // TODO: toBeRedeemed will be kept as long is the to-be-redeemed request is not cancelled.
+        // vault.toBeRedeemed = 0;
     }
 
     /**
