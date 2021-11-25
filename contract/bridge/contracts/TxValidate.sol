@@ -15,7 +15,7 @@ library TxValidate {
         address recipientBtcAddress
     ) private pure returns (uint256 btcAmount, uint256 opReturn) {
         (, uint256 _nVouts) = txVout.parseVarInt();
-        uint256 voutCount = MathUpgradeable.min(_nVouts, 3);
+        uint256 voutCount = _nVouts;
         bytes memory OP_RETURN_DATA;
         address btcAddress;
         for (uint256 i = 0; i < voutCount; i++) {
