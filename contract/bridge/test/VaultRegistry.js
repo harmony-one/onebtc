@@ -101,6 +101,14 @@ contract("VaultRegistry unit test", (accounts) => {
     assert.equal(this.initCollateral, amount);
   });
 
+  it("Register Deposit Address", async function () {
+    await this.VaultRegistry.testRegisterDepositAddress(this.vaultId, 1);
+
+    this.depositAddress = await this.VaultRegistry.getLastDepositAddress();
+
+    assert.equal(!!this.depositAddress, true);
+  });
+
   // it("set Oracle ExchangeRate", async function () {
   //   const req = await this.VaultRegistry.setExchangeRate(1);
   //
@@ -129,16 +137,24 @@ contract("VaultRegistry unit test", (accounts) => {
     assert.equal(event.args.amount, amount);
   });
 
-  it("Register Deposit Address", async function () {
-    await this.VaultRegistry.testRegisterDepositAddress(this.vaultId, 1);
+  it("tryDecreaseToBeIssuedTokens", async function () {
+    const amount = web3.utils.toWei("2");
 
-    this.depositAddress = await this.VaultRegistry.getLastDepositAddress();
+    const req = await this.VaultRegistry.testDecreaseToBeIssuedTokens(
+      this.vaultId,
+      amount
+    );
 
-    assert.equal(!!this.depositAddress, true);
+    const event = req.logs.filter(
+      (log) => log.event == "DecreaseToBeIssuedTokens"
+    )[0];
+
+    assert.equal(event.args.vaultId, this.vaultId);
+    assert.equal(event.args.amount, amount);
   });
 
-  it("Issue tokens 5 Wei", async function () {
-    const amount = web3.utils.toWei("5");
+  it("Issue tokens 2 Wei", async function () {
+    const amount = web3.utils.toWei("2");
 
     const req = await this.VaultRegistry.testIssueTokens(
       this.vaultId,
@@ -151,13 +167,14 @@ contract("VaultRegistry unit test", (accounts) => {
     assert.equal(amount, event.args.amount);
   });
 
-  it("after issue: Check issued amount equal 5 Wei", async function () {
-    const amount = await this.VaultRegistry.issued(this.vaultId);
-    assert.equal(amount, web3.utils.toWei("5"));
+  it("after issue: Check issued amount equal 2 Wei", async function () {
+    const vault = await this.VaultRegistry.vaults(this.vaultId);
+    const amount = await vault.issued;
+    assert.equal(amount, web3.utils.toWei("2"));
   });
 
   it("tryIncreaseToBeRedeemedTokens", async function () {
-    const amount = web3.utils.toWei("5");
+    const amount = web3.utils.toWei("1");
 
     const req = await this.VaultRegistry.testTryIncreaseToBeRedeemedTokens(
       this.vaultId,
@@ -175,8 +192,8 @@ contract("VaultRegistry unit test", (accounts) => {
     assert.equal(event.args.amount, amount);
   });
 
-  it("Redeem tokens 5 Wei", async function () {
-    const amount = web3.utils.toWei("5");
+  it("Redeem tokens 1 Wei", async function () {
+    const amount = web3.utils.toWei("1");
 
     const req = await this.VaultRegistry.testRedeemTokens(
       this.vaultId,
@@ -191,5 +208,36 @@ contract("VaultRegistry unit test", (accounts) => {
     const vault = await this.VaultRegistry.vaults(this.vaultId);
 
     assert.equal(vault.toBeRedeemed, 0);
+  });
+
+  it("after redeem: Check redeemable amount equal 1 Wei", async function () {
+    const amount = web3.utils.toWei("1");
+
+    const req = await this.VaultRegistry.testRedeemableTokens(
+      this.vaultId
+    );
+
+    const event = req.logs.filter((log) => log.event == "RedeemableTokens")[0];
+
+    assert.equal(this.vaultId, event.args.vaultId);
+    assert.equal(amount, event.args.amount);
+  });
+
+  it("RequestableToBeReplacedTokens", async function () {
+    const vault = await this.VaultRegistry.vaults(this.vaultId);
+    const issuedAmount = await vault.issued;
+    const toBeRedeemedAmount = await vault.toBeRedeemed;
+    const amount = issuedAmount.sub(toBeRedeemedAmount);
+
+    const req = await this.VaultRegistry.testRequestableToBeReplacedTokens(
+      this.vaultId
+    );
+
+    const event = req.logs.filter(
+      (log) => log.event == "RequestableToBeReplacedTokens"
+    )[0];
+
+    assert.equal(event.args.vaultId, this.vaultId);
+    assert.equal(event.args.amount.toString(), amount.toString());
   });
 });

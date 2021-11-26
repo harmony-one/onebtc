@@ -203,7 +203,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 collateral,
         uint256 numerator,
         uint256 denominator
-    ) internal returns (uint256 amount) {
+    ) internal view returns (uint256 amount) {
         if (numerator == 0 && denominator == 0) {
             return collateral;
         }
