@@ -1,24 +1,25 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 
 abstract contract ICollateral {
-    using SafeMath for uint256;
+    using SafeMathUpgradeable for uint256;
 
     event LockCollateral(address sender, uint256 amount);
     event ReleaseCollateral(address sender, uint256 amount);
     event SlashCollateral(address sender, address receiver, uint256 amount);
+
     mapping(address => uint256) public CollateralBalances;
     mapping(address => uint256) public CollateralUsed; // for vaults
 
-    function TotalCollateral() external view returns (uint256) {
+    function totalCollateral() external view returns (uint256) {
         return address(this).balance;
     }
 
     function lockCollateral(address sender, uint256 amount) internal {
-        require(msg.value >= amount, "InvalidCollateral");
+        require(msg.value >= amount, "Invalid collateral");
         CollateralBalances[sender] = CollateralBalances[sender].add(amount);
         emit LockCollateral(sender, amount);
     }
@@ -30,11 +31,11 @@ abstract contract ICollateral {
     ) private {
         require(
             CollateralBalances[sender].sub(CollateralUsed[sender]) >= amount,
-            "InSufficientCollateral"
+            "Insufficient collateral"
         );
         CollateralBalances[sender] = CollateralBalances[sender].sub(amount);
         address payable _to = address(uint160(to));
-        (bool sent, ) = _to.call.value(amount)("");
+        (bool sent, ) = _to.call{value: amount}("");
         require(sent, "Transfer failed.");
     }
 
@@ -52,20 +53,30 @@ abstract contract ICollateral {
         emit SlashCollateral(from, to, amount);
     }
 
-    function getFreeCollateral(address vaultId) internal view returns(uint256) {
+    function getFreeCollateral(address vaultId)
+        internal
+        view
+        returns (uint256)
+    {
         return CollateralBalances[vaultId].sub(CollateralUsed[vaultId]);
+    }
+
+    function getTotalCollateral(address vaultId) internal view returns (uint256) {
+        return CollateralBalances[vaultId];
     }
 
     function useCollateralInc(address vaultId, uint256 amount) internal {
         CollateralUsed[vaultId] = CollateralUsed[vaultId].add(amount);
         require(
             CollateralBalances[vaultId] >= CollateralUsed[vaultId],
-            "InSufficientCollateral"
+            "Insufficient collateral"
         );
     }
 
     function useCollateralDec(address vaultId, uint256 amount) internal {
-        require(CollateralUsed[vaultId] >= amount, "InSufficientCollateral");
+        require(CollateralUsed[vaultId] >= amount, "Insufficient collateral");
         CollateralUsed[vaultId] = CollateralUsed[vaultId].sub(amount);
     }
+
+    uint256[45] private __gap;
 }

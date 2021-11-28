@@ -12,8 +12,9 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
+import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
 
-contract ExchangeRateOracle is Initializable {
+contract ExchangeRateOracleV2 is Initializable {
     using SafeMathUpgradeable for uint256;
 
     uint256 constant MAX_DELAY = 1000;
@@ -39,7 +40,7 @@ contract ExchangeRateOracle is Initializable {
         uint256 rate = btcPrice.div(onePrice);
         exchangeRate = rate;
 
-        if (now - lastExchangeRateTime > MAX_DELAY) {
+        if (lastExchangeRateTime - now > MAX_DELAY) {
             emit recoverFromORACLEOFFLINE(oracle, rate);
         }
 
@@ -48,13 +49,33 @@ contract ExchangeRateOracle is Initializable {
         emit SetExchangeRate(oracle, rate);
     }
 
+    /**
+    @notice Returns the latest BTC/ONE exchange rate, as received from the external data sources.
+    @return uint256 (aggregate) exchange rate value
+    */
     function getExchangeRate() private view returns (uint256) {
+        AggregatorV3Interface oneUSD = AggregatorV3Interface(
+            0xcEe686F89bc0dABAd95AEAAC980aE1d97A075FAD
+        );
+        AggregatorV3Interface btcUSD = AggregatorV3Interface(
+            0xEF637736B220a58C661bfF4b71e03ca898DCC0Bd
+        );
+        (, int256 onePrice, , uint256 oneTimeStamp, ) = oneUSD
+            .latestRoundData();
+        (, int256 btcPrice, , uint256 btcTimeStamp, ) = btcUSD
+            .latestRoundData();
+
+        uint256 minTimeStamp = MathUpgradeable.min(oneTimeStamp, btcTimeStamp);
+        // oldest timestamp should be within the max delay
         require(
-            now - lastExchangeRateTime <= MAX_DELAY,
+            now - minTimeStamp <= MAX_DELAY,
             "Exchange rate avaialble is too old"
         );
 
-        return exchangeRate;
+        uint256 a = uint256(btcPrice);
+        uint256 b = uint256(onePrice);
+
+        return a.div(b);
     }
 
     /**

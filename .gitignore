@@ -128,8 +128,6 @@ blockchain/history
 
 # truffle
 .tern-port
-yarn.lock
-package-lock.json
 
 # buidler
 artifacts
@@ -160,3 +158,5 @@ firebase.json
 
 **/target/
 **/*.rs.bt
+
+.openzeppelin/

@@ -1,42 +1,46 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {ValidateSPV} from "@interlay/bitcoin-spv-sol/contracts/ValidateSPV.sol";
 import {TransactionUtils} from "./TransactionUtils.sol";
 import {Issue} from "./Issue.sol";
 import {Redeem} from "./Redeem.sol";
 import {Replace} from "./Replace.sol";
 import {IRelay} from "./IRelay.sol";
+import "./IExchangeRateOracle.sol";
 
-contract OneBtc is ERC20, Issue, Redeem, Replace {
-    IRelay public realy;
+contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
+    IRelay public relay;
 
-    constructor(IRelay _relay) public ERC20("OneBtc", "OneBtc") {
+    function initialize(IRelay _relay, IExchangeRateOracle _oracle) external initializer {
+        __ERC20_init("Harmony Bitcoin", "1BTC");
         _setupDecimals(8);
-        realy = _relay;
+        relay = _relay;
+        oracle = _oracle;
     }
 
     function verifyTx(
-        bytes calldata merkleProof,
+        uint32 height,
+        uint256 index,
         bytes calldata rawTx,
-        uint64 heightAndIndex,
-        bytes calldata header
-    ) private returns (bytes memory) {
+        bytes calldata header,
+        bytes calldata merkleProof
+    ) public returns (bytes memory) {
         bytes32 txId = rawTx.hash256();
-        realy.verifyTx(
-            uint32(heightAndIndex >> 32),
-            heightAndIndex & type(uint32).max,
+        relay.verifyTx(
+            height,
+            index,
             txId,
             header,
             merkleProof,
-            6,
+            1,
             true
         );
         TransactionUtils.Transaction memory btcTx =
-            TransactionUtils.extractTx(rawTx);
-        require(btcTx.locktime == 0, "locktime must zero!");
+        TransactionUtils.extractTx(rawTx);
+        require(btcTx.locktime == 0, "Locktime must be zero");
         // check version?
         // btcTx.version
         return btcTx.vouts;
@@ -54,12 +58,14 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         uint256 issueId,
         bytes calldata merkleProof,
         bytes calldata rawTx, // avoid compiler error: stack too deep
-        //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
-        uint64 heightAndIndex,
+    //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
+        uint32 height,
+        uint256 index,
         bytes calldata header
     ) external {
         bytes memory _vout =
-            verifyTx(merkleProof, rawTx, heightAndIndex, header);
+        verifyTx(height, index, rawTx, header, merkleProof);
+
         Issue._executeIssue(requester, issueId, _vout);
     }
 
@@ -72,12 +78,7 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         address btcAddress,
         address vaultId
     ) external {
-        Redeem._requestRedeem(
-            msg.sender,
-            amountOneBtc,
-            btcAddress,
-            vaultId
-        );
+        Redeem._requestRedeem(msg.sender, amountOneBtc, btcAddress, vaultId);
     }
 
     function executeRedeem(
@@ -85,11 +86,13 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         uint256 redeemId,
         bytes calldata merkleProof,
         bytes calldata rawTx,
-        uint64 heightAndIndex,
+        uint32 height,
+        uint256 index,
         bytes calldata header
     ) external {
         bytes memory _vout =
-            verifyTx(merkleProof, rawTx, heightAndIndex, header);
+        verifyTx(height, index, rawTx, header, merkleProof);
+
         Redeem._executeRedeem(requester, redeemId, _vout);
     }
 
@@ -101,26 +104,25 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         internal
         override(Redeem)
     {
-        //ERC20(this).transferFrom(from, address(this), amount);
-        ERC20._transfer(msg.sender, address(this), amount);
+        ERC20Upgradeable._transfer(msg.sender, address(this), amount);
     }
 
     function burnLockedOneBTC(uint256 amount) internal override(Redeem) {
-        ERC20._burn(address(this), amount);
+        ERC20Upgradeable._burn(address(this), amount);
     }
 
     function releaseLockedOneBTC(address receiver, uint256 amount)
         internal
         override(Redeem)
     {
-        ERC20._transfer(address(this), receiver, amount);
+        ERC20Upgradeable._transfer(address(this), receiver, amount);
     }
 
     function issueOneBTC(address receiver, uint256 amount)
         internal
         override(Issue)
     {
-        ERC20._mint(receiver, amount);
+        ERC20Upgradeable._mint(receiver, amount);
     }
 
     function requestReplace(
@@ -154,11 +156,11 @@ contract OneBtc is ERC20, Issue, Redeem, Replace {
         bytes calldata merkleProof,
         bytes calldata rawTx, // avoid compiler error: stack too deep
     //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
-        uint64 heightAndIndex,
+        uint32 height,
+        uint256 index,
         bytes calldata header
     ) external {
-        bytes memory _vout =
-        verifyTx(merkleProof, rawTx, heightAndIndex, header);
+        bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
         Replace._executeReplace(replaceId, _vout);
     }
 }

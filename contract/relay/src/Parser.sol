@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity 0.6.12;
 
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 
 library Parser {
-    using SafeMath for uint256;
+    using SafeMathUpgradeable for uint256;
     using BytesLib for bytes;
     using BTCUtils for bytes;
 

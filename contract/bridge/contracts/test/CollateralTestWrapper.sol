@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
-import { ICollateral } from "../Collateral.sol";
+pragma solidity 0.6.12;
+import {ICollateral} from "../Collateral.sol";
 
 contract CollateralTestWrapper is ICollateral {
     function testLockCollateral(address sender, uint256 amount) public payable {
@@ -20,7 +20,11 @@ contract CollateralTestWrapper is ICollateral {
         return slashCollateral(from, to, amount);
     }
 
-    function testGetFreeCollateral(address vaultId) public view returns(uint256) {
+    function testGetFreeCollateral(address vaultId)
+        public
+        view
+        returns (uint256)
+    {
         return getFreeCollateral(vaultId);
     }
 

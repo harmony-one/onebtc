@@ -28,7 +28,7 @@ contract("Collateral unit test", (accounts) => {
   });
 
   it("init totalCollateral is zero", async function () {
-    const totalCollateral = await this.CollateralTestWrapper.TotalCollateral();
+    const totalCollateral = await this.CollateralTestWrapper.totalCollateral();
     assert.equal(Number(totalCollateral), 0);
   });
 
@@ -48,7 +48,7 @@ contract("Collateral unit test", (accounts) => {
       errorMessage = e.message.split("Reason given: ")[1];
     }
 
-    assert.equal(errorMessage, "InvalidCollateral.");
+    assert.equal(errorMessage, "Invalid collateral.");
   });
 
   it("LockCollateral with 1 Gwei amount", async function () {
@@ -71,7 +71,7 @@ contract("Collateral unit test", (accounts) => {
   });
 
   it("after lock: totalCollateral equal 1 Gwei", async function () {
-    const totalCollateral = await this.CollateralTestWrapper.TotalCollateral();
+    const totalCollateral = await this.CollateralTestWrapper.totalCollateral();
     assert.equal(Number(totalCollateral), this.lockAmount);
   });
 
@@ -94,7 +94,7 @@ contract("Collateral unit test", (accounts) => {
   });
 
   it("after release: totalCollateral equal 0.5 Gwei", async function () {
-    const totalCollateral = await this.CollateralTestWrapper.TotalCollateral();
+    const totalCollateral = await this.CollateralTestWrapper.totalCollateral();
     assert.equal(Number(totalCollateral), 0.5 * 1e9);
   });
 
@@ -119,7 +119,7 @@ contract("Collateral unit test", (accounts) => {
   });
 
   it("after slash: totalCollateral equal 0.3 Gwei", async function () {
-    const totalCollateral = await this.CollateralTestWrapper.TotalCollateral();
+    const totalCollateral = await this.CollateralTestWrapper.totalCollateral();
     assert.equal(Number(totalCollateral), 0.3 * 1e9);
   });
 
