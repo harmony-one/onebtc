@@ -1,11 +1,11 @@
 {
   "dependencies": {
+    "@harmony-js/core": "^0.1.57",
     "@interlay/bitcoin-spv-sol": "^3.2.2",
     "@openzeppelin/contracts": "3.1.0",
     "@openzeppelin/test-helpers": "^0.5.11",
-    "bitcoinjs-lib": "^5.2.0",
-    "@harmony-js/core": "^0.1.57",
     "@truffle/hdwallet-provider": "^1.2.1",
+    "bitcoinjs-lib": "^5.2.0",
     "dotenv": "^8.2.0",
     "eth-ens-namehash": "^2.0.8",
     "solium": "^1.2.5",
