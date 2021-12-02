@@ -58,15 +58,20 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 issueId,
         bytes calldata merkleProof,
         bytes calldata rawTx, // avoid compiler error: stack too deep
-    //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
-        uint32 height,
-        uint256 index,
-        bytes calldata header
+        //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
+        uint64 heightAndIndex,
+        bytes calldata header,
+        uint256 outputIndex
     ) external {
-        bytes memory _vout =
-        verifyTx(height, index, rawTx, header, merkleProof);
+        bytes memory _vout = verifyTx(
+            uint32(heightAndIndex >> 32),
+            heightAndIndex & type(uint32).max,
+            rawTx,
+            header,
+            merkleProof
+        );
 
-        Issue._executeIssue(requester, issueId, _vout);
+        Issue._executeIssue(requester, issueId, _vout, outputIndex);
     }
 
     function cancelIssue(address requester, uint256 issueId) external {

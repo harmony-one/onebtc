@@ -250,7 +250,8 @@ abstract contract Replace is VaultRegistry, Request {
             _vout,
             0,
             replace.btcAddress,
-            replaceId
+            replaceId,
+            0
         );
 
         require(
