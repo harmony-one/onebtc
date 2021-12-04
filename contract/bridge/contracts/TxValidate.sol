@@ -10,74 +10,52 @@ library TxValidate {
     using BTCUtils for bytes;
     using BytesLib for bytes;
 
-    function extractPaymentValueAndOpReturn(
-        bytes memory txVout,
-        address recipientBtcAddress
-    ) private pure returns (uint256 btcAmount, uint256 opReturn) {
-        (, uint256 _nVouts) = txVout.parseVarInt();
-        uint256 voutCount = _nVouts;
-        bytes memory OP_RETURN_DATA;
-        address btcAddress;
-        for (uint256 i = 0; i < voutCount; i++) {
-            bytes memory vout = txVout.extractOutputAtIndex(i);
-            if (OP_RETURN_DATA.length == 0) {
-                OP_RETURN_DATA = vout.extractOpReturnData();
-                if (OP_RETURN_DATA.length > 0) continue;
-            }
-            if (btcAddress != recipientBtcAddress) {
-                bytes memory bytesAddress = vout.extractHash();
-                if (
-                    bytesAddress.length == 20 &&
-                    bytesAddress.toAddress(0) == recipientBtcAddress
-                ) {
-                    btcAmount = vout.extractValue();
-                    btcAddress = recipientBtcAddress;
-                }
-            }
-        }
-        require(btcAddress == recipientBtcAddress, "Invalid recipient");
-
-        if(OP_RETURN_DATA.length > 0) {
-            opReturn = OP_RETURN_DATA.bytesToUint();
-        }
-    }
-
     function validateTransaction(
         bytes memory txVout,
         uint256 minimumBtc,
         address recipientBtcAddress,
-        uint256 opReturnId
+        uint256 opReturnId,
+        uint256 outputIndex
     ) internal pure returns (uint256) {
-        (
-            uint256 extrPaymentValue,
-            uint256 extrOpReturn
-        ) = extractPaymentValueAndOpReturn(txVout, recipientBtcAddress);
+        uint256 btcAmount;
+        address btcAddress;
 
-        if(opReturnId != 0x0) {
-            require(extrOpReturn == opReturnId, "Invalid OpReturn");
-        }
-
-        require(extrPaymentValue >= minimumBtc, "Insufficient BTC value");
-        return extrPaymentValue;
-    }
-
-    function extractOpReturnOnly(bytes memory txVout)
-        internal
-        pure
-        returns (uint256 opReturn)
-    {
-        (, uint256 _nVouts) = txVout.parseVarInt();
-        uint256 voutCount = MathUpgradeable.min(_nVouts, 3);
-        bytes memory OP_RETURN_DATA;
-        for (uint256 i = 0; i < voutCount; i++) {
-            bytes memory vout = txVout.extractOutputAtIndex(i);
-            if (OP_RETURN_DATA.length == 0) {
-                OP_RETURN_DATA = vout.extractOpReturnData();
-                if (OP_RETURN_DATA.length > 0) continue;
+        if (opReturnId != 0x0) {
+            (, uint256 _nVouts) = txVout.parseVarInt();
+            uint256 voutCount = _nVouts;
+            bytes memory OP_RETURN_DATA;
+            for (uint256 i = 0; i < voutCount; i++) {
+                bytes memory vout = txVout.extractOutputAtIndex(i);
+                if (OP_RETURN_DATA.length == 0) {
+                    OP_RETURN_DATA = vout.extractOpReturnData();
+                    if (OP_RETURN_DATA.length > 0) continue;
+                }
+                if (btcAddress != recipientBtcAddress) {
+                    bytes memory bytesAddress = vout.extractHash();
+                    if (
+                        bytesAddress.length == 20 &&
+                        bytesAddress.toAddress(0) == recipientBtcAddress
+                    ) {
+                        btcAmount = vout.extractValue();
+                        btcAddress = recipientBtcAddress;
+                    }
+                }
             }
+
+            require(
+                OP_RETURN_DATA.bytesToUint() == opReturnId,
+                "Invalid OpReturn"
+            );
+        } else {
+            bytes memory vout = txVout.extractOutputAtIndex(outputIndex);
+            bytes memory bytesAddress = vout.extractHash();
+            btcAmount = vout.extractValue();
+            btcAddress = bytesAddress.toAddress(0);
         }
 
-        require(OP_RETURN_DATA.length > 0, "No OpRetrun");
-        opReturn = OP_RETURN_DATA.bytesToUint();
+        require(btcAmount >= minimumBtc, "Insufficient BTC value");
+        require(btcAddress == recipientBtcAddress, "Invalid recipient");
+
+        return btcAmount;
     }
 }
