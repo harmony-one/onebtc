@@ -16,7 +16,8 @@ contract TxValidateMock {
                 txVout,
                 minimumBtc,
                 recipientBtcAddress,
-                opReturnId
+                opReturnId,
+                0
             );
     }
 }
