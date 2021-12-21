@@ -18,7 +18,7 @@ abstract contract ICollateral {
         return address(this).balance;
     }
 
-    function lockCollateral(address sender, uint256 amount) internal {
+    function lockCollateral(address sender, uint256 amount) internal virtual {
         require(msg.value >= amount, "Invalid collateral");
         CollateralBalances[sender] = CollateralBalances[sender].add(amount);
         emit LockCollateral(sender, amount);
@@ -39,7 +39,7 @@ abstract contract ICollateral {
         require(sent, "Transfer failed.");
     }
 
-    function releaseCollateral(address sender, uint256 amount) internal {
+    function releaseCollateral(address sender, uint256 amount) internal virtual {
         release(sender, sender, amount);
         emit ReleaseCollateral(sender, amount);
     }
@@ -48,7 +48,7 @@ abstract contract ICollateral {
         address from,
         address to,
         uint256 amount
-    ) internal {
+    ) internal virtual {
         release(from, to, amount);
         emit SlashCollateral(from, to, amount);
     }
@@ -65,7 +65,7 @@ abstract contract ICollateral {
         return CollateralBalances[vaultId];
     }
 
-    function useCollateralInc(address vaultId, uint256 amount) internal {
+    function useCollateralInc(address vaultId, uint256 amount) internal virtual {
         CollateralUsed[vaultId] = CollateralUsed[vaultId].add(amount);
         require(
             CollateralBalances[vaultId] >= CollateralUsed[vaultId],
@@ -73,7 +73,7 @@ abstract contract ICollateral {
         );
     }
 
-    function useCollateralDec(address vaultId, uint256 amount) internal {
+    function useCollateralDec(address vaultId, uint256 amount) internal virtual {
         require(CollateralUsed[vaultId] >= amount, "Insufficient collateral");
         CollateralUsed[vaultId] = CollateralUsed[vaultId].sub(amount);
     }

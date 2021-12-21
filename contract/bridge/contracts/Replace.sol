@@ -7,10 +7,9 @@ import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import {Request} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
-import {ICollateral} from "./Collateral.sol";
-import {VaultRegistry} from "./VaultRegistry.sol";
+import "./IVaultRegistry.sol";
 
-abstract contract Replace is VaultRegistry, Request {
+abstract contract Replace is Request {
     //    using BTCUtils for bytes;
     //    using BytesLib for bytes;
 
@@ -72,6 +71,7 @@ abstract contract Replace is VaultRegistry, Request {
     }
 
     function _requestReplace(
+        IVaultRegistry vaultRegistry,
         address payable oldVaultId,
         uint256 btcAmount,
         uint256 griefingCollateral
@@ -83,7 +83,7 @@ abstract contract Replace is VaultRegistry, Request {
 
         // TODO: SECURITY CHECK (The oldVault MUST NOT be banned)
 
-        uint256 requestableTokens = VaultRegistry.requestableToBeReplacedTokens(
+        uint256 requestableTokens = vaultRegistry.requestableToBeReplacedTokens(
             oldVaultId
         );
         uint256 toBeReplacedIncrease = MathUpgradeable.min(requestableTokens, btcAmount);
@@ -91,7 +91,7 @@ abstract contract Replace is VaultRegistry, Request {
         uint256 replaceCollateralIncrease = griefingCollateral;
 
         if (btcAmount > 0) {
-            replaceCollateralIncrease = VaultRegistry.calculateCollateral(
+            replaceCollateralIncrease = vaultRegistry.calculateCollateral(
                 griefingCollateral,
                 toBeReplacedIncrease,
                 btcAmount
@@ -101,7 +101,7 @@ abstract contract Replace is VaultRegistry, Request {
         (
             uint256 totalToBeReplaced,
             uint256 totalGriefingCollateral
-        ) = VaultRegistry.tryIncreaseToBeReplacedTokens(
+        ) = vaultRegistry.tryIncreaseToBeReplacedTokens(
                 oldVaultId,
                 toBeReplacedIncrease,
                 replaceCollateralIncrease
@@ -121,7 +121,7 @@ abstract contract Replace is VaultRegistry, Request {
         );
 
         // Lock the oldVault’s griefing collateral. Note that this directly locks the amount
-        ICollateral.lockCollateral(oldVaultId, replaceCollateralIncrease);
+        vaultRegistry.lockCollateral(oldVaultId, replaceCollateralIncrease);
 
         emit RequestReplace(
             oldVaultId,
@@ -130,14 +130,14 @@ abstract contract Replace is VaultRegistry, Request {
         );
     }
 
-    function _withdrawReplace(address oldVaultId, uint256 btcAmount) internal {
+    function _withdrawReplace(IVaultRegistry vaultRegistry, address oldVaultId, uint256 btcAmount) internal {
         require(msg.sender == oldVaultId, "Sender should be old vault owner");
         // TODO: SECURITY CHECK (The oldVault MUST NOT be banned)
 
-        (uint256 withdrawnTokens, uint256 toWithdrawCollateral) = VaultRegistry
+        (uint256 withdrawnTokens, uint256 toWithdrawCollateral) = vaultRegistry
             .decreaseToBeReplacedTokens(oldVaultId, btcAmount);
 
-        ICollateral.releaseCollateral(oldVaultId, toWithdrawCollateral);
+        vaultRegistry.releaseCollateral(oldVaultId, toWithdrawCollateral);
 
         require(withdrawnTokens == 0, "Withdraw tokens is zero");
 
@@ -145,6 +145,7 @@ abstract contract Replace is VaultRegistry, Request {
     }
 
     function _acceptReplace(
+        IVaultRegistry vaultRegistry,
         address oldVaultId,
         address newVaultId,
         uint256 btcAmount,
@@ -161,14 +162,14 @@ abstract contract Replace is VaultRegistry, Request {
         // TODO: The newVault’s free balance MUST be enough to lock collateral.
         // TODO: SECURITY CHECK (The oldVault, newVault MUST NOT be banned)
 
-        Vault storage oldVault = VaultRegistry.vaults[oldVaultId];
-        Vault storage newVault = VaultRegistry.vaults[newVaultId];
+        (uint256 oldVaultBtcPublicKeyX,,,,,,,,) = vaultRegistry.vaults(oldVaultId);
+        (uint256 newVaultBtcPublicKeyX,,,,,,,,) = vaultRegistry.vaults(newVaultId);
 
-        require(oldVault.btcPublicKeyX != 0, "Vault does not exist");
-        require(newVault.btcPublicKeyX != 0, "Vault does not exist");
+        require(oldVaultBtcPublicKeyX != 0, "Vault does not exist");
+        require(newVaultBtcPublicKeyX != 0, "Vault does not exist");
 
         // decrease old-vault's to-be-replaced tokens
-        (uint256 redeemableTokens, uint256 griefingCollateral) = VaultRegistry
+        (uint256 redeemableTokens, uint256 griefingCollateral) = vaultRegistry
             .decreaseToBeReplacedTokens(oldVaultId, btcAmount);
 
         // TODO: check amount_btc is above the minimum
@@ -176,29 +177,29 @@ abstract contract Replace is VaultRegistry, Request {
         require(redeemableTokens >= dustValue, "Amount below dust amount");
 
         // Calculate and lock the new-vault's additional collateral
-        uint256 actualNewVaultCollateral = VaultRegistry.calculateCollateral(
+        uint256 actualNewVaultCollateral = vaultRegistry.calculateCollateral(
             collateral,
             redeemableTokens,
             btcAmount
         );
 
-        VaultRegistry.tryDepositCollateral(
+        vaultRegistry.tryDepositCollateral(
             newVaultId,
             actualNewVaultCollateral
         );
 
         // increase old-vault's to-be-redeemed tokens - this should never fail
-        VaultRegistry.tryIncreaseToBeRedeemedTokens(
+        vaultRegistry.tryIncreaseToBeRedeemedTokens(
             oldVaultId,
             redeemableTokens
         );
 
         // increase new-vault's to-be-issued tokens - this will fail if there is insufficient collateral
-        VaultRegistry.tryIncreaseToBeIssuedTokens(newVaultId, redeemableTokens);
+        vaultRegistry.tryIncreaseToBeIssuedTokens(newVaultId, redeemableTokens);
 
         uint256 replaceId = getReplaceId(oldVaultId);
 
-        address btcAddress = VaultRegistry.insertVaultDepositAddress(
+        address btcAddress = vaultRegistry.insertVaultDepositAddress(
             newVaultId,
             btcPublicKeyX,
             btcPublicKeyY,
@@ -234,7 +235,7 @@ abstract contract Replace is VaultRegistry, Request {
         );
     }
 
-    function _executeReplace(uint256 replaceId, bytes memory _vout) internal {
+    function _executeReplace(IVaultRegistry vaultRegistry, uint256 replaceId, bytes memory _vout) internal {
         // Retrieve the ReplaceRequest as per the replaceId parameter from Vaults in the VaultRegistry
         ReplaceRequest storage replace = replaceRequests[replaceId];
         require(
@@ -260,7 +261,7 @@ abstract contract Replace is VaultRegistry, Request {
 
         // decrease old-vault's issued & to-be-redeemed tokens, and
         // change new-vault's to-be-issued tokens to issued tokens
-        VaultRegistry.replaceTokens(
+        vaultRegistry.replaceTokens(
             oldVaultId,
             newVaultId,
             replace.amount,
@@ -268,7 +269,7 @@ abstract contract Replace is VaultRegistry, Request {
         );
 
         // if the old vault has not been liquidated, give it back its griefing collateral
-        ICollateral.releaseCollateral(oldVaultId, replace.griefingCollateral);
+        vaultRegistry.releaseCollateral(oldVaultId, replace.griefingCollateral);
 
         // Emit ExecuteReplace event.
         emit ExecuteReplace(replaceId, oldVaultId, newVaultId);

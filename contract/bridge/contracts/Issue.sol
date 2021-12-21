@@ -7,10 +7,9 @@ import "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import "./Request.sol";
 import "./TxValidate.sol";
-import "./Collateral.sol";
-import "./VaultRegistry.sol";
+import "./IVaultRegistry.sol";
 
-abstract contract Issue is VaultRegistry, Request {
+abstract contract Issue is Request {
     using BTCUtils for bytes;
     using BytesLib for bytes;
     using SafeMathUpgradeable for uint256;
@@ -93,6 +92,7 @@ abstract contract Issue is VaultRegistry, Request {
     }
 
     function _requestIssue(
+        IVaultRegistry vaultRegistry,
         address payable requester,
         uint256 amountRequested,
         address vaultId,
@@ -103,11 +103,11 @@ abstract contract Issue is VaultRegistry, Request {
             "Insufficient collateral"
         );
         require(
-            VaultRegistry.tryIncreaseToBeIssuedTokens(vaultId, amountRequested),
+            vaultRegistry.tryIncreaseToBeIssuedTokens(vaultId, amountRequested),
             "Amount requested exceeds vault limit"
         );
         uint256 issueId = getIssueId(requester);
-        address btcAddress = VaultRegistry.registerDepositAddress(
+        address btcAddress = vaultRegistry.registerDepositAddress(
             vaultId,
             issueId
         );
@@ -127,7 +127,7 @@ abstract contract Issue is VaultRegistry, Request {
             request.btcHeight = 0;
             request.status = RequestStatus.Pending;
         }
-        ICollateral.lockCollateral(
+        vaultRegistry.lockCollateral(
             request.requester,
             request.griefingCollateral
         );
@@ -142,6 +142,7 @@ abstract contract Issue is VaultRegistry, Request {
     }
 
     function _executeIssue(
+        IVaultRegistry vaultRegistry,
         address requester,
         uint256 issueId,
         bytes memory _vout
@@ -162,20 +163,20 @@ abstract contract Issue is VaultRegistry, Request {
             // only the requester of the issue can execute payments with different amounts
             require(msg.sender == request.requester, "Invalid executor");
             uint256 deficit = expectedTotalAmount - amountTransferred;
-            VaultRegistry.decreaseToBeIssuedTokens(request.vault, deficit);
-            uint256 releasedCollateral = VaultRegistry.calculateCollateral(
+            vaultRegistry.decreaseToBeIssuedTokens(request.vault, deficit);
+            uint256 releasedCollateral = vaultRegistry.calculateCollateral(
                 request.griefingCollateral,
                 amountTransferred,
                 expectedTotalAmount
             );
-            ICollateral.releaseCollateral(
+            vaultRegistry.releaseCollateral(
                 request.requester,
                 releasedCollateral
             );
             uint256 slashedCollateral = request.griefingCollateral.sub(
                 releasedCollateral
             );
-            ICollateral.slashCollateral(
+            vaultRegistry.slashCollateral(
                 request.requester,
                 request.vault,
                 slashedCollateral
@@ -187,14 +188,14 @@ abstract contract Issue is VaultRegistry, Request {
                 slashedCollateral
             );
         } else {
-            ICollateral.releaseCollateral(
+            vaultRegistry.releaseCollateral(
                 request.requester,
                 request.griefingCollateral
             );
             if (amountTransferred > expectedTotalAmount) {
                 uint256 surplusBtc = amountTransferred.sub(expectedTotalAmount);
                 if (
-                    VaultRegistry.tryIncreaseToBeIssuedTokens(
+                    vaultRegistry.tryIncreaseToBeIssuedTokens(
                         request.vault,
                         surplusBtc
                     )
@@ -208,7 +209,7 @@ abstract contract Issue is VaultRegistry, Request {
             }
         }
         uint256 total = request.amount.add(request.fee);
-        VaultRegistry.issueTokens(request.vault, total);
+        vaultRegistry.issueTokens(request.vault, total);
         issueOneBTC(request.vault, request.fee);
         issueOneBTC(request.requester, request.amount);
         request.status = RequestStatus.Completed;
@@ -224,7 +225,7 @@ abstract contract Issue is VaultRegistry, Request {
         );
     }
 
-    function _cancelIssue(address requester, uint256 issueId) internal {
+    function _cancelIssue(IVaultRegistry vaultRegistry, address requester, uint256 issueId) internal {
         IssueRequest storage request = issueRequests[requester][issueId];
         require(
             request.status == RequestStatus.Pending,
@@ -235,12 +236,12 @@ abstract contract Issue is VaultRegistry, Request {
             "Time not expired"
         );
         request.status = RequestStatus.Cancelled;
-        ICollateral.slashCollateral(
+        vaultRegistry.slashCollateral(
             request.requester,
             request.vault,
             request.griefingCollateral
         );
-        VaultRegistry.decreaseToBeIssuedTokens(
+        vaultRegistry.decreaseToBeIssuedTokens(
             request.vault,
             request.amount + request.fee
         );

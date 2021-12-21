@@ -10,15 +10,19 @@ import {Redeem} from "./Redeem.sol";
 import {Replace} from "./Replace.sol";
 import {IRelay} from "./IRelay.sol";
 import "./IExchangeRateOracle.sol";
+import "./IVaultRegistry.sol";
 
 contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
     IRelay public relay;
+    IVaultRegistry public vaultRegistry;
+    IExchangeRateOracle oracle;
 
-    function initialize(IRelay _relay, IExchangeRateOracle _oracle) external initializer {
+    function initialize(IRelay _relay, IExchangeRateOracle _oracle, IVaultRegistry _vaultRegistry) external initializer {
         __ERC20_init("Harmony Bitcoin", "1BTC");
         _setupDecimals(8);
         relay = _relay;
         oracle = _oracle;
+        vaultRegistry = _vaultRegistry;
     }
 
     function verifyTx(
@@ -38,8 +42,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
             1,
             true
         );
-        TransactionUtils.Transaction memory btcTx =
-        TransactionUtils.extractTx(rawTx);
+        TransactionUtils.Transaction memory btcTx = TransactionUtils.extractTx(rawTx);
         require(btcTx.locktime == 0, "Locktime must be zero");
         // check version?
         // btcTx.version
@@ -50,7 +53,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         external
         payable
     {
-        Issue._requestIssue(msg.sender, amountRequested, vaultId, msg.value);
+        Issue._requestIssue(vaultRegistry, msg.sender, amountRequested, vaultId, msg.value);
     }
 
     function executeIssue(
@@ -66,11 +69,11 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         bytes memory _vout =
         verifyTx(height, index, rawTx, header, merkleProof);
 
-        Issue._executeIssue(requester, issueId, _vout);
+        Issue._executeIssue(vaultRegistry, requester, issueId, _vout);
     }
 
     function cancelIssue(address requester, uint256 issueId) external {
-        Issue._cancelIssue(requester, issueId);
+        Issue._cancelIssue(vaultRegistry, requester, issueId);
     }
 
     function requestRedeem(
@@ -78,7 +81,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         address btcAddress,
         address vaultId
     ) external {
-        Redeem._requestRedeem(msg.sender, amountOneBtc, btcAddress, vaultId);
+        Redeem._requestRedeem(vaultRegistry, msg.sender, amountOneBtc, btcAddress, vaultId);
     }
 
     function executeRedeem(
@@ -93,11 +96,11 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         bytes memory _vout =
         verifyTx(height, index, rawTx, header, merkleProof);
 
-        Redeem._executeRedeem(requester, redeemId, _vout);
+        Redeem._executeRedeem(vaultRegistry, requester, redeemId, _vout);
     }
 
     function cancelRedeem(address requester, uint256 redeemId) external {
-        Redeem._cancelRedeem(requester, redeemId);
+        Redeem._cancelRedeem(vaultRegistry, requester, redeemId);
     }
 
     function lockOneBTC(address from, uint256 amount)
@@ -130,7 +133,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 btcAmount,
         uint256 griefingCollateral
     ) external payable {
-        Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
+        Replace._requestReplace(vaultRegistry, oldVaultId, btcAmount, griefingCollateral);
     }
 
     function acceptReplace(
@@ -142,6 +145,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 btcPublicKeyY
     ) external payable {
         Replace._acceptReplace(
+            vaultRegistry,
             oldVaultId,
             newVaultId,
             btcAmount,
@@ -152,6 +156,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
     }
 
     function executeReplace(
+        IVaultRegistry vaultRegistry,
         uint256 replaceId,
         bytes calldata merkleProof,
         bytes calldata rawTx, // avoid compiler error: stack too deep
@@ -161,6 +166,6 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         bytes calldata header
     ) external {
         bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
-        Replace._executeReplace(replaceId, _vout);
+        Replace._executeReplace(vaultRegistry, replaceId, _vout);
     }
 }
