@@ -70,6 +70,7 @@ abstract contract Issue is Request {
 
     function getIssueGriefingCollateral(uint256 amountBtc)
         private
+        pure
         returns (uint256)
     {
         return amountBtc;

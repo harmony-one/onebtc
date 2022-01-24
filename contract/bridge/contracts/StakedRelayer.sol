@@ -4,10 +4,7 @@ import {IRelay} from "./IRelay.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
-
-interface IVaultRegistry {
-    function liquidateTheftVault(address vaultId, address reporterId) external;
-}
+import "./IVaultRegistry.sol";
 
 contract StakedRelayer is Initializable, OwnableUpgradeable {
     using BTCUtils for bytes;

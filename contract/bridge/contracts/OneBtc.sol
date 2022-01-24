@@ -31,7 +31,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         bytes calldata rawTx,
         bytes calldata header,
         bytes calldata merkleProof
-    ) public returns (bytes memory) {
+    ) public view returns (bytes memory) {
         bytes32 txId = rawTx.hash256();
         relay.verifyTx(
             height,
@@ -107,7 +107,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         internal
         override(Redeem)
     {
-        ERC20Upgradeable._transfer(msg.sender, address(this), amount);
+        ERC20Upgradeable._transfer(from, address(this), amount);
     }
 
     function burnLockedOneBTC(uint256 amount) internal override(Redeem) {
@@ -156,7 +156,6 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
     }
 
     function executeReplace(
-        IVaultRegistry vaultRegistry,
         uint256 replaceId,
         bytes calldata merkleProof,
         bytes calldata rawTx, // avoid compiler error: stack too deep

@@ -25,9 +25,9 @@ contract ExchangeRateOracleWrapper is Initializable {
     }
 
     /**
-    @notice Set the latest (aggregate) BTC/ONE exchange rate. This function invokes a check of vault collateral rates in the Vault Registry component.
-    @param rate uint256 BTC/ONE exchange rate.
-    */
+     * @notice Set the latest (aggregate) BTC/ONE exchange rate. This function invokes a check of vault collateral rates in the Vault Registry component.
+     * @param rate uint256 BTC/ONE exchange rate.
+     */
     function setExchangeRate(uint256 rate) public {
         exchangeRate = rate;
         lastExchangeRateTime = now;
@@ -36,9 +36,9 @@ contract ExchangeRateOracleWrapper is Initializable {
     }
 
     /**
-    @notice Returns the latest BTC/ONE exchange rate, as received from the external data sources.
-    @return uint256 (aggregate) exchange rate value
-    */
+     * @notice Returns the latest BTC/ONE exchange rate, as received from the external data sources.
+     * @return uint256 (aggregate) exchange rate value
+     */
     function getExchangeRate() public view returns (uint256) {
         require(
             now - lastExchangeRateTime > MAX_DELAY,

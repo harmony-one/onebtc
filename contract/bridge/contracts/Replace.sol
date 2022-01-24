@@ -57,13 +57,14 @@ abstract contract Replace is Request {
             );
     }
 
-    function getReplaceBtcDustValue() private returns (uint256) {
+    function getReplaceBtcDustValue() private pure returns (uint256) {
         // TODO
         return 0;
     }
 
     function getReplaceGriefingCollateral(uint256 amountBtc)
         private
+        pure
         returns (uint256)
     {
         // TODO

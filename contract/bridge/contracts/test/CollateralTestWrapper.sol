@@ -5,11 +5,11 @@ import {ICollateral} from "../Collateral.sol";
 
 contract CollateralTestWrapper is ICollateral {
     function testLockCollateral(address sender, uint256 amount) public payable {
-        return lockCollateral(sender, amount);
+        return _lockCollateral(sender, amount);
     }
 
     function testReleaseCollateral(address sender, uint256 amount) public {
-        return releaseCollateral(sender, amount);
+        return _releaseCollateral(sender, amount);
     }
 
     function testSlashCollateral(
@@ -17,7 +17,7 @@ contract CollateralTestWrapper is ICollateral {
         address to,
         uint256 amount
     ) public {
-        return slashCollateral(from, to, amount);
+        return _slashCollateral(from, to, amount);
     }
 
     function testGetFreeCollateral(address vaultId)
@@ -25,14 +25,14 @@ contract CollateralTestWrapper is ICollateral {
         view
         returns (uint256)
     {
-        return getFreeCollateral(vaultId);
+        return _getFreeCollateral(vaultId);
     }
 
     function testUseCollateralInc(address vaultId, uint256 amount) public {
-        return useCollateralInc(vaultId, amount);
+        return _useCollateralInc(vaultId, amount);
     }
 
     function testUseCollateralDec(address vaultId, uint256 amount) public {
-        return useCollateralDec(vaultId, amount);
+        return _useCollateralDec(vaultId, amount);
     }
 }

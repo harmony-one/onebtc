@@ -3,19 +3,6 @@
 pragma solidity 0.6.12;
 
 interface IVaultRegistry {
-    // VaultRegistry
-    struct Vault {
-        uint256 btcPublicKeyX;
-        uint256 btcPublicKeyY;
-        uint256 collateral;
-        uint256 issued;
-        uint256 toBeIssued;
-        uint256 toBeRedeemed;
-        uint256 replaceCollateral;
-        uint256 toBeReplaced;
-        uint256 liquidatedCollateral;
-    }
-
     // // set functions for Vault
     // function setBtcPublicKeyX(address, uint256) external;
     // function setBtcPublicKeyY(address, uint256) external;
@@ -30,7 +17,7 @@ interface IVaultRegistry {
     // // set function for vaultDepositAddress
     // function setVaultDepositAddress(address, address, bool) external;
 
-    // interfaces for VaultRegistry
+    // interfaces used by VaultRegistry contract
     function vaults(address) external returns(uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256);
     function vaultDepositAddress(address, address) external returns(bool);
     function registerVault(uint256, uint256) external;
@@ -55,4 +42,7 @@ interface IVaultRegistry {
     function slashCollateral(address, address, uint256) external;
     function useCollateralInc(address, uint256) external;
     function useCollateralDec(address, uint256) external;
+
+    // interface used by StakedRelayer contract
+    function liquidateTheftVault(address vaultId, address reporterId) external;
 }

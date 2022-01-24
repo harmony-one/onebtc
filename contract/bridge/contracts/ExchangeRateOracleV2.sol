@@ -50,9 +50,9 @@ contract ExchangeRateOracleV2 is Initializable {
     }
 
     /**
-    @notice Returns the latest BTC/ONE exchange rate, as received from the external data sources.
-    @return uint256 (aggregate) exchange rate value
-    */
+     * @notice Returns the latest BTC/ONE exchange rate, as received from the external data sources.
+     * @return uint256 (aggregate) exchange rate value
+     */
     function getExchangeRate() private view returns (uint256) {
         AggregatorV3Interface oneUSD = AggregatorV3Interface(
             0xcEe686F89bc0dABAd95AEAAC980aE1d97A075FAD

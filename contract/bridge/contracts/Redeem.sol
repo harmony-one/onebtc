@@ -63,11 +63,11 @@ abstract contract Redeem is Request {
             );
     }
 
-    function getRedeemCollateral(uint256 amountBtc) private returns (uint256) {
+    function getRedeemCollateral(uint256 amountBtc) private pure returns (uint256) {
         return amountBtc;
     }
 
-    function getCurrentInclusionFee() private returns (uint256) {
+    function getCurrentInclusionFee() private pure returns (uint256) {
         return 0;
     }
 
