@@ -1,4 +1,5 @@
 const BN = require("bn.js");
+const { expectRevert } = require("@openzeppelin/test-helpers");
 const CollateralTestWrapper = artifacts.require("CollateralTestWrapper");
 
 web3.extend({
@@ -33,22 +34,15 @@ contract("Collateral unit test", (accounts) => {
   });
 
   it("Error on lockCollateral with 0 amount", async function () {
-    let errorMessage = "";
-
-    try {
-      await this.CollateralTestWrapper.testLockCollateral(
-        this.vaultId,
-        this.lockAmount,
+    const lockAmount = 0;
+    await expectRevert(this.CollateralTestWrapper.testLockCollateral(
+      this.vaultId,
+      lockAmount,
         {
           from: accounts[0],
           value: 0,
         }
-      );
-    } catch (e) {
-      errorMessage = e.message.split("Reason given: ")[1];
-    }
-
-    assert.equal(errorMessage, "Invalid collateral.");
+    ), 'Invalid collateral');
   });
 
   it("LockCollateral with 1 Gwei amount", async function () {
