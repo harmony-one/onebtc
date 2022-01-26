@@ -74,7 +74,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
             merkleProof
         );
 
-        Issue._executeIssue(requester, issueId, _vout, outputIndex);
+        Issue._executeIssue(vaultRegistry, requester, issueId, _vout, outputIndex);
     }
 
     function cancelIssue(address requester, uint256 issueId) external {

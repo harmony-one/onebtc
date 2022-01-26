@@ -9,7 +9,8 @@ contract TxValidateMock {
         bytes memory txVout,
         uint256 minimumBtc,
         address recipientBtcAddress,
-        uint256 opReturnId
+        uint256 opReturnId,
+        uint256 outputIndex
     ) public pure returns (uint256) {
         return
             TxValidate.validateTransaction(
@@ -17,7 +18,7 @@ contract TxValidateMock {
                 minimumBtc,
                 recipientBtcAddress,
                 opReturnId,
-                0
+                outputIndex
             );
     }
 }
