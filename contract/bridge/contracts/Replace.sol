@@ -252,7 +252,8 @@ abstract contract Replace is Request {
             _vout,
             0,
             replace.btcAddress,
-            replaceId
+            replaceId,
+            0
         );
 
         require(

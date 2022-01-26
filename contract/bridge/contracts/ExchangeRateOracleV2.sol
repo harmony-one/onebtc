@@ -1,9 +1,7 @@
 /**
 SPDX-License-Identifier: MIT
-
 Exchange Rate Oracle Module
 https://onebtc-dev.web.app/spec/oracle.html
-
 The Exchange Rate Oracle receives a continuous data feed on the exchange rate between BTC and ONE.
 */
 
@@ -33,32 +31,16 @@ contract ExchangeRateOracleV2 is Initializable {
         authorizedOracles[provider] = true;
     }
 
-    function setExchangeRate(uint256 btcPrice, uint256 onePrice) public {
-        address oracle = msg.sender;
-        require(authorizedOracles[oracle], "Sender is not authorized");
-
-        uint256 rate = btcPrice.div(onePrice);
-        exchangeRate = rate;
-
-        if (lastExchangeRateTime - now > MAX_DELAY) {
-            emit recoverFromORACLEOFFLINE(oracle, rate);
-        }
-
-        lastExchangeRateTime = now;
-
-        emit SetExchangeRate(oracle, rate);
-    }
-
     /**
-     * @notice Returns the latest BTC/ONE exchange rate, as received from the external data sources.
-     * @return uint256 (aggregate) exchange rate value
-     */
+    @notice Returns the latest BTC/ONE exchange rate, as received from the external data sources.
+    @return uint256 (aggregate) exchange rate value
+    */
     function getExchangeRate() private view returns (uint256) {
         AggregatorV3Interface oneUSD = AggregatorV3Interface(
-            0xcEe686F89bc0dABAd95AEAAC980aE1d97A075FAD
+            0xdCD81FbbD6c4572A69a534D8b8152c562dA8AbEF
         );
         AggregatorV3Interface btcUSD = AggregatorV3Interface(
-            0xEF637736B220a58C661bfF4b71e03ca898DCC0Bd
+            0x3C41439Eb1bF3BA3b2C3f8C921088b267f8d11f4
         );
         (, int256 onePrice, , uint256 oneTimeStamp, ) = oneUSD
             .latestRoundData();

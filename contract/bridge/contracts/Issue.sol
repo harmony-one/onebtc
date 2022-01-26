@@ -146,7 +146,8 @@ abstract contract Issue is Request {
         IVaultRegistry vaultRegistry,
         address requester,
         uint256 issueId,
-        bytes memory _vout
+        bytes memory _vout,
+        uint256 outputIndex
     ) internal {
         IssueRequest storage request = issueRequests[requester][issueId];
         require(
@@ -157,7 +158,8 @@ abstract contract Issue is Request {
             _vout,
             0,
             request.btcAddress,
-            0x0
+            0x0,
+            outputIndex
         );
         uint256 expectedTotalAmount = request.amount.add(request.fee);
         if (amountTransferred < expectedTotalAmount) {

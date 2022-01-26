@@ -132,7 +132,8 @@ abstract contract Redeem is Request {
             _vout,
             request.amountBtc,
             request.btcAddress,
-            redeemId
+            redeemId,
+            0
         );
         burnLockedOneBTC(request.amountBtc);
         releaseLockedOneBTC(request.vault, request.fee);
