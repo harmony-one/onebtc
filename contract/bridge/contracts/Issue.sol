@@ -158,7 +158,7 @@ abstract contract Issue is Request {
             _vout,
             0,
             request.btcAddress,
-            0x0,
+            0x0, // will validate only output with outputIndex
             outputIndex
         );
         uint256 expectedTotalAmount = request.amount.add(request.fee);
