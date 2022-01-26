@@ -71,10 +71,11 @@ contract("issue/redeem test", accounts => {
         const btcTx = issueTxMock(issueId, btcBase58, IssueAmount);
         const btcBlockNumberMock = 1000;
         const btcTxIndexMock = 2;
-        const btcHeightMock = btcBlockNumberMock<<32;
+        const heightAndIndex = (btcBlockNumberMock << 32) | btcTxIndexMock;
         const headerMock = Buffer.alloc(0);
         const proofMock = Buffer.alloc(0);
-        await this.OneBtc.executeIssue(this.issueRequester, issueId, proofMock, btcTx.toBuffer(), btcHeightMock, btcTxIndexMock, headerMock);
+        const ouputIndexMock = 0;
+        await this.OneBtc.executeIssue(this.issueRequester, issueId, proofMock, btcTx.toBuffer(), heightAndIndex, headerMock, ouputIndexMock);
         const OneBtcBalance = await this.OneBtc.balanceOf(this.issueRequester);
         const OneBtcBalanceVault = await this.OneBtc.balanceOf(this.vaultId);
         assert.equal(OneBtcBalance.toString(), IssueEvent.args.amount.toString());

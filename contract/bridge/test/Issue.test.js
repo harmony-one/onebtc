@@ -88,7 +88,7 @@ contract("Issue unit test", (accounts) => {
     }), 'Amount requested exceeds vault limit');
   });
 
-  it("Issue 1 BTC", async function () {
+  it("Issue 0.1 BTC", async function () {
     const IssueAmount = new BN('10000000'); // 0.1e8, 0.1 OneBtc
     const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {
       from: this.issueRequester,
@@ -106,17 +106,18 @@ contract("Issue unit test", (accounts) => {
     const btcTx = issueTxMock(issueId, btcBase58, IssueAmount.toNumber());
     const btcBlockNumberMock = 1000;
     const btcTxIndexMock = 2;
-    const btcTxHeightMock = btcBlockNumberMock << 32;
+    const heightAndIndex = (btcBlockNumberMock << 32) | btcTxIndexMock;
     const headerMock = Buffer.alloc(0);
     const proofMock = Buffer.alloc(0);
+    const ouputIndexMock = 0;
     const ExecuteReq = await this.OneBtc.executeIssue(
       this.issueRequester,
       issueId,
       proofMock,
       btcTx.toBuffer(),
-      btcTxHeightMock,
-      btcTxIndexMock,
-      headerMock
+      heightAndIndex,
+      headerMock,
+      ouputIndexMock
     );
 
     this.OneBtcBalance = await this.OneBtc.balanceOf(this.issueRequester);
@@ -135,9 +136,9 @@ contract("Issue unit test", (accounts) => {
       issueId,
       proofMock,
       btcTx.toBuffer(),
-      btcTxIndexMock,
-      btcTxIndexMock,
-      headerMock
+      heightAndIndex,
+      headerMock,
+      ouputIndexMock
     ), 'Request is already completed');
 
     // should not cancel the request which has been already completed
@@ -165,18 +166,18 @@ contract("Issue unit test", (accounts) => {
     const btcTx = issueTxMock(issueId, btcBase58, IssueAmount / 4);
     const btcBlockNumberMock = 1000;
     const btcTxIndexMock = 2;
-    const btcTxHeightMock = btcBlockNumberMock << 32;
+    const heightAndIndex = (btcBlockNumberMock << 32) | btcTxIndexMock;
     const headerMock = Buffer.alloc(0);
     const proofMock = Buffer.alloc(0);
-
+    const ouputIndexMock = 0;
     await expectRevert(this.OneBtc.executeIssue(
       this.issueRequester,
       issueId,
       proofMock,
       btcTx.toBuffer(),
-      btcTxHeightMock,
-      btcTxIndexMock,
-      headerMock
+      heightAndIndex,
+      headerMock,
+      ouputIndexMock
     ), 'Invalid executor');
   });
   
@@ -198,17 +199,18 @@ contract("Issue unit test", (accounts) => {
     const btcTx = issueTxMock(issueId, btcBase58, IssueAmount / 4);
     const btcBlockNumberMock = 1000;
     const btcTxIndexMock = 2;
-    const btcTxHeightMock = btcBlockNumberMock << 32;
+    const heightAndIndex = (btcBlockNumberMock << 32) | btcTxIndexMock;
     const headerMock = Buffer.alloc(0);
     const proofMock = Buffer.alloc(0);
+    const ouputIndexMock = 0;
     const ExecuteReq = await this.OneBtc.executeIssue(
       this.issueRequester,
       issueId,
       proofMock,
       btcTx.toBuffer(),
-      btcTxHeightMock,
-      btcTxIndexMock,
+      heightAndIndex,
       headerMock,
+      ouputIndexMock,
       {
         from: this.issueRequester
       }
