@@ -28,7 +28,7 @@ contract("VaultRegistry unit test", (accounts) => {
     this.VaultRegistry = await deployProxy(VaultRegistryWrapper, [this.ExchangeRateOracleWrapper.address]);
 
     // set OneBtc address with accounts[0]
-    await this.VaultRegistry.setOneBtcAddress(accounts[0]);
+    await this.VaultRegistry.updateOneBtcAddress(accounts[0]);
 
     this.vaultId = accounts[1];
     this.issueRequester = accounts[2];

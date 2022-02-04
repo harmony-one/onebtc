@@ -37,7 +37,7 @@ contract("Replace unit test", (accounts) => {
     this.OneBtc = await deployProxy(OneBtc, [this.RelayMock.address, this.ExchangeRateOracleWrapper.address, this.VaultRegistry.address]);
 
     // set OneBtc address to VaultRegistry
-    this.VaultRegistry.setOneBtcAddress(this.OneBtc.address);
+    this.VaultRegistry.updateOneBtcAddress(this.OneBtc.address);
 
     // set BTC/ONE exchange rate
     await this.ExchangeRateOracleWrapper.setExchangeRate(10); // 1 OneBtc = 10 ONE

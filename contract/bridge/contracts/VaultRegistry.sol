@@ -38,7 +38,6 @@ contract VaultRegistry is ReentrancyGuardUpgradeable, OwnableUpgradeable, IColla
         uint256 btcPublicKeyX,
         uint256 btcPublicKeyY
     );
-
     event VaultPublicKeyUpdate(address indexed vaultId, uint256 x, uint256 y);
     event IncreaseToBeIssuedTokens(address indexed vaultId, uint256 amount);
     event IncreaseToBeRedeemedTokens(address indexed vaultId, uint256 amount);
@@ -54,6 +53,8 @@ contract VaultRegistry is ReentrancyGuardUpgradeable, OwnableUpgradeable, IColla
         uint256 collateral
     );
     event LiquidateVault();
+    event UpdateOneBtcAddress(address indexed by, address indexed oldOneBtc, address indexed newOneBtc);
+    event UpdateOracleAddress(address indexed by, address indexed oldOracle, address indexed newOracle);
 
     modifier onlyOneBtc() {
         require(msg.sender == oneBtcAddress, "OnlyOneBtc");
@@ -67,8 +68,18 @@ contract VaultRegistry is ReentrancyGuardUpgradeable, OwnableUpgradeable, IColla
         oracle = _oracle;
     }
 
-    function setOneBtcAddress(address _oneBtcAddress) public onlyOwner {
+    function updateOneBtcAddress(address _oneBtcAddress) public onlyOwner {
+        UpdateOneBtcAddress(msg.sender, oneBtcAddress, _oneBtcAddress);
+
+        require(_oneBtcAddress != address(0), "Zero address for OneBtc");
         oneBtcAddress = _oneBtcAddress;
+    }
+
+    function updateOracleAddress(IExchangeRateOracle _oracle) external onlyOwner {
+        UpdateOracleAddress(msg.sender, address(oracle), address(_oracle));
+
+        require(address(_oracle) != address(0), "Zero address for Oracle");
+        oracle = _oracle;
     }
 
     function registerVault(uint256 btcPublicKeyX, uint256 btcPublicKeyY)

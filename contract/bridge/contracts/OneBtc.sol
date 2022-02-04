@@ -2,6 +2,7 @@
 
 pragma solidity 0.6.12;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {ValidateSPV} from "@interlay/bitcoin-spv-sol/contracts/ValidateSPV.sol";
 import {TransactionUtils} from "./TransactionUtils.sol";
@@ -12,12 +13,17 @@ import {IRelay} from "./IRelay.sol";
 import "./IExchangeRateOracle.sol";
 import "./IVaultRegistry.sol";
 
-contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
+contract OneBtc is OwnableUpgradeable, ERC20Upgradeable, Issue, Redeem, Replace {
+    event UpdateRelayAddress(address indexed by, address indexed oldRelay, address indexed newRelay);
+    event UpdateOracleAddress(address indexed by, address indexed oldOracle, address indexed newOracle);
+    event UpdateVaultRegistryAddress(address indexed by, address oldVaultRegistry, address indexed newVaultRegistry);
+
     IRelay public relay;
     IVaultRegistry public vaultRegistry;
     IExchangeRateOracle oracle;
 
     function initialize(IRelay _relay, IExchangeRateOracle _oracle, IVaultRegistry _vaultRegistry) external initializer {
+        __Ownable_init();
         __ERC20_init("Harmony Bitcoin", "1BTC");
         _setupDecimals(8);
         relay = _relay;
@@ -171,5 +177,26 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
     ) external {
         bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
         Replace._executeReplace(vaultRegistry, replaceId, _vout);
+    }
+
+    function updateRelayAddress(IRelay _relay) external onlyOwner {
+        UpdateRelayAddress(msg.sender, address(relay), address(_relay));
+
+        require(address(_relay) != address(0), "Zero address for Relay");
+        relay = _relay;
+    }
+
+    function updateOracleAddress(IExchangeRateOracle _oracle) external onlyOwner {
+        UpdateOracleAddress(msg.sender, address(oracle), address(_oracle));
+
+        require(address(_oracle) != address(0), "Zero address for Oracle");
+        oracle = _oracle;
+    }
+
+    function updateVaultRegistryAddress(IVaultRegistry _vaultRegistry) external onlyOwner {
+        UpdateVaultRegistryAddress(msg.sender, address(vaultRegistry), address(_vaultRegistry));
+
+        require(address(_vaultRegistry) != address(0), "Zero addess for VaultRegistry");
+        vaultRegistry = _vaultRegistry;
     }
 }
