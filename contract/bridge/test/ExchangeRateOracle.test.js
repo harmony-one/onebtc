@@ -2,7 +2,9 @@ const BN = require("bn.js");
 const { expectRevert } = require("@openzeppelin/test-helpers");
 const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 const { deployProxy } = require("@openzeppelin/truffle-upgrades");
-const ExchangeRateOracleWrapper = artifacts.require("ExchangeRateOracleWrapper");
+const ExchangeRateOracleWrapper = artifacts.require(
+  "ExchangeRateOracleWrapper"
+);
 
 web3.extend({
   property: "miner",
@@ -22,7 +24,9 @@ web3.extend({
 
 contract("ExchangeRateOracle unit test", (accounts) => {
   before(async function () {
-    this.ExchangeRateOracleWrapper = await deployProxy(ExchangeRateOracleWrapper);
+    this.ExchangeRateOracleWrapper = await deployProxy(
+      ExchangeRateOracleWrapper
+    );
   });
 
   it("setExchangeRate, getExchangeRate", async function () {
@@ -34,7 +38,10 @@ contract("ExchangeRateOracle unit test", (accounts) => {
     const req = await this.ExchangeRateOracleWrapper.setExchangeRate(100);
 
     // check exchange rate, reverted with `ERR_INVALID_ORACLE_SOURCE` due to the MAX_DELAY limit
-    await expectRevert(this.ExchangeRateOracleWrapper.getExchangeRate(), 'ERR_MISSING_EXCHANGE_RATE');
+    await expectRevert(
+      this.ExchangeRateOracleWrapper.getExchangeRate(),
+      "ERR_MISSING_EXCHANGE_RATE"
+    );
     const event = req.logs.filter((log) => log.event == "SetExchangeRate")[0];
     assert.equal(event.args.exchangeRate, 100);
 
@@ -48,22 +55,26 @@ contract("ExchangeRateOracle unit test", (accounts) => {
   });
 
   it("collateralToWrapped", async function () {
-    const amount = new BN('1000000000000000000'); // 1e18
-    const collateralToWrapped = await this.ExchangeRateOracleWrapper.collateralToWrapped(amount);
-    
+    const amount = new BN("1000000000000000000"); // 1e18
+    const collateralToWrapped =
+      await this.ExchangeRateOracleWrapper.collateralToWrapped(amount);
+
     // check collateralToWrapped
     const exchangeRate = await this.ExchangeRateOracleWrapper.getExchangeRate();
-    const expectedWrapped = amount.div(exchangeRate).div(new BN('10000000000'));
+    const expectedWrapped = amount.div(exchangeRate).div(new BN("10000000000"));
     assert.equal(collateralToWrapped.toString(), expectedWrapped.toString());
   });
 
   it("wrappedToCollateral", async function () {
-    const amount = new BN('100000000'); // 1e8
-    const wrappedToCollateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(amount);
-    
+    const amount = new BN("100000000"); // 1e8
+    const wrappedToCollateral =
+      await this.ExchangeRateOracleWrapper.wrappedToCollateral(amount);
+
     // check collateralToWrapped
     const exchangeRate = await this.ExchangeRateOracleWrapper.getExchangeRate();
-    const expectedCollateral = amount.mul(exchangeRate).mul(new BN('10000000000'));
+    const expectedCollateral = amount
+      .mul(exchangeRate)
+      .mul(new BN("10000000000"));
     assert.equal(wrappedToCollateral.toString(), expectedCollateral.toString());
   });
 });
