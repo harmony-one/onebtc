@@ -1,9 +1,7 @@
 /**
 SPDX-License-Identifier: MIT
-
 Exchange Rate Oracle Module
 https://onebtc-dev.web.app/spec/oracle.html
-
 The Exchange Rate Oracle receives a continuous data feed on the exchange rate between BTC and ONE.
 */
 

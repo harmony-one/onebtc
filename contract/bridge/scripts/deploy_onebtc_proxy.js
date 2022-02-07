@@ -11,10 +11,15 @@ async function main() {
         process.env.EXCHANGE_RATE_ORACLE
     );
 
-    const OneBtc = await ethers.getContractFactory("OneBtc");
-    const oneBtc = await upgrades.deployProxy(OneBtc, [relay.address, oracle.address], { initializer: "initialize" });
+    const VaultRegistry = await ethers.getContractFactory("VaultRegistry");
+    const vaultRegistry = await upgrades.deployProxy(VaultRegistry, [exchangeRateOracle.address]);
+    await vaultRegistry.deployed();
+    console.log("VaultRegistry contract deployed to: ", vaultRegistry.address);
 
-    console.log("OneBtc deployed to:", oneBtc.address);
+    const OneBtc = await ethers.getContractFactory("OneBtc");
+    const oneBtc = await upgrades.deployProxy(OneBtc, [relayMock.address, exchangeRateOracle.address, vaultRegistry.address]);
+    await oneBtc.deployed();
+    console.log("OneBtc contract deployed to: ", oneBtc.address);
 }
 
 main()

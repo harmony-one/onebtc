@@ -6,10 +6,9 @@ import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
 import {Request} from "./Request.sol";
 import {TxValidate} from "./TxValidate.sol";
-import {ICollateral} from "./Collateral.sol";
-import {VaultRegistry} from "./VaultRegistry.sol";
+import "./IVaultRegistry.sol";
 
-abstract contract Redeem is VaultRegistry, Request {
+abstract contract Redeem is Request {
     using BTCUtils for bytes;
     using BytesLib for bytes;
 
@@ -64,15 +63,16 @@ abstract contract Redeem is VaultRegistry, Request {
             );
     }
 
-    function getRedeemCollateral(uint256 amountBtc) private returns (uint256) {
+    function getRedeemCollateral(uint256 amountBtc) private pure returns (uint256) {
         return amountBtc;
     }
 
-    function getCurrentInclusionFee() private returns (uint256) {
+    function getCurrentInclusionFee() private pure returns (uint256) {
         return 0;
     }
 
     function _requestRedeem(
+        IVaultRegistry vaultRegistry,
         address requester,
         uint256 amountOneBtc,
         address btcAddress,
@@ -86,7 +86,7 @@ abstract contract Redeem is VaultRegistry, Request {
         uint256 redeemId = getRedeemId(requester);
 
         require(
-            VaultRegistry.tryIncreaseToBeRedeemedTokens(vaultId, toBeBurnedBtc),
+            vaultRegistry.tryIncreaseToBeRedeemedTokens(vaultId, toBeBurnedBtc),
             "Insufficient tokens committed"
         );
         // TODO: decrease collateral
@@ -106,7 +106,7 @@ abstract contract Redeem is VaultRegistry, Request {
             //request.btcHeight
             request.status = RequestStatus.Pending;
         }
-        ICollateral.useCollateralInc(vaultId, request.amountOne);
+        vaultRegistry.useCollateralInc(vaultId, request.amountOne);
         emit RedeemRequested(
             redeemId,
             requester,
@@ -118,6 +118,7 @@ abstract contract Redeem is VaultRegistry, Request {
     }
 
     function _executeRedeem(
+        IVaultRegistry vaultRegistry,
         address requester,
         uint256 redeemId,
         bytes memory _vout
@@ -137,8 +138,8 @@ abstract contract Redeem is VaultRegistry, Request {
         burnLockedOneBTC(request.amountBtc);
         releaseLockedOneBTC(request.vault, request.fee);
         request.status = RequestStatus.Completed;
-        ICollateral.useCollateralDec(request.vault, request.amountOne);
-        VaultRegistry.redeemTokens(
+        vaultRegistry.useCollateralDec(request.vault, request.amountOne);
+        vaultRegistry.redeemTokens(
             request.vault,
             request.amountBtc + request.transferFeeBtc
         );
@@ -152,7 +153,7 @@ abstract contract Redeem is VaultRegistry, Request {
         );
     }
 
-    function _cancelRedeem(address requester, uint256 redeemId) internal {
+    function _cancelRedeem(IVaultRegistry vaultRegistry, address requester, uint256 redeemId) internal {
         RedeemRequest storage request = redeemRequests[requester][redeemId];
         require(
             request.status == RequestStatus.Pending,
@@ -165,8 +166,8 @@ abstract contract Redeem is VaultRegistry, Request {
         request.status = RequestStatus.Cancelled;
         releaseLockedOneBTC(request.requester, request.amountBtc + request.fee);
 
-        ICollateral.useCollateralDec(request.vault, request.amountOne);
-        ICollateral.slashCollateral(
+        vaultRegistry.useCollateralDec(request.vault, request.amountOne);
+        vaultRegistry.slashCollateral(
             request.vault,
             request.requester,
             request.amountOne

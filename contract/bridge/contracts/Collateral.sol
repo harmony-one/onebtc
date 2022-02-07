@@ -4,7 +4,7 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 
-abstract contract ICollateral {
+contract ICollateral {
     using SafeMathUpgradeable for uint256;
 
     event LockCollateral(address sender, uint256 amount);
@@ -18,8 +18,8 @@ abstract contract ICollateral {
         return address(this).balance;
     }
 
-    function lockCollateral(address sender, uint256 amount) internal {
-        require(msg.value >= amount, "Invalid collateral");
+    function _lockCollateral(address sender, uint256 amount) internal virtual {
+        require(amount > 0, "Invalid collateral");
         CollateralBalances[sender] = CollateralBalances[sender].add(amount);
         emit LockCollateral(sender, amount);
     }
@@ -39,21 +39,21 @@ abstract contract ICollateral {
         require(sent, "Transfer failed.");
     }
 
-    function releaseCollateral(address sender, uint256 amount) internal {
+    function _releaseCollateral(address sender, uint256 amount) internal virtual {
         release(sender, sender, amount);
         emit ReleaseCollateral(sender, amount);
     }
 
-    function slashCollateral(
+    function _slashCollateral(
         address from,
         address to,
         uint256 amount
-    ) internal {
+    ) internal virtual {
         release(from, to, amount);
         emit SlashCollateral(from, to, amount);
     }
 
-    function getFreeCollateral(address vaultId)
+    function _getFreeCollateral(address vaultId)
         internal
         view
         returns (uint256)
@@ -65,7 +65,7 @@ abstract contract ICollateral {
         return CollateralBalances[vaultId];
     }
 
-    function useCollateralInc(address vaultId, uint256 amount) internal {
+    function _useCollateralInc(address vaultId, uint256 amount) internal virtual {
         CollateralUsed[vaultId] = CollateralUsed[vaultId].add(amount);
         require(
             CollateralBalances[vaultId] >= CollateralUsed[vaultId],
@@ -73,7 +73,7 @@ abstract contract ICollateral {
         );
     }
 
-    function useCollateralDec(address vaultId, uint256 amount) internal {
+    function _useCollateralDec(address vaultId, uint256 amount) internal virtual {
         require(CollateralUsed[vaultId] >= amount, "Insufficient collateral");
         CollateralUsed[vaultId] = CollateralUsed[vaultId].sub(amount);
     }

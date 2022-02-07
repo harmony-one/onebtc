@@ -19,7 +19,7 @@ library TxValidate {
     ) internal pure returns (uint256) {
         uint256 btcAmount;
         address btcAddress;
-
+        
         if (opReturnId != 0x0) {
             (, uint256 _nVouts) = txVout.parseVarInt();
             uint256 voutCount = _nVouts;

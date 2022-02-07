@@ -2,16 +2,19 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {ICollateral} from "./Collateral.sol";
 import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
 import "./IExchangeRateOracle.sol";
+import "./IVaultRegistry.sol";
 
-abstract contract VaultRegistry is Initializable, ICollateral {
+contract VaultRegistry is ReentrancyGuardUpgradeable, OwnableUpgradeable, ICollateral {
     using SafeMathUpgradeable for uint256;
 
+    // VaultRegistry
     struct Vault {
         uint256 btcPublicKeyX;
         uint256 btcPublicKeyY;
@@ -22,11 +25,12 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 replaceCollateral;
         uint256 toBeReplaced;
         uint256 liquidatedCollateral;
-        mapping(address => bool) depositAddresses;
     }
 
     mapping(address => Vault) public vaults;
+    mapping(address => mapping(address => bool)) vaultDepositAddress;
     IExchangeRateOracle oracle;
+    address public oneBtcAddress;
 
     event RegisterVault(
         address indexed vaultId,
@@ -34,7 +38,6 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 btcPublicKeyX,
         uint256 btcPublicKeyY
     );
-
     event VaultPublicKeyUpdate(address indexed vaultId, uint256 x, uint256 y);
     event IncreaseToBeIssuedTokens(address indexed vaultId, uint256 amount);
     event IncreaseToBeRedeemedTokens(address indexed vaultId, uint256 amount);
@@ -50,9 +53,37 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 collateral
     );
     event LiquidateVault();
+    event UpdateOneBtcAddress(address indexed by, address indexed oldOneBtc, address indexed newOneBtc);
+    event UpdateOracleAddress(address indexed by, address indexed oldOracle, address indexed newOracle);
+
+    modifier onlyOneBtc() {
+        require(msg.sender == oneBtcAddress, "OnlyOneBtc");
+        _;
+    }
+
+    function initialize(IExchangeRateOracle _oracle) external initializer {
+        __ReentrancyGuard_init();
+        __Ownable_init();
+
+        oracle = _oracle;
+    }
+
+    function updateOneBtcAddress(address _oneBtcAddress) public onlyOwner {
+        UpdateOneBtcAddress(msg.sender, oneBtcAddress, _oneBtcAddress);
+
+        require(_oneBtcAddress != address(0), "Zero address for OneBtc");
+        oneBtcAddress = _oneBtcAddress;
+    }
+
+    function updateOracleAddress(IExchangeRateOracle _oracle) external onlyOwner {
+        UpdateOracleAddress(msg.sender, address(oracle), address(_oracle));
+
+        require(address(_oracle) != address(0), "Zero address for Oracle");
+        oracle = _oracle;
+    }
 
     function registerVault(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
-        external
+        public
         payable
     {
         address vaultId = msg.sender;
@@ -70,7 +101,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function registerDepositAddress(address vaultId, uint256 issueId)
-        internal
+        public
+        onlyOneBtc
         returns (address)
     {
         Vault storage vault = vaults[vaultId];
@@ -82,10 +114,10 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         );
 
         require(
-            !vault.depositAddresses[derivedKey],
+            !vaultDepositAddress[vaultId][derivedKey],
             "The btc address is already used"
         );
-        vault.depositAddresses[derivedKey] = true;
+        vaultDepositAddress[vaultId][derivedKey] = true;
 
         return derivedKey;
     }
@@ -95,7 +127,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 btcPublicKeyX,
         uint256 btcPublicKeyY,
         uint256 replaceId
-    ) internal returns (address) {
+    ) public onlyOneBtc returns (address) {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
 
@@ -106,16 +138,16 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         );
 
         require(
-            !vault.depositAddresses[btcAddress],
+            !vaultDepositAddress[vaultId][btcAddress],
             "The btc address is already used"
         );
-        vault.depositAddresses[btcAddress] = true;
+        vaultDepositAddress[vaultId][btcAddress] = true;
 
         return btcAddress;
     }
 
     function updatePublicKey(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
-        external
+        public
     {
         address vaultId = msg.sender;
         Vault storage vault = vaults[vaultId];
@@ -130,18 +162,19 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
         vault.collateral = vault.collateral.add(msg.value);
-        ICollateral.lockCollateral(vaultId, msg.value);
+        ICollateral._lockCollateral(vaultId, msg.value);
     }
 
-    function withdrawCollateral(uint256 amount) external {
+    function withdrawCollateral(uint256 amount) public nonReentrant {
         Vault storage vault = vaults[msg.sender];
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
         vault.collateral = vault.collateral.sub(amount);
-        ICollateral.releaseCollateral(msg.sender, amount);
+        ICollateral._releaseCollateral(msg.sender, amount);
     }
 
     function decreaseToBeIssuedTokens(address vaultId, uint256 amount)
-        internal
+        public
+        onlyOneBtc
     {
         Vault storage vault = vaults[vaultId];
         vault.toBeIssued = vault.toBeIssued.sub(amount);
@@ -149,7 +182,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function tryIncreaseToBeIssuedTokens(address vaultId, uint256 amount)
-        internal
+        public
+        onlyOneBtc
         returns (bool)
     {
         uint256 issuableTokens = issuableTokens(vaultId);
@@ -161,7 +195,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function tryIncreaseToBeRedeemedTokens(address vaultId, uint256 amount)
-        internal
+        public
+        onlyOneBtc
         returns (bool)
     {
         uint256 redeemable = redeemableTokens(vaultId);
@@ -177,7 +212,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         return vault.issued.sub(vault.toBeRedeemed);
     }
 
-    function redeemTokens(address vaultId, uint256 amount) internal {
+    function redeemTokens(address vaultId, uint256 amount) public onlyOneBtc {
         Vault storage vault = vaults[vaultId];
         vault.toBeRedeemed = vault.toBeRedeemed.sub(amount);
         vault.issued = vault.issued.sub(amount);
@@ -185,14 +220,14 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function issuableTokens(address vaultId) public view returns (uint256) {
-        uint256 freeCollateral = ICollateral.getFreeCollateral(vaultId);
+        uint256 freeCollateral = ICollateral._getFreeCollateral(vaultId);
         return
             oracle.collateralToWrapped(
                 freeCollateral.mul(100).div(secureCollateralThreshold())
             );
     }
 
-    function issueTokens(address vaultId, uint256 amount) internal {
+    function issueTokens(address vaultId, uint256 amount) public onlyOneBtc {
         Vault storage vault = vaults[vaultId];
         vault.issued = vault.issued.add(amount);
         vault.toBeIssued = vault.toBeIssued.sub(amount);
@@ -203,7 +238,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 collateral,
         uint256 numerator,
         uint256 denominator
-    ) internal view returns (uint256 amount) {
+    ) public view returns (uint256 amount) {
         if (numerator == 0 && denominator == 0) {
             return collateral;
         }
@@ -212,7 +247,17 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function requestableToBeReplacedTokens(address vaultId)
+        public
+        view
+        onlyOneBtc
+        returns (uint256 amount)
+    {
+        return requestableToBeReplacedTokensFromSelf(vaultId);
+    }
+
+    function requestableToBeReplacedTokensFromSelf(address vaultId)
         internal
+        view
         returns (uint256 amount)
     {
         Vault memory vault = vaults[vaultId];
@@ -229,10 +274,10 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         address vaultId,
         uint256 tokens,
         uint256 collateral
-    ) internal returns (uint256, uint256) {
+    ) public onlyOneBtc returns (uint256, uint256) {
         Vault storage vault = vaults[vaultId];
 
-        uint256 requestableIncrease = requestableToBeReplacedTokens(vaultId);
+        uint256 requestableIncrease = requestableToBeReplacedTokensFromSelf(vaultId);
 
         require(
             tokens <= requestableIncrease,
@@ -248,7 +293,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function decreaseToBeReplacedTokens(address vaultId, uint256 tokens)
-        internal
+        public
+        onlyOneBtc
         returns (uint256, uint256)
     {
         Vault storage vault = vaults[vaultId];
@@ -279,7 +325,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         address newVaultId,
         uint256 tokens,
         uint256 collateral
-    ) internal {
+    ) public onlyOneBtc {
         Vault storage oldVault = vaults[oldVaultId];
         Vault storage newVault = vaults[newVaultId];
 
@@ -295,11 +341,11 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         emit ReplaceTokens(oldVaultId, newVaultId, tokens, collateral);
     }
 
-    function tryDepositCollateral(address vaultId, uint256 amount) internal {
+    function tryDepositCollateral(address vaultId, uint256 amount) public onlyOneBtc {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
 
-        ICollateral.lockCollateral(vaultId, amount);
+        ICollateral._lockCollateral(vaultId, amount);
 
         // Self::increase_total_backing_collateral(amount)?;
 
@@ -321,8 +367,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         liquidateVault.collateral = liquidateVault.collateral.add(amount);
         vault.collateral = vault.collateral.sub(amount);
         // slash collateral
-        ICollateral.slashCollateral(vaultId, address(this), amount);
-        ICollateral.lockCollateral(address(this), amount); // TODO; double check
+        ICollateral._slashCollateral(vaultId, address(this), amount);
+        ICollateral._lockCollateral(address(this), amount); // TODO; double check
     }
 
     function backedTokens(address vaultId) private returns (uint256) {
@@ -398,9 +444,75 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     /**
      * @dev Liquidate a vault by transferring all of its token balances to the liquidation vault.
      */
-    function liquidateVault(address vaultId, address reporterId) internal {
+    function liquidateVault(address vaultId, address reporterId) public {
         liquidate(vaultId, reporterId);
     }
+
+    /// override functions for ICollateral
+    function lockCollateral(address sender, uint256 amount) public virtual onlyOneBtc {
+        ICollateral._lockCollateral(sender, amount);
+    }
+
+    function releaseCollateral(address sender, uint256 amount) public virtual onlyOneBtc nonReentrant {
+        ICollateral._releaseCollateral(sender, amount);
+    }
+
+    function slashCollateral(
+        address from,
+        address to,
+        uint256 amount
+    ) public virtual onlyOneBtc nonReentrant {
+        ICollateral._slashCollateral(from, to, amount);
+    }
+
+    function useCollateralInc(address vaultId, uint256 amount) public virtual onlyOneBtc {
+        ICollateral._useCollateralInc(vaultId, amount);
+    }
+
+    function useCollateralDec(address vaultId, uint256 amount) public virtual onlyOneBtc {
+        ICollateral._useCollateralDec(vaultId, amount);
+    }
+
+    // set functions for Vault
+    // function setBtcPublicKeyX(address vaultAddress, uint256 value) external onlyOneBtc {
+    //     vaults[vaultAddress].btcPublicKeyX = value;
+    // }
+
+    // function setBtcPublicKeyY(address vaultAddress, uint256 value) external onlyOneBtc {
+    //     vaults[vaultAddress].btcPublicKeyY = value;
+    // }
+
+    // function setCollateral(address vaultAddress, uint256 value) external onlyOneBtc {
+    //     vaults[vaultAddress].collateral = value;
+    // }
+
+    // function setIssued(address vaultAddress, uint256 value) external onlyOneBtc {
+    //     vaults[vaultAddress].issued = value;
+    // }
+
+    // function setToBeIssued(address vaultAddress, uint256 value) external onlyOneBtc {
+    //     vaults[vaultAddress].toBeIssued = value;
+    // }
+
+    // function setToBeRedeemed(address vaultAddress, uint256 value) external onlyOneBtc {
+    //     vaults[vaultAddress].toBeRedeemed = value;
+    // }
+
+    // function setReplaceCollateral(address vaultAddress, uint256 value) external onlyOneBtc {
+    //     vaults[vaultAddress].replaceCollateral = value;
+    // }
+
+    // function setToBeReplaced(address vaultAddress, uint256 value) external onlyOneBtc {
+    //     vaults[vaultAddress].toBeReplaced = value;
+    // }
+
+    // function setLiquidatedCollateral(address vaultAddress, uint256 value) external onlyOneBtc {
+    //     vaults[vaultAddress].liquidatedCollateral = value;
+    // }
+
+    // function setVaultDepositAddress(address vaultAddress, address derivedKey, bool value) external onlyOneBtc {
+    //    vaults[vaultAddress][derivedKey] = value;
+    // }
 
     uint256[45] private __gap;
 }

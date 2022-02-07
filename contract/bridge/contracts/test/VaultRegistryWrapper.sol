@@ -3,7 +3,7 @@ pragma solidity 0.6.12;
 
 import {VaultRegistry} from "../VaultRegistry.sol";
 
-contract VaultRegistryTestWrapper is VaultRegistry {
+contract VaultRegistryWrapper is VaultRegistry {
     event RedeemableTokens(address vaultId, uint256 amount);
     event RequestableToBeReplacedTokens(address vaultId, uint256 amount);
 
@@ -29,7 +29,7 @@ contract VaultRegistryTestWrapper is VaultRegistry {
         public
         returns (bool)
     {
-        uint256 issuableTokens = getFreeCollateral(vaultId).mul(100).div(150); // mock oracle
+        uint256 issuableTokens = _getFreeCollateral(vaultId).mul(100).div(150); // mock oracle
         if (issuableTokens < amount) return false; // ExceedingVaultLimit
         Vault storage vault = vaults[vaultId];
         vault.toBeIssued = vault.toBeIssued.add(amount);
@@ -62,7 +62,7 @@ contract VaultRegistryTestWrapper is VaultRegistry {
         view
         returns (uint256)
     {
-        return getFreeCollateral(vaultId);
+        return _getFreeCollateral(vaultId);
     }
 
     function testRequestableToBeReplacedTokens(address vaultId) public returns (uint256) {

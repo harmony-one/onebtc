@@ -1,4 +1,8 @@
-const VaultRegistryTestWrapper = artifacts.require("VaultRegistryTestWrapper");
+const { deployProxy } = require("@openzeppelin/truffle-upgrades");
+
+const ExchangeRateOracleWrapper = artifacts.require("ExchangeRateOracleWrapper");
+const VaultRegistryWrapper = artifacts.require("VaultRegistryWrapper");
+
 const bitcoin = require("bitcoinjs-lib");
 const bn = (b) => BigInt(`0x${b.toString("hex")}`);
 
@@ -20,7 +24,11 @@ web3.extend({
 
 contract("VaultRegistry unit test", (accounts) => {
   before(async function () {
-    this.VaultRegistry = await VaultRegistryTestWrapper.new();
+    this.ExchangeRateOracleWrapper = await deployProxy(ExchangeRateOracleWrapper);
+    this.VaultRegistry = await deployProxy(VaultRegistryWrapper, [this.ExchangeRateOracleWrapper.address]);
+
+    // set OneBtc address with accounts[0]
+    await this.VaultRegistry.updateOneBtcAddress(accounts[0]);
 
     this.vaultId = accounts[1];
     this.issueRequester = accounts[2];

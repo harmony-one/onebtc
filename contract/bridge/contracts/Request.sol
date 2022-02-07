@@ -2,7 +2,7 @@
 
 pragma solidity 0.6.12;
 
-abstract contract Request {
+contract Request {
     enum RequestStatus {
         None,
         Pending,
