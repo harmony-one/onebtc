@@ -28,9 +28,31 @@ contract ExchangeRateOracleV2 is Initializable {
 
     event recoverFromORACLEOFFLINE(address oracle, uint256 rate);
 
+    uint256 constant SECONDS_IN_A_DAY = 86400;
+
+    uint256 prevExchangeRate;
+
     function initialize(address provider) public initializer {
         lastExchangeRateTime = now;
         authorizedOracles[provider] = true;
+    }
+
+    function setExchangeRate(uint256 btcPrice, uint256 onePrice) public {
+        address oracle = msg.sender;
+        require(authorizedOracles[oracle], "Sender is not authorized");
+
+        prevExchangeRate = exchangeRate;
+
+        uint256 rate = btcPrice.div(onePrice);
+        exchangeRate = rate;
+
+        if (now - lastExchangeRateTime > MAX_DELAY) {
+            emit recoverFromORACLEOFFLINE(oracle, rate);
+        }
+
+        lastExchangeRateTime = now;
+
+        emit SetExchangeRate(oracle, rate);
     }
 
     /**
@@ -52,14 +74,33 @@ contract ExchangeRateOracleV2 is Initializable {
         uint256 minTimeStamp = MathUpgradeable.min(oneTimeStamp, btcTimeStamp);
         // oldest timestamp should be within the max delay
         require(
-            now - minTimeStamp <= MAX_DELAY,
+            now - minTimeStamp <= SECONDS_IN_A_DAY,
             "Exchange rate avaialble is too old"
         );
 
-        uint256 a = uint256(btcPrice);
-        uint256 b = uint256(onePrice);
+        // price flucation cannot be higher than 10% as fallback on oracle failures
+        uint256 fluctuation = MathUpgradeable
+            .max(prevExchangeRate, exchangeRate)
+            .sub(MathUpgradeable.min(prevExchangeRate, exchangeRate))
+            .div(MathUpgradeable.max(prevExchangeRate, exchangeRate));
+        require(
+            fluctuation <= uint256(10).div(uint256(100)),
+            "Price fluctuation higher than tenPercent"
+        );
 
-        return a.div(b);
+        uint256 linkRate = uint256(btcPrice).div(uint256(onePrice));
+        // make sure that the deviation of the link price from authorized oralce price is less than zeroPointFivePercent
+        uint256 ratio = MathUpgradeable
+            .max(linkRate, exchangeRate)
+            .sub(MathUpgradeable.min(linkRate, exchangeRate))
+            .div(MathUpgradeable.max(linkRate, exchangeRate));
+
+        require(
+            ratio <= uint256(5).div(uint256(1000)),
+            "Deviation higher than zeroPointFivePercent"
+        );
+
+        return linkRate;
     }
 
     /**
