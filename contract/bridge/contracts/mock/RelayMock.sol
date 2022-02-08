@@ -41,4 +41,13 @@ contract RelayMock is IRelay {
     ) external view override returns (bool) {
         return true;
     }
+
+    function isApprovedStakedRelayer(address relayer)
+        external
+        view
+        override
+        returns (bool)
+    {
+        return true;
+    }
 }
