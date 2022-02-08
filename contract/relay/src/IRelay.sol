@@ -76,4 +76,9 @@ interface IRelay {
         uint256 confirmations,
         bool insecure
     ) external view returns (bool);
+
+    function isApprovedStakedRelayer(address relayer)
+        external
+        view
+        returns (bool);
 }
