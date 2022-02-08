@@ -50,28 +50,6 @@ abstract contract Redeem is VaultRegistry, Request {
         internal
         virtual;
 
-    function getRedeemFee(
-        uint256 /*amountRequested*/
-    ) private pure returns (uint256) {
-        return 0;
-    }
-
-    function getRedeemId(address user) private view returns (uint256) {
-        //getSecureId
-        return
-            uint256(
-                keccak256(abi.encodePacked(user, blockhash(block.number - 1)))
-            );
-    }
-
-    function getRedeemCollateral(uint256 amountBtc) private returns (uint256) {
-        return amountBtc;
-    }
-
-    function getCurrentInclusionFee() private returns (uint256) {
-        return 0;
-    }
-
     function _requestRedeem(
         address requester,
         uint256 amountOneBtc,
@@ -79,17 +57,18 @@ abstract contract Redeem is VaultRegistry, Request {
         address vaultId
     ) internal {
         lockOneBTC(requester, amountOneBtc);
-        uint256 feeOneBtc = getRedeemFee(amountOneBtc);
-        uint256 inclusionFee = getCurrentInclusionFee();
+        uint256 feeOneBtc = amountOneBtc.mul(5).div(1000); //0.5%
+        uint256 inclusionFee = 0;
         uint256 toBeBurnedBtc = amountOneBtc - feeOneBtc;
         uint256 redeemAmountOneBtc = toBeBurnedBtc - inclusionFee;
-        uint256 redeemId = getRedeemId(requester);
+        uint256 redeemId = uint256(
+            keccak256(abi.encodePacked(requester, blockhash(block.number - 1)))
+        );
 
         require(
             VaultRegistry.tryIncreaseToBeRedeemedTokens(vaultId, toBeBurnedBtc),
             "Insufficient tokens committed"
         );
-        // TODO: decrease collateral
         RedeemRequest storage request = redeemRequests[requester][redeemId];
         require(request.status == RequestStatus.None, "Invalid request");
         {
@@ -99,14 +78,10 @@ abstract contract Redeem is VaultRegistry, Request {
             request.fee = feeOneBtc;
             request.transferFeeBtc = inclusionFee;
             request.amountBtc = redeemAmountOneBtc;
-            //request.premiumOne
-            request.amountOne = getRedeemCollateral(redeemAmountOneBtc);
             request.requester = requester;
             request.btcAddress = btcAddress;
-            //request.btcHeight
             request.status = RequestStatus.Pending;
         }
-        ICollateral.useCollateralInc(vaultId, request.amountOne);
         emit RedeemRequested(
             redeemId,
             requester,
@@ -137,7 +112,11 @@ abstract contract Redeem is VaultRegistry, Request {
         burnLockedOneBTC(request.amountBtc);
         releaseLockedOneBTC(request.vault, request.fee);
         request.status = RequestStatus.Completed;
-        ICollateral.useCollateralDec(request.vault, request.amountOne);
+        // release the collateral for redeemed btc
+        ICollateral.useCollateralDec(
+            request.vault,
+            VaultRegistry.collateralForIssued(request.amountBtc)
+        );
         VaultRegistry.redeemTokens(
             request.vault,
             request.amountBtc + request.transferFeeBtc
@@ -152,7 +131,11 @@ abstract contract Redeem is VaultRegistry, Request {
         );
     }
 
-    function _cancelRedeem(address requester, uint256 redeemId) internal {
+    function _cancelRedeem(
+        address requester,
+        uint256 redeemId,
+        bool reimburse
+    ) internal {
         RedeemRequest storage request = redeemRequests[requester][redeemId];
         require(
             request.status == RequestStatus.Pending,
@@ -163,14 +146,24 @@ abstract contract Redeem is VaultRegistry, Request {
             "Time not expired"
         );
         request.status = RequestStatus.Cancelled;
-        releaseLockedOneBTC(request.requester, request.amountBtc + request.fee);
-
-        ICollateral.useCollateralDec(request.vault, request.amountOne);
-        ICollateral.slashCollateral(
-            request.vault,
-            request.requester,
-            request.amountOne
-        );
+        uint256 total = request.amountBtc + request.fee;
+        if (reimburse) {
+            uint256 slashCollateral = VaultRegistry.collateralFor(total);
+            uint256 punishmentFee = slashCollateral.mul(10).div(100); // 10% punishment fee
+            uint256 totalSlash = slashCollateral.add(punishmentFee);
+            ICollateral.useCollateralDec(request.vault, totalSlash);
+            ICollateral.slashCollateral(
+                request.vault,
+                request.requester,
+                totalSlash
+            );
+            VaultRegistry.redeemTokens(
+                request.vault,
+                request.amountBtc + request.transferFeeBtc
+            );
+        } else {
+            releaseLockedOneBTC(request.requester, total);
+        }
         emit RedeemCanceled(
             redeemId,
             requester,

@@ -53,36 +53,13 @@ abstract contract Issue is VaultRegistry, Request {
 
     function issueOneBTC(address receiver, uint256 amount) internal virtual;
 
-    function getIssueFee(uint256 amountRequested)
-        private
-        pure
-        returns (uint256)
-    {
-        return amountRequested.mul(2).div(1000);
-    }
-
-    function getIssueId(address user) private view returns (uint256) {
-        //getSecureId
-        return
-            uint256(
-                keccak256(abi.encodePacked(user, blockhash(block.number - 1)))
-            );
-    }
-
-    function getIssueGriefingCollateral(uint256 amountBtc)
-        private
-        returns (uint256)
-    {
-        return amountBtc;
-    }
-
     function updateIssueAmount(
         uint256 issueId,
         IssueRequest storage issue,
         uint256 transferredBtc,
         uint256 confiscatedGriefingCollateral
     ) internal {
-        issue.fee = getIssueFee(transferredBtc);
+        issue.fee = transferredBtc.mul(5).div(1000); //0.5%
         issue.amount = transferredBtc.sub(issue.fee);
         emit IssueAmountChanged(
             issueId,
@@ -98,20 +75,25 @@ abstract contract Issue is VaultRegistry, Request {
         address vaultId,
         uint256 griefingCollateral
     ) internal {
+        // griefing collateral needs to be >= 0.005% of vaults collateral
         require(
-            getIssueGriefingCollateral(amountRequested) <= griefingCollateral,
-            "Insufficient collateral"
+            VaultRegistry.getTotalCollateral(vaultId).mul(5).div(100000) <= griefingCollateral,
+            "Insufficient griefing collateral"
         );
         require(
             VaultRegistry.tryIncreaseToBeIssuedTokens(vaultId, amountRequested),
             "Amount requested exceeds vault limit"
         );
-        uint256 issueId = getIssueId(requester);
+        uint256 issueId = uint256(
+            keccak256(
+                abi.encodePacked(requester, blockhash(block.number - 1))
+            )
+        );
         address btcAddress = VaultRegistry.registerDepositAddress(
             vaultId,
             issueId
         );
-        uint256 fee = getIssueFee(amountRequested);
+        uint256 fee = amountRequested.mul(5).div(1000); //0.5%
         uint256 amountUser = amountRequested.sub(fee);
         IssueRequest storage request = issueRequests[requester][issueId];
         require(request.status == RequestStatus.None, "Invalid issue request");
@@ -131,6 +113,8 @@ abstract contract Issue is VaultRegistry, Request {
             request.requester,
             request.griefingCollateral
         );
+        // updated used collateral for the issued
+        ICollateral.useCollateralInc(request.vault, VaultRegistry.collateralForIssued(amountRequested));
         emit IssueRequested(
             issueId,
             requester,
@@ -165,6 +149,7 @@ abstract contract Issue is VaultRegistry, Request {
             require(msg.sender == request.requester, "Invalid executor");
             uint256 deficit = expectedTotalAmount - amountTransferred;
             VaultRegistry.decreaseToBeIssuedTokens(request.vault, deficit);
+            // release portion of the griefing collateral of the requester
             uint256 releasedCollateral = VaultRegistry.calculateCollateral(
                 request.griefingCollateral,
                 amountTransferred,
@@ -174,6 +159,7 @@ abstract contract Issue is VaultRegistry, Request {
                 request.requester,
                 releasedCollateral
             );
+            // send the rest to vault as slashing
             uint256 slashedCollateral = request.griefingCollateral.sub(
                 releasedCollateral
             );
@@ -204,8 +190,8 @@ abstract contract Issue is VaultRegistry, Request {
                     updateIssueAmount(issueId, request, amountTransferred, 0);
                 } else {
                     // vault does not have enough collateral to accept the over payment, so refund.
-                    // TODO requestRefund
-                    // requestRefund(surplusBtc, request.vault, request.requester, issueId);
+                    // refund is disabled
+                    require(false, "Overpayment refund is disabled");
                 }
             }
         }
@@ -214,8 +200,6 @@ abstract contract Issue is VaultRegistry, Request {
         issueOneBTC(request.vault, request.fee);
         issueOneBTC(request.requester, request.amount);
         request.status = RequestStatus.Completed;
-        // TODO: update sla
-        // sla.eventUpdateVaultSla(request.vault, total);
         emit IssueCompleted(
             issueId,
             requester,
@@ -242,10 +226,12 @@ abstract contract Issue is VaultRegistry, Request {
             request.vault,
             request.griefingCollateral
         );
+        uint256 total = request.amount + request.fee;
         VaultRegistry.decreaseToBeIssuedTokens(
             request.vault,
-            request.amount + request.fee
+            total
         );
+        ICollateral.useCollateralDec(request.vault, VaultRegistry.collateralForIssued(total));
         emit IssueCanceled(
             issueId,
             requester,

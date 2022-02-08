@@ -28,11 +28,10 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         bytes calldata header,
         bytes calldata merkleProof
     ) public returns (bytes memory) {
-        bytes32 txId = rawTx.hash256();
         relay.verifyTx(
             height,
             index,
-            txId,
+            rawTx.hash256(),
             header,
             merkleProof,
             1,
@@ -101,8 +100,8 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         Redeem._executeRedeem(requester, redeemId, _vout);
     }
 
-    function cancelRedeem(address requester, uint256 redeemId) external {
-        Redeem._cancelRedeem(requester, redeemId);
+    function cancelRedeem(address requester, uint256 redeemId, bool reimburse) external {
+        Redeem._cancelRedeem(requester, redeemId, reimburse);
     }
 
     function lockOneBTC(address from, uint256 amount)
@@ -135,7 +134,8 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 btcAmount,
         uint256 griefingCollateral
     ) external payable {
-        Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
+        require(false, "Feature temporarily disabled");
+        // Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
     }
 
     function acceptReplace(
@@ -146,14 +146,15 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 btcPublicKeyX,
         uint256 btcPublicKeyY
     ) external payable {
-        Replace._acceptReplace(
-            oldVaultId,
-            newVaultId,
-            btcAmount,
-            collateral,
-            btcPublicKeyX,
-            btcPublicKeyY
-        );
+        require(false, "Feature temporarily disabled");
+        // Replace._acceptReplace(
+        //     oldVaultId,
+        //     newVaultId,
+        //     btcAmount,
+        //     collateral,
+        //     btcPublicKeyX,
+        //     btcPublicKeyY
+        // );
     }
 
     function executeReplace(
@@ -165,7 +166,8 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 index,
         bytes calldata header
     ) external {
-        bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
-        Replace._executeReplace(replaceId, _vout);
+        require(false, "Feature temporarily disabled");
+        // bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
+        // Replace._executeReplace(replaceId, _vout);
     }
 }

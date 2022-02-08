@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 
 import {IRelay} from "./IRelay.sol";
@@ -6,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 
 interface IVaultRegistry {
-    function liquidateTheftVault(address vaultId, address reporterId) external;
+    function liquidateVault(address vaultId, address reporterId) external;
 }
 
 contract StakedRelayer is Initializable, OwnableUpgradeable {
@@ -31,10 +33,12 @@ contract StakedRelayer is Initializable, OwnableUpgradeable {
 
     function initialize(
         IRelay _relay,
-        IVaultRegistry _vaultRegistry
+        IVaultRegistry _vaultRegistry,
+        address initialRelayer
     ) external initializer {
         relay = _relay;
         vaultRegistry = _vaultRegistry;
+        authorizedRelayers[initialRelayer] = true;
     }
 
     /**
@@ -43,10 +47,13 @@ contract StakedRelayer is Initializable, OwnableUpgradeable {
     function reportVaultTheft(
         address vaultId,
         bytes calldata rawTx,
-        uint64 heightAndIndex,
+        uint32 height,
+        uint256 index,
         bytes calldata merkleProof,
         bytes calldata header
     ) external {
+        require(authorizedRelayers[msg.sender], "Sender is not authorized");
+
         bytes32 txId = rawTx.hash256();
 
         // check if already reported
@@ -55,19 +62,20 @@ contract StakedRelayer is Initializable, OwnableUpgradeable {
 
         // verify transaction inclusion using header and merkle proof
         relay.verifyTx(
-            uint32(heightAndIndex >> 32),
-            heightAndIndex & type(uint32).max,
+            height,
+            index,
             txId,
             header,
             merkleProof,
-            6,
+            1,
             true
         );
 
         // all looks good, liquidate vault
         address reporterId = msg.sender;
-        vaultRegistry.liquidateTheftVault(vaultId, reporterId);
+        vaultRegistry.liquidateVault(vaultId, reporterId);
 
+        theftReports[reportKey] = true;
         emit ReportVaultTheft(vaultId);
     }
 
@@ -81,6 +89,7 @@ contract StakedRelayer is Initializable, OwnableUpgradeable {
         bytes calldata merkleProofs,
         bytes calldata headers
     ) external {
+        require(authorizedRelayers[msg.sender], "Sender is not authorized");
         // separate the two sets and check that
         // txns must be unique
 
@@ -97,8 +106,10 @@ contract StakedRelayer is Initializable, OwnableUpgradeable {
 
         // all looks good, liquidate vault
         address reporterId = msg.sender;
-        vaultRegistry.liquidateTheftVault(vaultId, reporterId);
+        vaultRegistry.liquidateVault(vaultId, reporterId);
 
         emit VaultDoublePayment(vaultId, leftTxId, rightTxId);
     }
+
+    mapping(address => bool) authorizedRelayers;
 }

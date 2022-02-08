@@ -65,10 +65,6 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         emit RegisterVault(vaultId, msg.value, btcPublicKeyX, btcPublicKeyY);
     }
 
-    function secureCollateralThreshold() private view returns (uint256) {
-        return 150;
-    }
-
     function registerDepositAddress(address vaultId, uint256 issueId)
         internal
         returns (address)
@@ -136,6 +132,14 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     function withdrawCollateral(uint256 amount) external {
         Vault storage vault = vaults[msg.sender];
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        // is allowed to withdraw collateral
+        require(
+            amount <
+                getTotalCollateral(msg.sender).sub(
+                    collateralForIssued(vault.issued.add(vault.toBeIssued))
+                ),
+            "Only unbacked collateral can be withdrawn"
+        );
         vault.collateral = vault.collateral.sub(amount);
         ICollateral.releaseCollateral(msg.sender, amount);
     }
@@ -186,10 +190,15 @@ abstract contract VaultRegistry is Initializable, ICollateral {
 
     function issuableTokens(address vaultId) public view returns (uint256) {
         uint256 freeCollateral = ICollateral.getFreeCollateral(vaultId);
-        return
-            oracle.collateralToWrapped(
-                freeCollateral.mul(100).div(secureCollateralThreshold())
-            );
+        return oracle.collateralToWrapped(freeCollateral.mul(100).div(150));
+    }
+
+    function collateralFor(uint256 amount) public view returns (uint256) {
+        return oracle.wrappedToCollateral(amount);
+    }
+
+    function collateralForIssued(uint256 amount) public view returns (uint256) {
+        return oracle.wrappedToCollateral(amount).mul(150).div(100);
     }
 
     function issueTokens(address vaultId, uint256 amount) internal {
@@ -300,13 +309,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
 
         ICollateral.lockCollateral(vaultId, amount);
-
-        // Self::increase_total_backing_collateral(amount)?;
-
-        // TODO: Deposit `amount` of stake in the pool
-        // ext::staking::deposit_stake::<T>(T::GetRewardsCurrencyId::get(), vault_id, vault_id, amount)?;
     }
-    
+
     function slashForToBeRedeemed(address vaultId, uint256 amount) private {
         Vault storage vault = vaults[vaultId];
         uint256 collateral = MathUpgradeable.min(vault.collateral, amount);
@@ -322,34 +326,28 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         vault.collateral = vault.collateral.sub(amount);
         // slash collateral
         ICollateral.slashCollateral(vaultId, address(this), amount);
-        ICollateral.lockCollateral(address(this), amount); // TODO; double check
+        ICollateral.lockCollateral(address(this), amount);
     }
 
-    function backedTokens(address vaultId) private returns (uint256) {
-        Vault storage vault = vaults[vaultId];
-        return vault.issued.add(vault.toBeIssued);
-    }
-
-    function getUsedCollateral(address vaultId) private returns (uint256) {
-        Vault storage vault = vaults[vaultId];
-        uint256 issuedTokens = backedTokens(vaultId);
-        uint256 collateralForIssuedTokens = issuedTokens.mul(
-            secureCollateralThreshold()
-        );
-        return MathUpgradeable.min(vault.collateral, collateralForIssuedTokens);
-    }
-
-    function liquidate(address vaultId, address reporterId) private {
+    /**
+     * @dev Liquidate a vault by transferring all of its token balances to the liquidation vault.
+     */
+    function liquidateVault(address vaultId, address reporterId) internal {
         Vault storage vault = vaults[vaultId];
 
         // pay the theft report reward to reporter
 
         // liquidate at most SECURE_THRESHOLD * collateral
         // liquidated collateral = collateral held for the issued + to be issued
-        uint256 liquidatedCollateral = getUsedCollateral(vaultId);
+        uint256 issuedTokens = vault.issued.add(vault.toBeIssued);
+        uint256 collateralForIssuedTokens = collateralForIssued(issuedTokens);
+        uint256 liquidatedCollateral = MathUpgradeable.min(
+            vault.collateral,
+            collateralForIssuedTokens
+        );
 
         // collateral tokens = total backed tokens
-        uint256 collateralTokens = backedTokens(vaultId);
+        uint256 collateralTokens = vault.issued.add(vault.toBeIssued);
 
         // liquidate collateral excluding to be redeemed =
         // liquidate collateral * (collateral tokens - to be redeemed tokens) / collateral tokens
@@ -381,7 +379,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         liquidationVault.toBeIssued = liquidationVault.toBeIssued.add(
             vault.toBeIssued
         );
-        
+
         // TODO: toBeRedeemed will be kept as long is the to-be-redeemed request is not cancelled.
         // liquidationVault.toBeRedeemed = liquidationVault.toBeRedeemed.add(
         //     vault.toBeRedeemed
@@ -393,13 +391,6 @@ abstract contract VaultRegistry is Initializable, ICollateral {
 
         // TODO: toBeRedeemed will be kept as long is the to-be-redeemed request is not cancelled.
         // vault.toBeRedeemed = 0;
-    }
-
-    /**
-     * @dev Liquidate a vault by transferring all of its token balances to the liquidation vault.
-     */
-    function liquidateVault(address vaultId, address reporterId) internal {
-        liquidate(vaultId, reporterId);
     }
 
     uint256[45] private __gap;
