@@ -77,7 +77,7 @@ abstract contract Issue is VaultRegistry, Request {
     ) internal {
         // griefing collateral needs to be >= 0.005% of vaults collateral
         require(
-            VaultRegistry.getTotalCollateral(vaultId).mul(5).div(100000) <= griefingCollateral,
+            getTotalCollateral(vaultId).mul(5).div(100000) <= griefingCollateral,
             "Insufficient griefing collateral"
         );
         require(
