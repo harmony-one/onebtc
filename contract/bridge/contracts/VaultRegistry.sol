@@ -3,13 +3,14 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import {ICollateral} from "./Collateral.sol";
 import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
 import "./IExchangeRateOracle.sol";
 
-abstract contract VaultRegistry is Initializable, ICollateral {
+abstract contract VaultRegistry is Initializable, ReentrancyGuardUpgradeable, ICollateral {
     using SafeMathUpgradeable for uint256;
 
     struct Vault {
@@ -129,7 +130,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         ICollateral.lockCollateral(vaultId, msg.value);
     }
 
-    function withdrawCollateral(uint256 amount) external {
+    function withdrawCollateral(uint256 amount) external nonReentrant {
         Vault storage vault = vaults[msg.sender];
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
         // is allowed to withdraw collateral
