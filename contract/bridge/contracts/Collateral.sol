@@ -69,12 +69,12 @@ abstract contract ICollateral {
         CollateralUsed[vaultId] = CollateralUsed[vaultId].add(amount);
         require(
             CollateralBalances[vaultId] >= CollateralUsed[vaultId],
-            "Insufficient collateral"
+            "inc:Insufficient collateral"
         );
     }
 
     function useCollateralDec(address vaultId, uint256 amount) internal {
-        require(CollateralUsed[vaultId] >= amount, "Insufficient collateral");
+        require(CollateralUsed[vaultId] >= amount, "dec:Insufficient collateral");
         CollateralUsed[vaultId] = CollateralUsed[vaultId].sub(amount);
     }
 

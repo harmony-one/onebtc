@@ -115,7 +115,7 @@ abstract contract Redeem is VaultRegistry, Request {
         // release the collateral for redeemed btc
         ICollateral.useCollateralDec(
             request.vault,
-            VaultRegistry.collateralForIssued(request.amountBtc)
+            VaultRegistry.collateralFor(request.amountBtc)
         );
         VaultRegistry.redeemTokens(
             request.vault,
