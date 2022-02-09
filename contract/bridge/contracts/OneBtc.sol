@@ -34,6 +34,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         external
         initializer
     {
+        __ReentrancyGuard_init();
         __ERC20_init("Harmony Bitcoin", "1BTC");
         _setupDecimals(8);
         relay = _relay;
@@ -81,7 +82,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint64 heightAndIndex,
         bytes calldata header,
         uint256 outputIndex
-    ) external {
+    ) external nonReentrant {
         bytes memory _vout = verifyTx(
             uint32(heightAndIndex >> 32),
             heightAndIndex & type(uint32).max,
@@ -93,7 +94,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         Issue._executeIssue(requester, issueId, _vout, outputIndex);
     }
 
-    function cancelIssue(address requester, uint256 issueId) external {
+    function cancelIssue(address requester, uint256 issueId) external nonReentrant {
         Issue._cancelIssue(requester, issueId);
     }
 
@@ -129,7 +130,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         address requester,
         uint256 redeemId,
         bool reimburse
-    ) external {
+    ) external nonReentrant {
         Redeem._cancelRedeem(requester, redeemId, reimburse);
     }
 
@@ -194,7 +195,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint32 height,
         uint256 index,
         bytes calldata header
-    ) external {
+    ) external nonReentrant {
         require(false, "Feature temporarily disabled");
         // bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
         // Replace._executeReplace(replaceId, _vout);
@@ -210,7 +211,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 index,
         bytes calldata merkleProof,
         bytes calldata header
-    ) external {
+    ) external nonReentrant {
         require(
             relay.isApprovedStakedRelayer(msg.sender),
             "Sender is not authorized"
@@ -245,7 +246,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint64[] memory heightAndIndexs,
         bytes calldata merkleProofs,
         bytes calldata headers
-    ) external {
+    ) external nonReentrant {
         require(
             relay.isApprovedStakedRelayer(msg.sender),
             "Sender is not authorized"
