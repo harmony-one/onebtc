@@ -3,14 +3,13 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import {ICollateral} from "./Collateral.sol";
 import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
 import "./IExchangeRateOracle.sol";
 
-abstract contract VaultRegistry is Initializable, ReentrancyGuardUpgradeable, ICollateral {
+abstract contract VaultRegistry is Initializable, ICollateral {
     using SafeMathUpgradeable for uint256;
 
     struct Vault {
@@ -28,6 +27,12 @@ abstract contract VaultRegistry is Initializable, ReentrancyGuardUpgradeable, IC
 
     mapping(address => Vault) public vaults;
     IExchangeRateOracle oracle;
+
+    // ReentrancyGuard
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
 
     event RegisterVault(
         address indexed vaultId,
@@ -51,6 +56,35 @@ abstract contract VaultRegistry is Initializable, ReentrancyGuardUpgradeable, IC
         uint256 collateral
     );
     event LiquidateVault();
+
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * Calling a `nonReentrant` function from another `nonReentrant`
+     * function is not supported. It is possible to prevent this from happening
+     * by making the `nonReentrant` function external, and make it call a
+     * `private` function that does the actual work.
+     */
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _notEntered will be true
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+
+        _;
+
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        _status = _NOT_ENTERED;
+    }
+
+    function __ReentrancyGuard_init() internal initializer {
+        __ReentrancyGuard_init_unchained();
+    }
+
+    function __ReentrancyGuard_init_unchained() internal initializer {
+        _status = _NOT_ENTERED;
+    }
 
     function registerVault(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
         external
@@ -394,5 +428,5 @@ abstract contract VaultRegistry is Initializable, ReentrancyGuardUpgradeable, IC
         // vault.toBeRedeemed = 0;
     }
 
-    uint256[45] private __gap;
+    uint256[42] private __gap;
 }
