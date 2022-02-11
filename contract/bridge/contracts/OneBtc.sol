@@ -59,7 +59,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         TransactionUtils.Transaction memory btcTx = TransactionUtils.extractTx(
             rawTx
         );
-        require(btcTx.locktime == 0, "Locktime must be zero");
+        // require(btcTx.locktime == 0 || btcTx.locktime < height, "Locktime not reached");
         // check version?
         // btcTx.version
         return btcTx.vouts;
