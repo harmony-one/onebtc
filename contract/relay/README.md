@@ -2,7 +2,7 @@
 
 ## Relevant Repositories
 
-Our libs:
+Interlay libs:
 
 * https://github.com/interlay/compressed-inclusion-proofs
 * https://github.com/crossclaim/btcrelay-sol
@@ -77,7 +77,7 @@ npx buidler run scripts/metrics.ts
 
 [Summa](https://github.com/summa-tx/relays) have also developed a Bitcoin relay in Solidity.
 There are a number of differences between the two approaches however. As summarized in the table
-below, their block submission is significantly cheaper compared to ours. This is primarily due to
+below, their block submission is significantly cheaper compared to this implementation. This is primarily due to
 their more restrictive use of storage and separation of functionality - block submission, difficulty adjustment
 and fork selection are all separate calls. However, checking transaction inclusion is slightly more involved
 as the implementation needs to recurse backwards through all ancestors.
@@ -91,7 +91,7 @@ as the implementation needs to recurse backwards through all ancestors.
 | 67326    | 79540   | Inclusion | Tx Depth 6                   |
 | 67326    | 102364  | Inclusion | Tx Depth 32                  |
 
-There are two primary motivations for our higher cost in block submission:
+There are two primary motivations for this implementation's higher cost in block submission:
 
 1. The relay should be self-healing, requiring minimal user intervention.
 2. Constant time lookup - given a height we should be able to instantly verify inclusion.
