@@ -136,6 +136,7 @@ abstract contract Issue is VaultRegistry, Request {
             request.status == RequestStatus.Pending,
             "Request is already completed"
         );
+        request.status = RequestStatus.Completed;
         uint256 amountTransferred = TxValidate.validateTransaction(
             _vout,
             0,
@@ -199,7 +200,6 @@ abstract contract Issue is VaultRegistry, Request {
         VaultRegistry.issueTokens(request.vault, total);
         issueOneBTC(request.vault, request.fee);
         issueOneBTC(request.requester, request.amount);
-        request.status = RequestStatus.Completed;
         emit IssueCompleted(
             issueId,
             requester,
