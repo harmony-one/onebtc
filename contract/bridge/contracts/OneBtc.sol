@@ -22,12 +22,12 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
     }
 
     event ReportVaultTheft(address indexed vaultId);
-
     event VaultDoublePayment(
         address indexed vaultId,
         bytes32 leftTxId,
         bytes32 rightTxId
     );
+
     mapping(bytes32 => bool) public theftReports;
 
     function initialize(IRelay _relay, IExchangeRateOracle _oracle)

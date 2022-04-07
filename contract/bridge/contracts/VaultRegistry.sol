@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import {ICollateral} from "./Collateral.sol";
 import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
 import "./IExchangeRateOracle.sol";
+import "./IVaultReward.sol";
 
 abstract contract VaultRegistry is Initializable, ICollateral {
     using SafeMathUpgradeable for uint256;
@@ -27,6 +28,9 @@ abstract contract VaultRegistry is Initializable, ICollateral {
 
     mapping(address => Vault) public vaults;
     IExchangeRateOracle oracle;
+    // upgrade contract
+    address public vaultReward;
+    bool public isSetVaultReward;
 
     event RegisterVault(
         address indexed vaultId,
@@ -122,14 +126,21 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function lockAdditionalCollateral() public payable {
+        // update vault accClaimableRewards
+        IVaultReward(vaultReward).updateVaultAccClaimableRewards(msg.sender);
+
         address vaultId = msg.sender;
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
         vault.collateral = vault.collateral.add(msg.value);
         ICollateral.lockCollateral(vaultId, msg.value);
+
     }
 
     function withdrawCollateral(uint256 amount) external {
+        // update vault accClaimableRewards
+        IVaultReward(vaultReward).updateVaultAccClaimableRewards(msg.sender);
+
         Vault storage vault = vaults[msg.sender];
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
         // is allowed to withdraw collateral
@@ -333,6 +344,9 @@ abstract contract VaultRegistry is Initializable, ICollateral {
      * @dev Liquidate a vault by transferring all of its token balances to the liquidation vault.
      */
     function liquidateVault(address vaultId, address reporterId) internal {
+        // update vault accClaimableRewards
+        IVaultReward(vaultReward).updateVaultAccClaimableRewards(vaultId);
+
         Vault storage vault = vaults[vaultId];
 
         // pay the theft report reward to reporter
@@ -393,5 +407,28 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         // vault.toBeRedeemed = 0;
     }
 
-    uint256[45] private __gap;
+    function getVault(address _vaultId) external view returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
+        Vault memory vault = vaults[_vaultId];
+
+        return (
+            vault.btcPublicKeyX,
+            vault.btcPublicKeyY,
+            vault.collateral,
+            vault.issued,
+            vault.toBeIssued,
+            vault.toBeRedeemed,
+            vault.replaceCollateral,
+            vault.toBeReplaced,
+            vault.liquidatedCollateral
+        );
+    }
+
+    function setVaultRewardAddress(address _vaultReward) external {
+        require(!isSetVaultReward, "Already set VaultReward address");
+        isSetVaultReward = true;
+
+        vaultReward = _vaultReward;
+    }
+
+    uint256[43] private __gap;
 }
