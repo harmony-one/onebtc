@@ -294,26 +294,26 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         return (usedTokens, usedCollateral);
     }
 
-    function replaceTokens(
-        address oldVaultId,
-        address newVaultId,
-        uint256 tokens,
-        uint256 collateral
-    ) internal {
-        Vault storage oldVault = vaults[oldVaultId];
-        Vault storage newVault = vaults[newVaultId];
+    // function replaceTokens(
+    //     address oldVaultId,
+    //     address newVaultId,
+    //     uint256 tokens,
+    //     uint256 collateral
+    // ) internal {
+    //     Vault storage oldVault = vaults[oldVaultId];
+    //     Vault storage newVault = vaults[newVaultId];
 
-        require(oldVault.btcPublicKeyX != 0, "Vault does not exist");
-        require(newVault.btcPublicKeyX != 0, "Vault does not exist");
+    //     require(oldVault.btcPublicKeyX != 0, "Vault does not exist");
+    //     require(newVault.btcPublicKeyX != 0, "Vault does not exist");
 
-        // TODO: add liquidation functionality
-        // if old_vault.data.is_liquidated()
+    //     // TODO: add liquidation functionality
+    //     // if old_vault.data.is_liquidated()
 
-        oldVault.issued = oldVault.issued.sub(tokens);
-        newVault.issued = newVault.issued.add(tokens);
+    //     oldVault.issued = oldVault.issued.sub(tokens);
+    //     newVault.issued = newVault.issued.add(tokens);
 
-        emit ReplaceTokens(oldVaultId, newVaultId, tokens, collateral);
-    }
+    //     emit ReplaceTokens(oldVaultId, newVaultId, tokens, collateral);
+    // }
 
     function tryDepositCollateral(address vaultId, uint256 amount) internal {
         Vault storage vault = vaults[vaultId];
