@@ -65,8 +65,8 @@ contract VaultRegistryTestWrapper is VaultRegistry {
         return getFreeCollateral(vaultId);
     }
 
-    function testRequestableToBeReplacedTokens(address vaultId) public returns (uint256) {
-        uint requestableTokens = requestableToBeReplacedTokens(vaultId);
-        emit RequestableToBeReplacedTokens(vaultId, requestableTokens);
-    }
+    // function testRequestableToBeReplacedTokens(address vaultId) public returns (uint256) {
+    //     uint requestableTokens = requestableToBeReplacedTokens(vaultId);
+    //     emit RequestableToBeReplacedTokens(vaultId, requestableTokens);
+    // }
 }
