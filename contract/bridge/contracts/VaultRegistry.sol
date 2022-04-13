@@ -134,7 +134,6 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
         vault.collateral = vault.collateral.add(msg.value);
         ICollateral.lockCollateral(vaultId, msg.value);
-
     }
 
     function withdrawCollateral(uint256 amount) external {
@@ -430,5 +429,5 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         vaultReward = _vaultReward;
     }
 
-    uint256[43] private __gap;
+    uint256[44] private __gap;
 }
