@@ -158,47 +158,47 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         ERC20Upgradeable._mint(receiver, amount);
     }
 
-    function requestReplace(
-        address payable oldVaultId,
-        uint256 btcAmount,
-        uint256 griefingCollateral
-    ) external payable {
-        require(false, "Feature temporarily disabled");
-        // Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
-    }
+    // function requestReplace(
+    //     address payable oldVaultId,
+    //     uint256 btcAmount,
+    //     uint256 griefingCollateral
+    // ) external payable {
+    //     require(false, "Feature temporarily disabled");
+    //     // Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
+    // }
 
-    function acceptReplace(
-        address oldVaultId,
-        address newVaultId,
-        uint256 btcAmount,
-        uint256 collateral,
-        uint256 btcPublicKeyX,
-        uint256 btcPublicKeyY
-    ) external payable {
-        require(false, "Feature temporarily disabled");
-        // Replace._acceptReplace(
-        //     oldVaultId,
-        //     newVaultId,
-        //     btcAmount,
-        //     collateral,
-        //     btcPublicKeyX,
-        //     btcPublicKeyY
-        // );
-    }
+    // function acceptReplace(
+    //     address oldVaultId,
+    //     address newVaultId,
+    //     uint256 btcAmount,
+    //     uint256 collateral,
+    //     uint256 btcPublicKeyX,
+    //     uint256 btcPublicKeyY
+    // ) external payable {
+    //     require(false, "Feature temporarily disabled");
+    //     // Replace._acceptReplace(
+    //     //     oldVaultId,
+    //     //     newVaultId,
+    //     //     btcAmount,
+    //     //     collateral,
+    //     //     btcPublicKeyX,
+    //     //     btcPublicKeyY
+    //     // );
+    // }
 
-    function executeReplace(
-        uint256 replaceId,
-        bytes calldata merkleProof,
-        bytes calldata rawTx, // avoid compiler error: stack too deep
-        //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
-        uint32 height,
-        uint256 index,
-        bytes calldata header
-    ) external {
-        require(false, "Feature temporarily disabled");
-        // bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
-        // Replace._executeReplace(replaceId, _vout);
-    }
+    // function executeReplace(
+    //     uint256 replaceId,
+    //     bytes calldata merkleProof,
+    //     bytes calldata rawTx, // avoid compiler error: stack too deep
+    //     //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
+    //     uint32 height,
+    //     uint256 index,
+    //     bytes calldata header
+    // ) external {
+    //     require(false, "Feature temporarily disabled");
+    //     // bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
+    //     // Replace._executeReplace(replaceId, _vout);
+    // }
 
     /**
      * @dev Report vault misbehavior by providing fraud proof (malicious bitcoin transaction and the corresponding transaction inclusion proof). Fully slashes the vault.
