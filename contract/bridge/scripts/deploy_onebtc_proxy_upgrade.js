@@ -1,20 +1,10 @@
-const { ethers } = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 
 async function main() {
-    const Relay = await ethers.getContractFactory("RelayMock");
-    const relay = await Relay.attach(
-        process.env.HMY_RELAY_CONTRACT
-    );
-
-    const ExchangeRateOracle = await ethers.getContractFactory("ExchangeRateOracle");
-    const oracle = await ExchangeRateOracle.attach(
-        process.env.EXCHANGE_RATE_ORACLE
-    );
-
     const OneBtc = await ethers.getContractFactory("OneBtc");
-    const oneBtc = await upgrades.upgradeProxy(process.env.ONE_BTC_CONTRACT, OneBtc);
+    const oneBtc = await upgrades.upgradeProxy(process.env.ONE_BTC, OneBtc, { unsafeSkipStorageCheck: true });
 
-    console.log("OneBtc deployed to:", oneBtc.address);
+    console.log("OneBtc upgraded:", oneBtc.address);
 }
 
 main()
@@ -23,4 +13,3 @@ main()
         console.error(error);
         process.exit(1);
     });
-
