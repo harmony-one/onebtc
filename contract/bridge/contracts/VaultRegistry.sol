@@ -27,7 +27,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     mapping(address => Vault) public vaults;
-    IExchangeRateOracle oracle;
+    IExchangeRateOracle public oracle;
     // upgrade contract
     address public vaultReward;
     bool public isSetVaultReward;
@@ -126,8 +126,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function lockAdditionalCollateral() public payable {
-        // update vault accClaimableRewards
-        IVaultReward(vaultReward).updateVaultAccClaimableRewards(msg.sender);
+        _updateVaultAccClaimableRewards(msg.sender);
 
         address vaultId = msg.sender;
         Vault storage vault = vaults[vaultId];
@@ -137,8 +136,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function withdrawCollateral(uint256 amount) external {
-        // update vault accClaimableRewards
-        IVaultReward(vaultReward).updateVaultAccClaimableRewards(msg.sender);
+        _updateVaultAccClaimableRewards(msg.sender);
 
         Vault storage vault = vaults[msg.sender];
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
@@ -152,6 +150,11 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         );
         vault.collateral = vault.collateral.sub(amount);
         ICollateral.releaseCollateral(msg.sender, amount);
+    }
+
+    function _updateVaultAccClaimableRewards(address _vaultId) internal {
+        // update vault accClaimableRewards
+        IVaultReward(vaultReward).updateVaultAccClaimableRewards(_vaultId);
     }
 
     function decreaseToBeIssuedTokens(address vaultId, uint256 amount)
@@ -343,8 +346,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
      * @dev Liquidate a vault by transferring all of its token balances to the liquidation vault.
      */
     function liquidateVault(address vaultId, address reporterId) internal {
-        // update vault accClaimableRewards
-        IVaultReward(vaultReward).updateVaultAccClaimableRewards(vaultId);
+        _updateVaultAccClaimableRewards(vaultId);
 
         Vault storage vault = vaults[vaultId];
 
