@@ -322,17 +322,19 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     function slashToLiquidationVault(address vaultId, uint256 amount) private {
         Vault storage vault = vaults[vaultId];
         Vault storage liquidateVault = vaults[address(this)];
-        liquidateVault.collateral = liquidateVault.collateral.add(amount);
+        uint256 reward = amount.mul(25).div(1000); //2.5%
+        liquidateVault.collateral = liquidateVault.collateral.add(amount.sub(reward));
         vault.collateral = vault.collateral.sub(amount);
         // slash collateral
         ICollateral.liquidateCollateral(vaultId, amount);
+        ICollateral.releaseCollateralFromUsed(address(this), msg.sender, reward);   
     }
 
     function liquidationRatio(address vaultId) public returns (uint256) {
         Vault storage vault = vaults[vaultId];        
         require(vault.btcPublicKeyX != 0, "VDNE");
         if(vault.issued == 0) return 0;
-        uint256 collateralForIssuedTokens = collateralForIssued(vault.issued);
+        uint256 collateralForIssuedTokens = collateralFor(vault.issued);
         uint256 ratio = collateralForIssuedTokens.mul(10000).div(vault.collateral);
         return ratio;        
     }
@@ -370,13 +372,13 @@ abstract contract VaultRegistry is Initializable, ICollateral {
             liquidatedCollateralExcludingToBeRedeemed;
 
         // slash collateral for the to_be_redeemed tokens
-        slashForToBeRedeemed(vaultId, collateralForToBeRedeemed);
+        slashForToBeRedeemed(vaultId, collateralForToBeRedeemed);        
 
         // slash collateral used for issued + to_be_issued to the liquidation vault
         // also move the used over.
         slashToLiquidationVault(
             vaultId,
-            MathUpgradeable.min(vault.collateral, liquidatedCollateralExcludingToBeRedeemed)
+            liquidatedCollateralExcludingToBeRedeemed
         );
 
         // copy tokens to liquidation vault

@@ -53,12 +53,20 @@ abstract contract ICollateral {
         emit SlashCollateral(from, to, amount);
     }
 
-    function liquidateCollateral(address from, uint256 amount) internal {
-        require(CollateralBalances[from] >= amount, "Insufficient collateral");
+    function liquidateCollateral(address vaultId, uint256 amount) internal {
+        require(CollateralBalances[vaultId] >= amount, "Insufficient collateral");
         CollateralBalances[address(this)] = amount;
-        CollateralUsed[address(this)] = CollateralUsed[from];
-        CollateralBalances[from] = CollateralBalances[from].sub(amount);
-        CollateralUsed[from] = 0;
+        CollateralUsed[address(this)] = CollateralUsed[vaultId];
+        CollateralBalances[vaultId] = CollateralBalances[vaultId].sub(amount);
+        CollateralUsed[vaultId] = 0;
+    }
+
+    // force removal of collateral from used/and balance when removing from liquidation.
+    function releaseCollateralFromUsed(address vaultId, address to, uint256 amount) internal {
+        useCollateralDec(vaultId, amount);
+        CollateralBalances[vaultId].sub(amount);
+        (bool sent, ) = to.call{value: amount}("");
+        require(sent, "Transfer failed.");     
     }
 
     function getFreeCollateral(address vaultId)

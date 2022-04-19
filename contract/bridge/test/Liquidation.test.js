@@ -112,20 +112,22 @@ contract("liquidation test", accounts => {
         const IssueAmount = 0.5 * 1e8;  
         await issueToken(vaultId, IssueAmount);
         ratio = await oneBtc.liquidationRatio.call(vaultId);
-        assert.equal(ratio.toString(), "7500");
+        assert.equal(ratio.toString(), "5000");
         await expectRevert(oneBtc.liquidateVaultUnderCollateralized(vaultId), "under");
 
-        await exchangeRateOracleWrapper.setExchangeRate(15); // 1 OneBtc = 10 ONE
+        await exchangeRateOracleWrapper.setExchangeRate(20); // 1 OneBtc = 10 ONE
 
         // require delay to get the price
         await web3.miner.incTime(Number(1001)); // MAX_DELAY = 1000
         await web3.miner.mine();
 
         ratio = await oneBtc.liquidationRatio.call(vaultId);
-        assert.equal(ratio.toString(), "11250");
+        assert.equal(ratio.toString(), "10000");
         const vaultBefore = await oneBtc.vaults(vaultId);
-
-        await oneBtc.liquidateVaultUnderCollateralized(vaultId);
+        const accountBefore = await web3.eth.getBalance(accounts[0]);
+        const tx = await oneBtc.liquidateVaultUnderCollateralized(vaultId, {gasPrice: 0});
+        const reward = (new BN(collateral.toString())).mul(new BN(25)).div(new BN(1000));
+        //console.log("expect reward=", reward.toString(), tx);
 
         const vaultAfter = await oneBtc.vaults(vaultId);
         assert.equal(vaultAfter.issued.toString(), "0");
@@ -134,8 +136,12 @@ contract("liquidation test", accounts => {
 
         const liquidationVault = await oneBtc.vaults(oneBtc.address);
         assert.equal(liquidationVault.issued.toString(), vaultBefore.issued.toString());
-        assert.equal(liquidationVault.collateral.toString(), vaultBefore.collateral.toString());
+        assert.equal(liquidationVault.collateral.toString(), vaultBefore.collateral.sub(reward).toString());
         assert.equal(liquidationVault.toBeIssued.toString(), vaultBefore.toBeIssued.toString());
+
+        const accountAfter = await web3.eth.getBalance(accounts[0]);
+        assert.equal(new BN(accountAfter).sub(new BN(accountBefore)).toString(), 
+                    reward.toString());
 
         //console.log(liquidationVault);
     });

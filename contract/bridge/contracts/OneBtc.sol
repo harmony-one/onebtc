@@ -158,14 +158,14 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         ERC20Upgradeable._mint(receiver, amount);
     }
 
-    function requestReplace(
-        address payable oldVaultId,
-        uint256 btcAmount,
-        uint256 griefingCollateral
-    ) external payable {
-        require(false, "Feature temporarily disabled");
-        // Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
-    }
+    // function requestReplace(
+    //     address payable oldVaultId,
+    //     uint256 btcAmount,
+    //     uint256 griefingCollateral
+    // ) external payable {
+    //     require(false, "Feature temporarily disabled");
+    //     // Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
+    // }
 
     // function acceptReplace(
     //     address oldVaultId,
@@ -202,10 +202,8 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
 
     function liquidateVaultUnderCollateralized(address vaultId) external {
         uint256 ratio = liquidationRatio(vaultId);
-        require(ratio > 10000, "under");
+        require(ratio >= 10000, "under");
         liquidateVault(vaultId, msg.sender);
-
-        // reward liquidator to keep bridge well capitalized
     }
 
     /**
