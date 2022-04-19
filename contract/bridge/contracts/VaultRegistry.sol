@@ -70,7 +70,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         returns (address)
     {
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        require(vault.btcPublicKeyX != 0, "VDNE");
         address derivedKey = BitcoinKeyDerivation.derivate(
             vault.btcPublicKeyX,
             vault.btcPublicKeyY,
@@ -93,7 +93,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 replaceId
     ) internal returns (address) {
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        require(vault.btcPublicKeyX != 0, "VDNE");
 
         address btcAddress = BitcoinKeyDerivation.derivate(
             btcPublicKeyX,
@@ -115,7 +115,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     {
         address vaultId = msg.sender;
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        require(vault.btcPublicKeyX != 0, "VDNE");
         vault.btcPublicKeyX = btcPublicKeyX;
         vault.btcPublicKeyY = btcPublicKeyY;
         emit VaultPublicKeyUpdate(vaultId, btcPublicKeyX, btcPublicKeyY);
@@ -124,14 +124,14 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     function lockAdditionalCollateral() public payable {
         address vaultId = msg.sender;
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        require(vault.btcPublicKeyX != 0, "VDNE");
         vault.collateral = vault.collateral.add(msg.value);
         ICollateral.lockCollateral(vaultId, msg.value);
     }
 
     function withdrawCollateral(uint256 amount) external {
         Vault storage vault = vaults[msg.sender];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        require(vault.btcPublicKeyX != 0, "VDNE");
         // is allowed to withdraw collateral
         require(
             amount <
@@ -225,7 +225,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         returns (uint256 amount)
     {
         Vault memory vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        require(vault.btcPublicKeyX != 0, "VDNE");
 
         uint256 requestableIncrease = vault.issued.sub(vault.toBeRedeemed).sub(
             vault.toBeReplaced
@@ -261,7 +261,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         returns (uint256, uint256)
     {
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        require(vault.btcPublicKeyX != 0, "VDNE");
 
         uint256 usedTokens = MathUpgradeable.min(vault.toBeReplaced, tokens);
 
@@ -292,8 +292,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         Vault storage oldVault = vaults[oldVaultId];
         Vault storage newVault = vaults[newVaultId];
 
-        require(oldVault.btcPublicKeyX != 0, "Vault does not exist");
-        require(newVault.btcPublicKeyX != 0, "Vault does not exist");
+        require(oldVault.btcPublicKeyX != 0, "VDNE");
+        require(newVault.btcPublicKeyX != 0, "VDNE");
 
         // TODO: add liquidation functionality
         // if old_vault.data.is_liquidated()
@@ -306,7 +306,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
 
     function tryDepositCollateral(address vaultId, uint256 amount) internal {
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        require(vault.btcPublicKeyX != 0, "VDNE");
 
         ICollateral.lockCollateral(vaultId, amount);
     }
@@ -329,6 +329,15 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         ICollateral.lockCollateral(address(this), amount);
     }
 
+    function liquidationRatio(address vaultId) public returns (uint256) {
+        Vault storage vault = vaults[vaultId];        
+        require(vault.btcPublicKeyX != 0, "VDNE");
+        if(vault.issued == 0) return 0;
+        uint256 collateralForIssuedTokens = collateralForIssued(vault.issued);
+        uint256 ratio = collateralForIssuedTokens.mul(10000).div(vault.collateral);
+        return ratio;        
+    }
+    
     /**
      * @dev Liquidate a vault by transferring all of its token balances to the liquidation vault.
      */
@@ -367,7 +376,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         // slash collateral used for issued + to_be_issued to the liquidation vault
         slashToLiquidationVault(
             vaultId,
-            liquidatedCollateralExcludingToBeRedeemed
+            MathUpgradeable.min(vault.collateral, liquidatedCollateralExcludingToBeRedeemed)
         );
 
         // copy tokens to liquidation vault

@@ -158,8 +158,8 @@ abstract contract Replace is VaultRegistry, Request {
         // Vault storage oldVault = VaultRegistry.vaults[oldVaultId];
         // Vault storage newVault = VaultRegistry.vaults[newVaultId];
 
-        // require(oldVault.btcPublicKeyX != 0, "Vault does not exist");
-        // require(newVault.btcPublicKeyX != 0, "Vault does not exist");
+        // require(oldVault.btcPublicKeyX != 0, "VDNE");
+        // require(newVault.btcPublicKeyX != 0, "VDNE");
 
         // // decrease old-vault's to-be-replaced tokens
         // (uint256 redeemableTokens, uint256 griefingCollateral) = VaultRegistry
