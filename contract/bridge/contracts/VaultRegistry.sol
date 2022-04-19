@@ -325,8 +325,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         liquidateVault.collateral = liquidateVault.collateral.add(amount);
         vault.collateral = vault.collateral.sub(amount);
         // slash collateral
-        ICollateral.slashCollateral(vaultId, address(this), amount);
-        ICollateral.lockCollateral(address(this), amount);
+        ICollateral.liquidateCollateral(vaultId, amount);
     }
 
     function liquidationRatio(address vaultId) public returns (uint256) {
@@ -374,6 +373,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         slashForToBeRedeemed(vaultId, collateralForToBeRedeemed);
 
         // slash collateral used for issued + to_be_issued to the liquidation vault
+        // also move the used over.
         slashToLiquidationVault(
             vaultId,
             MathUpgradeable.min(vault.collateral, liquidatedCollateralExcludingToBeRedeemed)

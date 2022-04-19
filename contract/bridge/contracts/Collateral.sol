@@ -53,6 +53,14 @@ abstract contract ICollateral {
         emit SlashCollateral(from, to, amount);
     }
 
+    function liquidateCollateral(address from, uint256 amount) internal {
+        require(CollateralBalances[from] >= amount, "Insufficient collateral");
+        CollateralBalances[address(this)] = amount;
+        CollateralUsed[address(this)] = CollateralUsed[from];
+        CollateralBalances[from] = CollateralBalances[from].sub(amount);
+        CollateralUsed[from] = 0;
+    }
+
     function getFreeCollateral(address vaultId)
         internal
         view

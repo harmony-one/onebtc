@@ -124,12 +124,19 @@ contract("liquidation test", accounts => {
         ratio = await oneBtc.liquidationRatio.call(vaultId);
         assert.equal(ratio.toString(), "11250");
         const vaultBefore = await oneBtc.vaults(vaultId);
-        console.log(vaultBefore);
 
         await oneBtc.liquidateVaultUnderCollateralized(vaultId);
-        
-        const vaultAfter = await oneBtc.vaults(vaultId);
-        console.log(vaultAfter);
 
+        const vaultAfter = await oneBtc.vaults(vaultId);
+        assert.equal(vaultAfter.issued.toString(), "0");
+        assert.equal(vaultAfter.collateral.toString(), "0");
+        assert.equal(vaultAfter.toBeIssued.toString(), "0");
+
+        const liquidationVault = await oneBtc.vaults(oneBtc.address);
+        assert.equal(liquidationVault.issued.toString(), vaultBefore.issued.toString());
+        assert.equal(liquidationVault.collateral.toString(), vaultBefore.collateral.toString());
+        assert.equal(liquidationVault.toBeIssued.toString(), vaultBefore.toBeIssued.toString());
+
+        //console.log(liquidationVault);
     });
 });
