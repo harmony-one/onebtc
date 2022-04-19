@@ -4,7 +4,8 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import "./IVaultRegistry.sol";
+import "./interface/IVaultRegistry.sol";
+import "./interface/IVaultReserve.sol";
 
 contract VaultReward is Initializable {
   using SafeMathUpgradeable for uint256;
@@ -16,10 +17,20 @@ contract VaultReward is Initializable {
     uint256 rewardClaimAt;
     uint256 collateralUpdatedAt;
     uint256 accClaimableRewards;
+    uint256 accRewardPerShare;
+  }
+
+  struct VaultStaker {
+    uint256 balance;
+    uint256 accClaimableRewards;
+    uint256 rewardDebt;
   }
 
   address public oneBtc;
-  mapping(address => LockedVault) public lockedVaults;
+  address public vaultReserve;
+  mapping(address => LockedVault) public lockedVaults;  // Vault -> LockedVault
+  mapping(address => mapping(address => VaultStaker)) public vaultStakers;  // Vault -> User -> VaultStaker
+  mapping(address => address[]) public userStakedVaultList;  // User -> Vault list
 
   event ExtendVaultLockPeriod(address indexed vaultId, uint256 oldLockPeriod, uint256 newLockPeriod);
   event ClaimRewards(address indexed vaultId, uint256 amount, uint256 claimAt);
@@ -41,8 +52,9 @@ contract VaultReward is Initializable {
     _;
   }
 
-  function initialize(address _oneBtc) public initializer {
+  function initialize(address _oneBtc, address _vaultReserve) public initializer {
     oneBtc = _oneBtc;
+    vaultReserve = _vaultReserve;
   }
 
   function extendVaultLockPeriod(address _vaultId, uint256 _lockPeriod) external vaultExist(_vaultId) {
@@ -124,8 +136,9 @@ contract VaultReward is Initializable {
     vault.rewardClaimAt = rewardClaimAt;
 
     // transfer rewards
-    (bool sent,) = msg.sender.call{value: claimableRewards}("");
-    require(sent, "Failed to send ONE");
+    IVaultReserve(vaultReserve).withdrawReward(claimableRewards);
+    // (bool sent,) = msg.sender.call{value: claimableRewards}("");
+    // require(sent, "Failed to send ONE");
 
     emit ClaimRewards(_vaultId, claimableRewards, rewardClaimAt);
   }
