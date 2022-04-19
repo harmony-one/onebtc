@@ -6,6 +6,7 @@ const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 const OneBtc = artifacts.require("OneBtc");
 const RelayMock = artifacts.require("RelayMock");
 const ExchangeRateOracleWrapper = artifacts.require("ExchangeRateOracleWrapper");
+const VaultReserve = artifacts.require("VaultReserve");
 const VaultReward = artifacts.require("VaultReward");
 
 const bitcoin = require("bitcoinjs-lib");
@@ -39,10 +40,14 @@ contract("VaultReward unit test", (accounts) => {
     this.RelayMock = await RelayMock.new();
     this.ExchangeRateOracleWrapper = await deployProxy(ExchangeRateOracleWrapper);
     this.OneBtc = await deployProxy(OneBtc, [this.RelayMock.address, this.ExchangeRateOracleWrapper.address]);
-    this.VaultReward = await deployProxy(VaultReward, [this.OneBtc.address]);
+    this.VaultReserve = await deployProxy(VaultReserve, []);
+    this.VaultReward = await deployProxy(VaultReward, [this.OneBtc.address, this.VaultReserve.address]);
 
     // set VaultReward contract address to OneBtc contract
     await this.OneBtc.setVaultRewardAddress(this.VaultReward.address);
+
+    // set VaultReward contract address to VaultReserve contract
+    await this.VaultReserve.setVaultReward(this.VaultReward.address);
 
     // set BTC/ONE exchange rate
     await this.ExchangeRateOracleWrapper.setExchangeRate(10); // 1 OneBtc = 10 ONE
@@ -180,5 +185,30 @@ contract("VaultReward unit test", (accounts) => {
     const {claimableRewards, rewardClaimAt: claimAt} = await this.VaultReward.getClaimableRewards(this.vaultId);
     assert.equal(Number(claimableRewards), claimableRewardsExpectation);
     assert.closeTo(Number(claimAt), rewardClaimAtExpectation, 1);
+  });
+
+  it("claimRewards", async function() {
+    // check old vault balance
+    let oldVaultBalance = await web3.eth.getBalance(this.vaultId);
+    
+    // get vault claimable rewards
+    const {claimableRewards, rewardClaimAt: claimAt} = await this.VaultReward.getClaimableRewards(this.vaultId);
+    
+    // deposit rewards to VaultReserve contract
+    await this.VaultReserve.depositReward({
+      from: accounts[0],
+      value: Number(claimableRewards) * 2
+    });
+
+    // claim rewards
+    const receipt = await this.VaultReward.claimRewards(this.vaultId, { from: this.vaultId });
+    const gasUsed = receipt.receipt.gasUsed;
+    const tx = await web3.eth.getTransaction(receipt.tx);
+    const gasPrice = tx.gasPrice;
+    const gas = gasPrice * gasUsed;
+
+    // check new vault balance
+    let newVaultBalance = await web3.eth.getBalance(this.vaultId);
+    assert.closeTo(Number(oldVaultBalance) + Number(claimableRewards) - Number(gas), Number(newVaultBalance), 1000000);
   });
 });
