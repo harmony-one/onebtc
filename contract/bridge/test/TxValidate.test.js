@@ -27,7 +27,7 @@ contract("transaction parse test", accounts => {
         const txMock = issueTxMock(requestId, receiverAddress, requestAmount);
         const parsedTx = await txUtils.extractTx(txMock.toBuffer());
         const receiverAddressHex = '0x'+bitcoin.address.fromBase58Check(receiverAddress).hash.toString('hex');
-        await expectRevert(txValidate.validateTransaction(parsedTx.vouts, requestAmount, receiverAddressHex, requestId+1), "InvalidOpReturn");
+        await expectRevert(txValidate.validateTransaction(parsedTx.vouts, requestAmount, receiverAddressHex, requestId+1), "Invalid OpReturn");
     });
     it("validateTxout with less amount", async () => {
         const txUtils = await TxUtils.new();
@@ -38,7 +38,7 @@ contract("transaction parse test", accounts => {
         const txMock = issueTxMock(requestId, receiverAddress, requestAmount-1);
         const parsedTx = await txUtils.extractTx(txMock.toBuffer());
         const receiverAddressHex = '0x'+bitcoin.address.fromBase58Check(receiverAddress).hash.toString('hex');
-        await expectRevert(txValidate.validateTransaction(parsedTx.vouts, requestAmount, receiverAddressHex, requestId), "InsufficientValue");
+        await expectRevert(txValidate.validateTransaction(parsedTx.vouts, requestAmount, receiverAddressHex, requestId), "Insufficient BTC value");
     });
     it("validateTxout with more amount", async () => {
         const txUtils = await TxUtils.new();
@@ -61,7 +61,7 @@ contract("transaction parse test", accounts => {
         const txMock = issueTxMock(requestId, receiverAddress, requestAmount+10);
         const parsedTx = await txUtils.extractTx(txMock.toBuffer());
         const receiverAddressHex = '0x1111111111111111111111111111111111111111';
-        await expectRevert(txValidate.validateTransaction(parsedTx.vouts, requestAmount, receiverAddressHex, requestId), "InvalidRecipient");
+        await expectRevert(txValidate.validateTransaction(parsedTx.vouts, requestAmount, receiverAddressHex, requestId), "Insufficient BTC value");
     });
     it("validateTxout without requestId", async () => {
         const txUtils = await TxUtils.new();
@@ -72,6 +72,6 @@ contract("transaction parse test", accounts => {
         const txMock = issueTxMock(undefined, receiverAddress, requestAmount+10);
         const parsedTx = await txUtils.extractTx(txMock.toBuffer());
         const receiverAddressHex = '0x'+bitcoin.address.fromBase58Check(receiverAddress).hash.toString('hex');
-        await expectRevert(txValidate.validateTransaction(parsedTx.vouts, requestAmount, receiverAddressHex, requestId), "NoOpRetrun");
+        await expectRevert(txValidate.validateTransaction(parsedTx.vouts, requestAmount, receiverAddressHex, requestId), "Invalid OpReturn");
     });
 });
