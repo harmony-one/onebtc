@@ -108,7 +108,7 @@ contract("VaultReward unit test", (accounts) => {
     const { lockStartAt: oldLockStartAt, lockPeriod: oldLockPeriod, lockExpireAt: oldLockExpireAt, rewardClaimAt: oldRewardClaimAt, collateralUpdatedAt: oldCollateralUpdatedAt, accClaimableRewards: oldAccClaimableRewards } = await this.VaultReward.lockedVaults(this.vaultId);
 
     // increase time
-    await web3.miner.incTime(Number(3600 * 24 * 15)); // 15 day
+    await web3.miner.incTime(Number(3600 * 24 * 14)); // 14 day
     await web3.miner.mine();
 
     // set lock period
@@ -124,7 +124,7 @@ contract("VaultReward unit test", (accounts) => {
     // get expectations
     const vault = await this.OneBtc.getVault(this.vaultId);
     let vaultUsedCollateral = Number(vault[2]) - Number(vault[8]);
-    let accClaimableRewardsExpectation = vaultUsedCollateral * 5 * 15 / 365 / 100;  // lockPeriod: 3 months, APR: 5%
+    let accClaimableRewardsExpectation = vaultUsedCollateral * 5 * 14 / 365 / 100;  // lockPeriod: 3 months, APR: 5%
     
     // check vault info
     assert.equal(Number(lockStartAt), Number(oldLockStartAt));
@@ -132,7 +132,7 @@ contract("VaultReward unit test", (accounts) => {
     assert.equal(Number(lockExpireAt), Number(oldLockExpireAt) + (60*60*24*30*vaultLockPeriod));
     assert.closeTo(Number(rewardClaimAt), currentTimestamp, 1);
     assert.equal(Number(collateralUpdatedAt), oldCollateralUpdatedAt);
-    assert.equal(accClaimableRewards, accClaimableRewardsExpectation);
+    assert.closeTo(Number(accClaimableRewards), accClaimableRewardsExpectation, 10);
   });
 
   it("getClaimableRewards", async function() {
@@ -146,9 +146,9 @@ contract("VaultReward unit test", (accounts) => {
     // get expectations
     const vault = await this.OneBtc.getVault(this.vaultId);
     let vaultUsedCollateral = Number(vault[2]) - Number(vault[8]);
-    let claimableRewardsExpectation = Number(accClaimableRewards) + (vaultUsedCollateral * 10 * 15 / 365 / 100);  // lockPeriod: 6 months, APR: 10%, accRewards: for 15 days, not 20 days
+    let claimableRewardsExpectation = Number(accClaimableRewards) + (vaultUsedCollateral * 10 * 14 / 365 / 100);  // lockPeriod: 6 months, APR: 10%, accRewards: for 14 days, not 20 days
     let currentTimestamp = await getBlockTimestamp(vault);
-    let rewardClaimAtExpectation = Number(currentTimestamp) - (60*60*24*5);
+    let rewardClaimAtExpectation = Number(currentTimestamp) - (60*60*24*6); // 20-14=6
     
     // check vault claimable rewards
     const {claimableRewards, rewardClaimAt: claimAt} = await this.VaultReward.getClaimableRewards(this.vaultId);
@@ -172,9 +172,9 @@ contract("VaultReward unit test", (accounts) => {
     let tx = await this.OneBtc.withdrawCollateral(withdrawAmount, { from: this.vaultId });
     
     // get expectations
-    let claimableRewardsExpectation = Number(accClaimableRewards) + (vaultUsedCollateral * 10 * 30 / 365 / 100);  // lockPeriod: 6 months, APR: 10%, accRewards: for 30 days, not 40(20+20) days
+    let claimableRewardsExpectation = Number(accClaimableRewards) + (vaultUsedCollateral * 10 * 28 / 365 / 100);  // lockPeriod: 6 months, APR: 10%, accRewards: for 28 days, not 40(20+20) days
     let currentTimestamp = await getBlockTimestamp(tx);
-    let rewardClaimAtExpectation = Number(currentTimestamp) - (60*60*24*10);
+    let rewardClaimAtExpectation = Number(currentTimestamp) - (60*60*24*12);  // 40-28=12
     
     // check vault claimable rewards
     const {claimableRewards, rewardClaimAt: claimAt} = await this.VaultReward.getClaimableRewards(this.vaultId);
