@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import {ICollateral} from "./Collateral.sol";
 import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
 import "./IExchangeRateOracle.sol";
-import "./IVaultReward.sol";
+import "./interface/IVaultReward.sol";
 
 abstract contract VaultRegistry is Initializable, ICollateral {
     using SafeMathUpgradeable for uint256;
