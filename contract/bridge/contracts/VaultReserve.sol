@@ -21,12 +21,9 @@ contract VaultReserve is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
     _;
   }
 
-  modifier checkReserve(uint256 _amount) {
-    require(totalDepositAmount.sub(totalWithdrawalAmount) >= _amount, "insufficient reserve");
-    _;
+  receive() external payable {
+    totalDepositAmount = totalDepositAmount.add(msg.value);
   }
-
-  receive() external payable {}
 
   function initialize() external {
     __Ownable_init();
@@ -38,15 +35,15 @@ contract VaultReserve is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
     totalDepositAmount = totalDepositAmount.add(msg.value);
   }
 
-  function withdrawReward(uint256 _amount) external onlyVaultReward nonReentrant whenNotPaused checkReserve(_amount) {
+  function withdrawReward(address payable _to, uint256 _amount) external onlyVaultReward nonReentrant whenNotPaused {
     totalWithdrawalAmount = totalWithdrawalAmount.add(_amount);
 
     // transfer rewards
-    (bool sent,) = msg.sender.call{value: _amount}("");
+    (bool sent,) = payable(_to).call{value: _amount}("");
     require(sent, "Failed to send ONE");
   }
 
-  function emergencyWithdraw(address payable _to, uint256 _amount) external onlyOwner checkReserve(_amount) {
+  function emergencyWithdraw(address payable _to, uint256 _amount) external onlyOwner {
     totalWithdrawalAmount = totalWithdrawalAmount.add(_amount);
 
     // transfer rewards
