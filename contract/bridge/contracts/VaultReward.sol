@@ -153,7 +153,7 @@ contract VaultReward is Initializable {
     uint256 secPerDay = 60 * 60 * 24;
     uint256 elapsedSecs;
     if (block.timestamp <= vault.lockExpireAt) {
-      rewardClaimAt = block.timestamp.sub(mod(block.timestamp.sub(vault.rewardClaimAt), secPerDay.mul(15)));
+      rewardClaimAt = block.timestamp.sub(mod(block.timestamp.sub(vault.rewardClaimAt), secPerDay.mul(14)));
       elapsedSecs = rewardClaimAt.sub(vault.rewardClaimAt);
     } else {
       rewardClaimAt = vault.lockExpireAt;
@@ -161,11 +161,11 @@ contract VaultReward is Initializable {
     }
 
     // calculate the remaining rewards since the last claim time
-    uint256 claimableUnit = elapsedSecs.div(secPerDay).div(15); // claim every 15 days
+    uint256 claimableUnit = elapsedSecs.div(secPerDay).div(14); // claim every 14 days
     if (claimableUnit == 0) {
       claimableRewards = vault.accClaimableRewards;
     } else {
-      claimableRewards = vault.accClaimableRewards.add(vaultUsedCollateral.mul(claimableUnit).mul(15).mul(vaultAPR).div(36500));
+      claimableRewards = vault.accClaimableRewards.add(vaultUsedCollateral.mul(claimableUnit).mul(14).mul(vaultAPR).div(36500));
     }
   }
 
