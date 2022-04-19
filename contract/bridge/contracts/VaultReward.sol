@@ -136,9 +136,7 @@ contract VaultReward is Initializable {
     vault.rewardClaimAt = rewardClaimAt;
 
     // transfer rewards
-    IVaultReserve(vaultReserve).withdrawReward(claimableRewards);
-    // (bool sent,) = msg.sender.call{value: claimableRewards}("");
-    // require(sent, "Failed to send ONE");
+    IVaultReserve(vaultReserve).withdrawReward(msg.sender, claimableRewards);
 
     emit ClaimRewards(_vaultId, claimableRewards, rewardClaimAt);
   }
