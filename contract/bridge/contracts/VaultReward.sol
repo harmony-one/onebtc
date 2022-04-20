@@ -180,6 +180,10 @@ contract VaultReward is Initializable {
     }
   }
 
+  function getVaultLockExpireAt(address _vaultId) external view returns (uint256) {
+    return lockedVaults[_vaultId].lockExpireAt;
+  }
+
   function mod(uint256 a, uint256 b) private pure returns (uint256 remainder) {
     remainder = a.sub(a.div(b).mul(b));
   }
