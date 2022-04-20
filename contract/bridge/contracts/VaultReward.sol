@@ -164,7 +164,7 @@ contract VaultReward is Initializable {
     uint256 secPerDay = 60 * 60 * 24;
     uint256 elapsedSecs;
     if (block.timestamp <= vault.lockExpireAt) {
-      rewardClaimAt = block.timestamp.sub(mod(block.timestamp.sub(vault.rewardClaimAt), secPerDay.mul(14)));
+      rewardClaimAt = block.timestamp.sub((block.timestamp.sub(vault.rewardClaimAt)).mod(secPerDay.mul(14)));
       elapsedSecs = rewardClaimAt.sub(vault.rewardClaimAt);
     } else {
       rewardClaimAt = vault.lockExpireAt;
@@ -182,9 +182,5 @@ contract VaultReward is Initializable {
 
   function getVaultLockExpireAt(address _vaultId) external view returns (uint256) {
     return lockedVaults[_vaultId].lockExpireAt;
-  }
-
-  function mod(uint256 a, uint256 b) private pure returns (uint256 remainder) {
-    remainder = a.sub(a.div(b).mul(b));
   }
 }
