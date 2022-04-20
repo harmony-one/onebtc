@@ -136,6 +136,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function withdrawCollateral(uint256 amount) external {
+        require(IVaultReward(vaultReward).getVaultLockExpireAt(msg.sender) < block.timestamp, "Vault lock period is not expired");
+
         _updateVaultAccClaimableRewards(msg.sender);
 
         Vault storage vault = vaults[msg.sender];
