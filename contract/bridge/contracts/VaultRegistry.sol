@@ -74,7 +74,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         returns (address)
     {
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        requireVaultExistence(vault.btcPublicKeyX);
+
         address derivedKey = BitcoinKeyDerivation.derivate(
             vault.btcPublicKeyX,
             vault.btcPublicKeyY,
@@ -97,7 +98,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 replaceId
     ) internal returns (address) {
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        requireVaultExistence(vault.btcPublicKeyX);
 
         address btcAddress = BitcoinKeyDerivation.derivate(
             btcPublicKeyX,
@@ -119,7 +120,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     {
         address vaultId = msg.sender;
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        requireVaultExistence(vault.btcPublicKeyX);
         vault.btcPublicKeyX = btcPublicKeyX;
         vault.btcPublicKeyY = btcPublicKeyY;
         emit VaultPublicKeyUpdate(vaultId, btcPublicKeyX, btcPublicKeyY);
@@ -130,7 +131,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
 
         address vaultId = msg.sender;
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        requireVaultExistence(vault.btcPublicKeyX);
         vault.collateral = vault.collateral.add(msg.value);
         ICollateral.lockCollateral(vaultId, msg.value);
     }
@@ -141,7 +142,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         _updateVaultAccClaimableRewards(msg.sender);
 
         Vault storage vault = vaults[msg.sender];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        requireVaultExistence(vault.btcPublicKeyX);
         // is allowed to withdraw collateral
         require(
             amount <
@@ -240,7 +241,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     //     returns (uint256 amount)
     // {
     //     Vault memory vault = vaults[vaultId];
-    //     require(vault.btcPublicKeyX != 0, "Vault does not exist");
+    //     requireVaultExistence(vault.btcPublicKeyX);
 
     //     uint256 requestableIncrease = vault.issued.sub(vault.toBeRedeemed).sub(
     //         vault.toBeReplaced
@@ -276,7 +277,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     //     returns (uint256, uint256)
     // {
     //     Vault storage vault = vaults[vaultId];
-    //     require(vault.btcPublicKeyX != 0, "Vault does not exist");
+    //     requireVaultExistence(vault.btcPublicKeyX);
 
     //     uint256 usedTokens = MathUpgradeable.min(vault.toBeReplaced, tokens);
 
@@ -307,8 +308,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     //     Vault storage oldVault = vaults[oldVaultId];
     //     Vault storage newVault = vaults[newVaultId];
 
-    //     require(oldVault.btcPublicKeyX != 0, "Vault does not exist");
-    //     require(newVault.btcPublicKeyX != 0, "Vault does not exist");
+    //     requireVaultExistence(oldVault.btcPublicKeyX);
+    //     requireVaultExistence(newVault.btcPublicKeyX);
 
     //     // TODO: add liquidation functionality
     //     // if old_vault.data.is_liquidated()
@@ -321,7 +322,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
 
     function tryDepositCollateral(address vaultId, uint256 amount) internal {
         Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+        requireVaultExistence(vault.btcPublicKeyX);
 
         ICollateral.lockCollateral(vaultId, amount);
     }
@@ -408,6 +409,10 @@ abstract contract VaultRegistry is Initializable, ICollateral {
 
         // TODO: toBeRedeemed will be kept as long is the to-be-redeemed request is not cancelled.
         // vault.toBeRedeemed = 0;
+    }
+
+    function requireVaultExistence(uint256 _vaultBtcPublicKeyX) private {
+        require(_vaultBtcPublicKeyX != 0, "Vault does not exist");
     }
 
     function getVault(address _vaultId) external view returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
