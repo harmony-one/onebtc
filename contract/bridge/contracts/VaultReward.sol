@@ -34,6 +34,7 @@ contract VaultReward is Initializable {
 
   event ExtendVaultLockPeriod(address indexed vaultId, uint256 oldLockPeriod, uint256 newLockPeriod);
   event ClaimRewards(address indexed vaultId, uint256 amount, uint256 claimAt);
+  event ClaimRewardsAndLock(address indexed vaultId, uint256 amount, uint256 claimAt);
   event UpdateVaultAccClaimableRewards(
     address indexed vaultId,
     uint256 oldAccClaimableRewards,
@@ -51,6 +52,8 @@ contract VaultReward is Initializable {
     require(btcPublicKeyX != 0, "Vault does not exist");
     _;
   }
+
+  receive() external payable {}
 
   function initialize(address _oneBtc, address _vaultReserve) public initializer {
     oneBtc = _oneBtc;
@@ -91,20 +94,18 @@ contract VaultReward is Initializable {
   }
 
   function _updateVaultAccClaimableRewards(address _vaultId) internal {
-    if (block.timestamp <= lockedVaults[_vaultId].lockExpireAt) {
-      // get vault
-      LockedVault storage vault = lockedVaults[_vaultId];
+    // get vault
+    LockedVault storage vault = lockedVaults[_vaultId];
 
-      // store the old accClaimableRewards
-      uint256 oldAccClaimableRewards = vault.accClaimableRewards;
+    // store the old accClaimableRewards
+    uint256 oldAccClaimableRewards = vault.accClaimableRewards;
 
-      // update the vault info
-      (uint256 claimableRewards, uint256 rewardClaimAt) = getClaimableRewards(_vaultId);
-      vault.accClaimableRewards = claimableRewards;
-      vault.rewardClaimAt = rewardClaimAt;
+    // update the vault info
+    (uint256 claimableRewards, uint256 rewardClaimAt) = getClaimableRewards(_vaultId);
+    vault.accClaimableRewards = claimableRewards;
+    vault.rewardClaimAt = rewardClaimAt;
 
-      emit UpdateVaultAccClaimableRewards(_vaultId, oldAccClaimableRewards, vault.accClaimableRewards, rewardClaimAt);
-    }
+    emit UpdateVaultAccClaimableRewards(_vaultId, oldAccClaimableRewards, vault.accClaimableRewards, rewardClaimAt);
   }
 
   function updateVaultAccClaimableRewards(address _vaultId) external onlyOneBtc {
@@ -124,9 +125,28 @@ contract VaultReward is Initializable {
     }
   }
 
-  function claimRewards(address _vaultId) external {
+  function claimRewards(address payable _vaultId) external {
     require(_vaultId == msg.sender, "Invalid vaultId");
 
+    // claiim rewards
+    (uint256 claimableRewards, uint256 rewardClaimAt) = _claimRewards(_vaultId, _vaultId);
+
+    emit ClaimRewards(_vaultId, claimableRewards, rewardClaimAt);
+  }
+
+  function claimRewardsAndLock(address payable _vaultId) external {
+    require(_vaultId == msg.sender, "Invalid vaultId");
+
+    // claim rewards
+    (uint256 claimableRewards, uint256 rewardClaimAt) = _claimRewards(_vaultId, address(this));
+
+    // lock collateral
+    IVaultRegistry(oneBtc).lockAdditionalCollateralFromVaultReward{value: claimableRewards}(_vaultId);
+
+    emit ClaimRewardsAndLock(_vaultId, claimableRewards, rewardClaimAt);
+  }
+
+  function _claimRewards(address _vaultId, address payable _to) internal returns(uint256, uint256) {
     // get reward debt
     (uint256 claimableRewards, uint256 rewardClaimAt) = getClaimableRewards(_vaultId);
     
@@ -136,9 +156,9 @@ contract VaultReward is Initializable {
     vault.rewardClaimAt = rewardClaimAt;
 
     // transfer rewards
-    IVaultReserve(vaultReserve).withdrawReward(msg.sender, claimableRewards);
+    IVaultReserve(vaultReserve).withdrawReward(_to, claimableRewards);
 
-    emit ClaimRewards(_vaultId, claimableRewards, rewardClaimAt);
+    return (claimableRewards, rewardClaimAt);
   }
 
   function getClaimableRewards(address _vaultId) public view vaultExist(_vaultId) returns (uint256 claimableRewards, uint256 rewardClaimAt) {
