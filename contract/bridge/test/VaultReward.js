@@ -231,6 +231,77 @@ contract("VaultReward unit test", (accounts) => {
 
     // check new vault balance
     let newVaultBalance = await web3.eth.getBalance(this.vaultId);
-    assert.closeTo(Number(oldVaultBalance) + Number(claimableRewards) - Number(gas), Number(newVaultBalance), 1000000);
+    assert.closeTo(Number(oldVaultBalance) + Number(claimableRewards) - Number(gas), Number(newVaultBalance), 100000);
+  });
+
+  it("claimRewardsAndLock", async function() {
+    // get old vault balance
+    let oldVaultBalance = await web3.eth.getBalance(this.vaultId);
+
+    // check old vault collateral
+    let vault = await this.OneBtc.getVault(this.vaultId);
+    let oldVaultCollateral = Number(vault[2]) - Number(vault[8]);
+
+    // increase time
+    await web3.miner.incTime(Number(3600 * 24 * 20)); // 20 day
+    await web3.miner.mine();
+
+    // get vault claimable rewards
+    const {claimableRewards, rewardClaimAt: claimAt} = await this.VaultReward.getClaimableRewards(this.vaultId);
+
+    // deposit rewards to VaultReserve contract
+    await this.VaultReserve.depositReward({
+      from: accounts[0],
+      value: Number(claimableRewards) * 2
+    });
+    
+    // claim rewards and lock it again
+    const receipt = await this.VaultReward.claimRewardsAndLock(this.vaultId, { from: this.vaultId });
+    const gasUsed = receipt.receipt.gasUsed;
+    const tx = await web3.eth.getTransaction(receipt.tx);
+    const gasPrice = tx.gasPrice;
+    const gas = gasPrice * gasUsed;
+    
+    // get new vault balance
+    let newVaultBalance = await web3.eth.getBalance(this.vaultId);
+
+    // get new vault collateral
+    vault = await this.OneBtc.getVault(this.vaultId);
+    let newVaultCollateral = Number(vault[2]) - Number(vault[8]);
+
+    // check new vault balance and collateral
+    assert.closeTo(Number(oldVaultBalance) - Number(gas), Number(newVaultBalance), 100000);
+    assert.closeTo(Number(oldVaultCollateral) + Number(claimableRewards), Number(newVaultCollateral), 100000);
+  });
+
+  it("withdraw if the vault lock period is expired", async function() {
+    // get old vault balance
+    let oldVaultBalance = await web3.eth.getBalance(this.vaultId);
+
+    // increase time
+    await web3.miner.incTime(Number(3600 * 24 * 30 * 12)); // 1 year
+    await web3.miner.mine();
+
+    // check old vault collateral
+    let vault = await this.OneBtc.getVault(this.vaultId);
+    let oldVaultCollateral = vault[2].sub(vault[8]);
+
+    // withdraw all collateral and claimable rewards
+    const receipt = await this.OneBtc.withdrawCollateral(oldVaultCollateral, { from: this.vaultId });
+    const gasUsed = receipt.receipt.gasUsed;
+    const tx = await web3.eth.getTransaction(receipt.tx);
+    const gasPrice = tx.gasPrice;
+    const gas = gasPrice * gasUsed;
+    
+    // get new vault balance
+    let newVaultBalance = await web3.eth.getBalance(this.vaultId);
+
+    // get new vault collateral
+    vault = await this.OneBtc.getVault(this.vaultId);
+    let newVaultCollateral = vault[2].sub(vault[8]);
+
+    // check new vault balance and collateral
+    assert.equal(Number(oldVaultBalance) + Number(oldVaultCollateral) - Number(gas), Number(newVaultBalance));
+    assert.equal(Number(newVaultCollateral), 0);
   });
 });
