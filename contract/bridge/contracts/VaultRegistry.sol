@@ -55,6 +55,11 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     );
     event LiquidateVault();
 
+    modifier onlyVaultReward() {
+        require(msg.sender == vaultReward, "Only VaultReward");
+        _;
+    }
+
     function registerVault(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
         external
         payable
@@ -127,13 +132,20 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function lockAdditionalCollateral() public payable {
-        _updateVaultAccClaimableRewards(msg.sender);
+        _lockAdditionalCollateral(msg.sender, msg.value);
+    }
 
-        address vaultId = msg.sender;
-        Vault storage vault = vaults[vaultId];
+    function lockAdditionalCollateralFromVaultReward(address _vaultId) external payable onlyVaultReward {
+        _lockAdditionalCollateral(_vaultId, msg.value);
+    }
+
+    function _lockAdditionalCollateral(address _vaultId, uint256 _lockAmount) private {
+        _updateVaultAccClaimableRewards(_vaultId);
+
+        Vault storage vault = vaults[_vaultId];
         requireVaultExistence(vault.btcPublicKeyX);
-        vault.collateral = vault.collateral.add(msg.value);
-        ICollateral.lockCollateral(vaultId, msg.value);
+        vault.collateral = vault.collateral.add(_lockAmount);
+        ICollateral.lockCollateral(_vaultId, _lockAmount);
     }
 
     function withdrawCollateral(uint256 amount) external {
@@ -145,7 +157,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         requireVaultExistence(vault.btcPublicKeyX);
         // is allowed to withdraw collateral
         require(
-            amount <
+            amount <=
                 getTotalCollateral(msg.sender).sub(
                     collateralForIssued(vault.issued.add(vault.toBeIssued))
                 ),
@@ -432,7 +444,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function setVaultRewardAddress(address _vaultReward) external {
-        require(!isSetVaultReward, "Already set VaultReward address");
+        require(!isSetVaultReward, "VaultReward already set");
         isSetVaultReward = true;
 
         vaultReward = _vaultReward;
