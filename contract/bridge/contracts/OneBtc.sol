@@ -163,8 +163,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 btcAmount,
         uint256 griefingCollateral
     ) external payable {
-        require(false, "Feature temporarily disabled");
-        // Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
+        Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
     }
 
     function acceptReplace(
@@ -175,15 +174,14 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 btcPublicKeyX,
         uint256 btcPublicKeyY
     ) external payable {
-        require(false, "Feature temporarily disabled");
-        // Replace._acceptReplace(
-        //     oldVaultId,
-        //     newVaultId,
-        //     btcAmount,
-        //     collateral,
-        //     btcPublicKeyX,
-        //     btcPublicKeyY
-        // );
+        Replace._acceptReplace(
+            oldVaultId,
+            newVaultId,
+            btcAmount,
+            collateral,
+            btcPublicKeyX,
+            btcPublicKeyY
+        );
     }
 
     function executeReplace(
@@ -195,9 +193,8 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         uint256 index,
         bytes calldata header
     ) external {
-        require(false, "Feature temporarily disabled");
-        // bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
-        // Replace._executeReplace(replaceId, _vout);
+        bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
+        Replace._executeReplace(replaceId, _vout);
     }
 
     /**
