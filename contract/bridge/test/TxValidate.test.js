@@ -1,5 +1,6 @@
 const TxUtils = artifacts.require("TransactionUtilsMock");
 const TxValidate = artifacts.require("TxValidateMock");
+const TxValidateLibA = artifacts.require("TxValidate");
 
 const bitcoin = require('bitcoinjs-lib');
 const { expectRevert } = require("@openzeppelin/test-helpers");
@@ -8,6 +9,8 @@ const { issueTxMock } = require('./mock/btcTxMock');
 contract("transaction parse test", accounts => {
     it("extractTx and validateTxout", async () => {
         const txUtils = await TxUtils.new();
+        const TxValidateLib = await TxValidateLibA.new();
+        TxValidate.link("TxValidate", TxValidateLib.address);    
         const txValidate = await TxValidate.new();
         const receiverAddress = '12L1QTVLowqsRUNht35RyBE3RZzmCZzYF3';
         const requestId = 123;
