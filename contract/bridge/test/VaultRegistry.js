@@ -1,6 +1,8 @@
 const VaultRegistryTestWrapper = artifacts.require("VaultRegistryTestWrapper");
 const bitcoin = require("bitcoinjs-lib");
 const bn = (b) => BigInt(`0x${b.toString("hex")}`);
+const Secp256k1 = artifacts.require("Secp256k1");
+const TxValidate = artifacts.require("TxValidate");
 
 web3.extend({
   property: "miner",
@@ -20,6 +22,11 @@ web3.extend({
 
 contract("VaultRegistry unit test", (accounts) => {
   before(async function () {
+    const Secp256k1Lib = await Secp256k1.new();
+    VaultRegistryTestWrapper.link("Secp256k1", Secp256k1Lib.address);
+
+    const TxValidateLib = await TxValidate.new();
+    VaultRegistryTestWrapper.link("TxValidate", TxValidateLib.address);
     this.VaultRegistry = await VaultRegistryTestWrapper.new();
 
     this.vaultId = accounts[1];
