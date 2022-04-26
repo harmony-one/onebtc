@@ -184,8 +184,11 @@ contract VaultReward is Initializable {
     uint256 secPerDay = 60 * 60 * 24;
     uint256 elapsedSecs;
     if (block.timestamp <= vault.lockExpireAt) {
-      rewardClaimAt = block.timestamp.sub((block.timestamp.sub(vault.rewardClaimAt)).mod(secPerDay.mul(14)));
-      elapsedSecs = rewardClaimAt.sub(vault.rewardClaimAt);
+      rewardClaimAt = block.timestamp.sub(
+        (block.timestamp.sub(vault.rewardClaimAt)) //elapsed seconds since the last claim
+        .mod(secPerDay.mul(14)) // mod by 2 weeks to get remaining seconds in this 2 week period
+      );  //timestamp of last applicable 2 week period for rewards
+      elapsedSecs = rewardClaimAt.sub(vault.rewardClaimAt); //end result is a amount in seconds that is a multiple of 2 weeks, and represent the number of 2 week periods since last claim
     } else {
       rewardClaimAt = vault.lockExpireAt;
       elapsedSecs = rewardClaimAt.sub(vault.rewardClaimAt);
