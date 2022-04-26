@@ -6,25 +6,13 @@ import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import {ICollateral} from "./Collateral.sol";
-import {BitcoinKeyDerivation} from "./crypto/BitcoinKeyDerivation.sol";
 import "./IExchangeRateOracle.sol";
+import "./interface/IVaultRegistry.sol";
 import "./interface/IVaultReward.sol";
+import "./lib/VaultRegistryLib.sol";
 
-abstract contract VaultRegistry is Initializable, ICollateral {
+abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
     using SafeMathUpgradeable for uint256;
-
-    struct Vault {
-        uint256 btcPublicKeyX;
-        uint256 btcPublicKeyY;
-        uint256 collateral;
-        uint256 issued;
-        uint256 toBeIssued;
-        uint256 toBeRedeemed;
-        uint256 replaceCollateral;
-        uint256 toBeReplaced;
-        uint256 liquidatedCollateral;
-        mapping(address => bool) depositAddresses;
-    }
 
     mapping(address => Vault) public vaults;
     IExchangeRateOracle public oracle;
@@ -65,11 +53,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         payable
     {
         address vaultId = msg.sender;
-        Vault storage vault = vaults[vaultId];
-        require(vault.btcPublicKeyX == 0, "Vault already exist");
-        require(btcPublicKeyX != 0 && btcPublicKeyY != 0, "Invalid public key");
-        vault.btcPublicKeyX = btcPublicKeyX;
-        vault.btcPublicKeyY = btcPublicKeyY;
+        VaultRegistryLib.registerVault(vaults[vaultId], btcPublicKeyX, btcPublicKeyY);
         lockAdditionalCollateral();
         emit RegisterVault(vaultId, msg.value, btcPublicKeyX, btcPublicKeyY);
     }
@@ -78,22 +62,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         internal
         returns (address)
     {
-        Vault storage vault = vaults[vaultId];
-        requireVaultExistence(vault.btcPublicKeyX);
-
-        address derivedKey = BitcoinKeyDerivation.derivate(
-            vault.btcPublicKeyX,
-            vault.btcPublicKeyY,
-            issueId
-        );
-
-        require(
-            !vault.depositAddresses[derivedKey],
-            "The btc address is already used"
-        );
-        vault.depositAddresses[derivedKey] = true;
-
-        return derivedKey;
+        requireVaultExistence(vaults[vaultId].btcPublicKeyX);
+        return VaultRegistryLib.registerDepositAddress(vaults[vaultId], vaultId, issueId);
     }
 
     function insertVaultDepositAddress(
@@ -102,22 +72,8 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         uint256 btcPublicKeyY,
         uint256 replaceId
     ) internal returns (address) {
-        Vault storage vault = vaults[vaultId];
-        requireVaultExistence(vault.btcPublicKeyX);
-
-        address btcAddress = BitcoinKeyDerivation.derivate(
-            btcPublicKeyX,
-            btcPublicKeyY,
-            replaceId
-        );
-
-        require(
-            !vault.depositAddresses[btcAddress],
-            "The btc address is already used"
-        );
-        vault.depositAddresses[btcAddress] = true;
-
-        return btcAddress;
+        requireVaultExistence(vaults[vaultId].btcPublicKeyX);
+        return VaultRegistryLib.insertVaultDepositAddress(vaults[vaultId], btcPublicKeyX, btcPublicKeyY, replaceId);
     }
 
     function updatePublicKey(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
@@ -135,7 +91,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         _lockAdditionalCollateral(msg.sender, msg.value);
     }
 
-    function lockAdditionalCollateralFromVaultReward(address _vaultId) external payable onlyVaultReward {
+    function lockAdditionalCollateralFromVaultReward(address _vaultId) external override payable onlyVaultReward {
         _lockAdditionalCollateral(_vaultId, msg.value);
     }
 
@@ -427,7 +383,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         require(_vaultBtcPublicKeyX != 0, "Vault does not exist");
     }
 
-    function getVault(address _vaultId) external view returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
+    function getVault(address _vaultId) external view override returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
         Vault memory vault = vaults[_vaultId];
 
         return (
