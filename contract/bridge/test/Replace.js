@@ -100,7 +100,7 @@ contract("Replace unit test", (accounts) => {
 
   it("Request Replace", async function () {
     const btcAmount = 0.001 * 1e8;
-    const collateral = 0.01 * 1e8;
+    const collateral = 0.05 * 1e8;
 
     const req = await this.OneBtc.requestReplace(
       this.vaultId,

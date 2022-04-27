@@ -236,35 +236,35 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
     /**
      * @dev Reports vault double payment providing two fraud proof (malicious bitcoin transaction and the corresponding transaction inclusion proof). Fully slashes the vault.
      */
-    function reportVaultDoublePayment(
-        address vaultId,
-        bytes calldata rawTxs,
-        uint64[] memory heightAndIndexs,
-        bytes calldata merkleProofs,
-        bytes calldata headers
-    ) external {
-        require(
-            relay.isApprovedStakedRelayer(msg.sender),
-            "Sender is not authorized"
-        );
-        // separate the two sets and check that
-        // txns must be unique
+    // function reportVaultDoublePayment(
+    //     address vaultId,
+    //     bytes calldata rawTxs,
+    //     uint64[] memory heightAndIndexs,
+    //     bytes calldata merkleProofs,
+    //     bytes calldata headers
+    // ) external {
+    //     require(
+    //         relay.isApprovedStakedRelayer(msg.sender),
+    //         "Sender is not authorized"
+    //     );
+    //     // separate the two sets and check that
+    //     // txns must be unique
 
-        // verify transaction inclusion using header and merkle proof for both
+    //     // verify transaction inclusion using header and merkle proof for both
 
-        bytes32 leftTxId;
-        bytes32 rightTxId;
+    //     bytes32 leftTxId;
+    //     bytes32 rightTxId;
 
-        // extract the two txns
-        // TransactionUtils.extractTx(rawTxns)
+    //     // extract the two txns
+    //     // TransactionUtils.extractTx(rawTxns)
 
-        // verify that the OP_RETURN matches, amounts are not relevant
-        // TxValidate.extractOpReturnOnly();
+    //     // verify that the OP_RETURN matches, amounts are not relevant
+    //     // TxValidate.extractOpReturnOnly();
 
-        // all looks good, liquidate vault
-        address reporterId = msg.sender;
-        liquidateVault(vaultId, reporterId);
+    //     // all looks good, liquidate vault
+    //     address reporterId = msg.sender;
+    //     liquidateVault(vaultId, reporterId);
 
-        emit VaultDoublePayment(vaultId, leftTxId, rightTxId);
-    }
+    //     emit VaultDoublePayment(vaultId, leftTxId, rightTxId);
+    // }
 }
