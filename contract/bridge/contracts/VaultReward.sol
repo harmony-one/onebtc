@@ -62,7 +62,7 @@ contract VaultReward is Initializable {
     require(_lockPeriod == 3 || _lockPeriod == 6 || _lockPeriod == 12, "Lock period should be one of 3, 6, 12");
 
     // update vault accClaimableRewards
-    _updateVaultAccClaimableRewards(_vaultId);
+    updateVaultAccClaimableRewards(_vaultId);
 
     // get vault
     LockedVault storage vault = lockedVaults[_vaultId];
@@ -88,22 +88,7 @@ contract VaultReward is Initializable {
     emit ExtendVaultLockPeriod(_vaultId, oldLockPeriod, vault.lockPeriod);
   }
 
-  function _updateVaultAccClaimableRewards(address _vaultId) internal {
-    // get vault
-    LockedVault storage vault = lockedVaults[_vaultId];
-
-    // store the old accClaimableRewards
-    uint256 oldAccClaimableRewards = vault.accClaimableRewards;
-
-    // update the vault info
-    (uint256 claimableRewards, uint256 rewardClaimAt) = getClaimableRewards(_vaultId);
-    vault.accClaimableRewards = claimableRewards;
-    vault.rewardClaimAt = rewardClaimAt;
-
-    emit UpdateVaultAccClaimableRewards(_vaultId, oldAccClaimableRewards, vault.accClaimableRewards, rewardClaimAt);
-  }
-
-  function updateVaultAccClaimableRewards(address _vaultId) external {
+  function updateVaultAccClaimableRewards(address _vaultId) public {
     if (block.timestamp <= lockedVaults[_vaultId].lockExpireAt) {
       // get vault
       LockedVault storage vault = lockedVaults[_vaultId];
