@@ -42,11 +42,6 @@ contract VaultReward is Initializable {
     uint256 updatedAt
   );
 
-  modifier onlyOneBtc() {
-    require(msg.sender == oneBtc, "Only OneBtc");
-    _;
-  }
-
   modifier vaultExist(address _vaultId) {
     (uint256 btcPublicKeyX,,,,,,,,) = IVaultRegistry(oneBtc).getVault(_vaultId);
     require(btcPublicKeyX != 0, "Vault does not exist");
@@ -108,7 +103,7 @@ contract VaultReward is Initializable {
     emit UpdateVaultAccClaimableRewards(_vaultId, oldAccClaimableRewards, vault.accClaimableRewards, rewardClaimAt);
   }
 
-  function updateVaultAccClaimableRewards(address _vaultId) external onlyOneBtc {
+  function updateVaultAccClaimableRewards(address _vaultId) external {
     if (block.timestamp <= lockedVaults[_vaultId].lockExpireAt) {
       // get vault
       LockedVault storage vault = lockedVaults[_vaultId];
