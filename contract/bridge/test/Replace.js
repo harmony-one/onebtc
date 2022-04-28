@@ -99,14 +99,18 @@ contract("Replace unit test", (accounts) => {
   });
 
   it("Request Replace", async function () {
-    const btcAmount = 0.001 * 1e8;
-    const collateral = 0.05 * 1e8;
+
+    const eligibleBTCReplace = await this.OneBtc.requestableToBeReplacedTokens(this.vaultId);
+
+    const collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(eligibleBTCReplace);
+    const griefingCollateral = (collateral * 5 / 100).toString(); // 5%
+    console.log("Eligible=", eligibleBTCReplace.toString(), eligibleBTCReplace.toString(), griefingCollateral.toString());
 
     const req = await this.OneBtc.requestReplace(
       this.vaultId,
-      btcAmount,
-      collateral,
-      { from: this.vaultId, value: collateral }
+      eligibleBTCReplace,
+      griefingCollateral,
+      { from: this.vaultId, value: griefingCollateral }
     );
 
     const IssueEvent = req.logs.filter(
@@ -114,9 +118,9 @@ contract("Replace unit test", (accounts) => {
     )[0];
 
     assert.equal(this.vaultId.toString(), IssueEvent.args.oldVault.toString());
-    assert.equal(btcAmount.toString(), IssueEvent.args.btcAmount.toString());
+    assert.equal(eligibleBTCReplace.toString(), IssueEvent.args.btcAmount.toString());
     assert.equal(
-      collateral.toString(),
+      griefingCollateral.toString(),
       IssueEvent.args.griefingCollateral.toString()
     );
   });

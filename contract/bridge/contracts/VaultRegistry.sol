@@ -221,7 +221,7 @@ abstract contract VaultRegistry is Initializable, ICollateral {
     }
 
     function requestableToBeReplacedTokens(address vaultId)
-        internal
+        public view
         returns (uint256 amount)
     {
         Vault memory vault = vaults[vaultId];

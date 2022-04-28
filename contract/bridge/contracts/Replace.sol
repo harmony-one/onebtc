@@ -74,31 +74,26 @@ abstract contract Replace is VaultRegistry, Request {
             "Cannot replace a banned vault"
         );
 
+        // vault.issued - vault.toBeRedeemed
         uint256 requestableTokens = VaultRegistry.requestableToBeReplacedTokens(
             oldVaultId
         );
+
+        // cap to maximum replaceable token
+        require(btcAmount <= requestableTokens, "exceeds eligible replacement");
         uint256 toBeReplacedIncrease = MathUpgradeable.min(
             requestableTokens,
             btcAmount
         );
 
-        uint256 replaceCollateralIncrease = griefingCollateral;
-
-        if (btcAmount > 0) {
-            replaceCollateralIncrease = VaultRegistry.calculateCollateral(
-                griefingCollateral,
-                toBeReplacedIncrease,
-                btcAmount
-            );
-        }
-
+        // 5% griefing is calculated on collateral?
         (
             uint256 totalToBeReplaced,
             uint256 totalGriefingCollateral
         ) = VaultRegistry.tryIncreaseToBeReplacedTokens(
                 oldVaultId,
-                toBeReplacedIncrease,
-                replaceCollateralIncrease
+                btcAmount,           // btc to replace
+                griefingCollateral       // one's equivalent
             );
 
         // check that total-to-be-replaced is above the minimum. NOTE: this means that even
@@ -115,12 +110,12 @@ abstract contract Replace is VaultRegistry, Request {
         );
 
         // Lock the oldVault’s griefing collateral. Note that this directly locks the amount
-        ICollateral.lockCollateral(oldVaultId, replaceCollateralIncrease);
+        ICollateral.lockCollateral(oldVaultId, griefingCollateral);
 
         emit RequestReplace(
             oldVaultId,
-            toBeReplacedIncrease,
-            replaceCollateralIncrease
+            btcAmount,
+            griefingCollateral
         );
     }
 
