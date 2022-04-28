@@ -104,7 +104,6 @@ contract("Replace unit test", (accounts) => {
 
     const collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(eligibleBTCReplace);
     const griefingCollateral = (collateral * 5 / 100).toString(); // 5%
-    console.log("Eligible=", eligibleBTCReplace.toString(), eligibleBTCReplace.toString(), griefingCollateral.toString());
 
     const req = await this.OneBtc.requestReplace(
       this.vaultId,
@@ -183,7 +182,7 @@ contract("Replace unit test", (accounts) => {
     const btcTx = issueTxMock(replaceId, btcBase58, btcAmount);
     const btcBlockNumberMock = 1000;
     const btcTxIndexMock = 2;
-    const heightAndIndex = (btcBlockNumberMock << 32) | btcTxIndexMock;
+    const btcTxHeightMock = (btcBlockNumberMock << 32);
     const headerMock = Buffer.alloc(0);
     const proofMock = Buffer.alloc(0);
 
@@ -191,7 +190,8 @@ contract("Replace unit test", (accounts) => {
       replaceId,
       proofMock,
       btcTx.toBuffer(),
-      heightAndIndex,
+      btcTxIndexMock,
+      btcTxHeightMock,
       headerMock
     );
 

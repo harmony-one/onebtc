@@ -81,10 +81,6 @@ abstract contract Replace is VaultRegistry, Request {
 
         // cap to maximum replaceable token
         require(btcAmount <= requestableTokens, "exceeds eligible replacement");
-        uint256 toBeReplacedIncrease = MathUpgradeable.min(
-            requestableTokens,
-            btcAmount
-        );
 
         // 5% griefing is calculated on collateral?
         (
