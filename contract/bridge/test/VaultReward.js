@@ -90,14 +90,14 @@ contract("VaultReward unit test", (accounts) => {
     let currentTimestamp = await getBlockTimestamp(tx);
 
     // check vault info
-    const { lockStartAt, lockPeriod, lockExpireAt, rewardClaimAt, accClaimableRewards,  accRewardPerShare, accRewardPerSharelUpdatedAt, collateralDebt } = await this.VaultReward.lockedVaults(this.vaultId);
+    const { lockStartAt, lockPeriod, lockExpireAt, rewardClaimAt, accClaimableRewards,  accRewardPerShare, accRewardPerShareUpdatedAt, collateralDebt } = await this.VaultReward.lockedVaults(this.vaultId);
     assert.equal(lockStartAt, currentTimestamp);
     assert.equal(lockPeriod, vaultLockPeriod)
     assert.equal(lockExpireAt, currentTimestamp + (60*60*24*30*vaultLockPeriod));
     assert.equal(rewardClaimAt, currentTimestamp);
     assert.equal(accClaimableRewards, 0);
     assert.equal(accRewardPerShare, 0);
-    assert.equal(accRewardPerSharelUpdatedAt, currentTimestamp);
+    assert.equal(accRewardPerShareUpdatedAt, currentTimestamp);
     assert.equal(collateralDebt, 0);
   });
 
@@ -137,7 +137,7 @@ contract("VaultReward unit test", (accounts) => {
     let currentTimestamp = await getBlockTimestamp(tx);
 
     // get vault info
-    const { lockStartAt, lockPeriod, lockExpireAt, rewardClaimAt, accClaimableRewards,  accRewardPerShare, accRewardPerSharelUpdatedAt, collateralDebt } = await this.VaultReward.lockedVaults(this.vaultId);
+    const { lockStartAt, lockPeriod, lockExpireAt, rewardClaimAt, accClaimableRewards,  accRewardPerShare, accRewardPerShareUpdatedAt, collateralDebt } = await this.VaultReward.lockedVaults(this.vaultId);
 
     // get expectations
     const vault = await this.OneBtc.getVault(this.vaultId);
@@ -309,7 +309,7 @@ contract("VaultReward unit test", (accounts) => {
     let newVaultCollateral = vault[2].sub(vault[8]);
 
     // check new vault balance and collateral
-    assert.equal(Number(oldVaultBalance) + Number(oldVaultCollateral) - Number(gas), Number(newVaultBalance));
+    assert.closeTo(Number(oldVaultBalance) + Number(oldVaultCollateral) - Number(gas), Number(newVaultBalance), 100000);
     assert.equal(Number(newVaultCollateral), 0);
   });
 });
