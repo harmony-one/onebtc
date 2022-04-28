@@ -18,6 +18,7 @@ contract VaultReward is Initializable {
     uint256 collateralUpdatedAt;
     uint256 accClaimableRewards;
     uint256 accRewardPerShare;
+    uint256 collateralDebt;
   }
 
   struct VaultStaker {
@@ -80,6 +81,7 @@ contract VaultReward is Initializable {
       vault.rewardClaimAt = block.timestamp;
       vault.collateralUpdatedAt = block.timestamp;
       vault.accClaimableRewards = 0;
+      vault.collateralDebt = 0;
     } else {    // locked vault
       vault.lockPeriod = vault.lockPeriod.add(_lockPeriod);
       vault.lockExpireAt = vault.lockExpireAt.add(lockPeriodInSec);
