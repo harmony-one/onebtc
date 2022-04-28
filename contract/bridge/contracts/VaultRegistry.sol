@@ -256,14 +256,14 @@ abstract contract VaultRegistry is Initializable, ICollateral {
         return (vault.toBeReplaced, vault.replaceCollateral);
     }
 
-    function decreaseToBeReplacedTokens(address vaultId, uint256 tokens)
+    function decreaseToBeReplacedTokens(address vaultId, uint256 btcAmount)
         internal
         returns (uint256, uint256)
     {
         Vault storage vault = vaults[vaultId];
         require(vault.btcPublicKeyX != 0, "Vault does not exist");
 
-        uint256 usedTokens = MathUpgradeable.min(vault.toBeReplaced, tokens);
+        uint256 usedTokens = MathUpgradeable.min(vault.toBeReplaced, btcAmount);
 
         uint256 calculatedCollateral = calculateCollateral(
             vault.replaceCollateral,

@@ -22,6 +22,14 @@ async function deployOneBTC() {
     return {oneBtc, relayMock, exchangeRateOracleWrapper}
 }
 
+async function printVault(contract, vaultId) {
+    const vaultInfo = await contract.vaults(vaultId);
+    for(var k in vaultInfo) {
+        isNaN(k) && console.log(k, vaultInfo[k].toString())
+    }
+}
+
 module.exports = {
-    deployOneBTC
+    deployOneBTC,
+    printVault
 }

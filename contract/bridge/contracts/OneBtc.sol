@@ -184,6 +184,11 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         );
     }
 
+    function cancelReplace(address payable oldVaultId,
+        uint256 btcAmount) external {
+        Replace._withdrawReplace(oldVaultId, btcAmount);
+    }
+
     function executeReplace(
         uint256 replaceId,
         bytes calldata merkleProof,
@@ -197,41 +202,41 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         Replace._executeReplace(replaceId, _vout);
     }
 
-    /**
-     * @dev Report vault misbehavior by providing fraud proof (malicious bitcoin transaction and the corresponding transaction inclusion proof). Fully slashes the vault.
-     */
-    function reportVaultTheft(
-        address vaultId,
-        bytes calldata rawTx,
-        uint32 height,
-        uint256 index,
-        bytes calldata merkleProof,
-        bytes calldata header
-    ) external {
-        require(
-            relay.isApprovedStakedRelayer(msg.sender),
-            "Sender is not authorized"
-        );
+    // /**
+    //  * @dev Report vault misbehavior by providing fraud proof (malicious bitcoin transaction and the corresponding transaction inclusion proof). Fully slashes the vault.
+    //  */
+    // function reportVaultTheft(
+    //     address vaultId,
+    //     bytes calldata rawTx,
+    //     uint32 height,
+    //     uint256 index,
+    //     bytes calldata merkleProof,
+    //     bytes calldata header
+    // ) external {
+    //     require(
+    //         relay.isApprovedStakedRelayer(msg.sender),
+    //         "Sender is not authorized"
+    //     );
 
-        bytes32 txId = rawTx.hash256();
+    //     bytes32 txId = rawTx.hash256();
 
-        // check if already reported
-        bytes32 reportKey = keccak256(abi.encodePacked(vaultId, txId));
-        require(
-            theftReports[reportKey] == false,
-            "This txId has already been logged as a theft by the given vault"
-        );
+    //     // check if already reported
+    //     bytes32 reportKey = keccak256(abi.encodePacked(vaultId, txId));
+    //     require(
+    //         theftReports[reportKey] == false,
+    //         "This txId has already been logged as a theft by the given vault"
+    //     );
 
-        // verify transaction inclusion using header and merkle proof
-        relay.verifyTx(height, index, txId, header, merkleProof, 1, true);
+    //     // verify transaction inclusion using header and merkle proof
+    //     relay.verifyTx(height, index, txId, header, merkleProof, 1, true);
 
-        // all looks good, liquidate vault
-        address reporterId = msg.sender;
-        liquidateVault(vaultId, reporterId);
+    //     // all looks good, liquidate vault
+    //     address reporterId = msg.sender;
+    //     liquidateVault(vaultId, reporterId);
 
-        theftReports[reportKey] = true;
-        emit ReportVaultTheft(vaultId);
-    }
+    //     theftReports[reportKey] = true;
+    //     emit ReportVaultTheft(vaultId);
+    // }
 
     /**
      * @dev Reports vault double payment providing two fraud proof (malicious bitcoin transaction and the corresponding transaction inclusion proof). Fully slashes the vault.

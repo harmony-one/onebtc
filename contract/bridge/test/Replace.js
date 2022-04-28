@@ -22,6 +22,16 @@ web3.extend({
       call: "evm_mine",
       params: 0,
     },
+    {
+      name: "snapshot",
+      call: "evm_snapshot",
+      params: 0,
+    },
+    {
+      name: "revert",
+      call: "evm_revert",
+      params: 1,
+    },         
   ],
 });
 
@@ -122,6 +132,10 @@ contract("Replace unit test", (accounts) => {
       griefingCollateral.toString(),
       IssueEvent.args.griefingCollateral.toString()
     );
+
+    // snapshot so we can test cancel later
+    this.snapshotId = await web3.miner.snapshot();
+
   });
 
   it("Register NEW Vault with 10 Wei Collateral", async function () {
@@ -201,4 +215,24 @@ contract("Replace unit test", (accounts) => {
     assert.equal(this.newVaultId.toString(), reqEvent.args.newVault.toString());
     assert.equal(this.replaceId.toString(), reqEvent.args.replaceId.toString());
   });
+
+
+  it("Cancel Replace", async function () {
+    await web3.miner.revert(this.snapshotId);
+    //deployHelper.printVault(this.OneBtc, this.vaultId);
+
+    const cancelAmount = 0.5 * 1e8;
+    const collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(cancelAmount);
+    const griefingCollateral = (collateral * 5 / 100).toString(); // 5%
+
+    const CancelReq = await this.OneBtc.cancelReplace(this.vaultId, cancelAmount,  { from: this.vaultId });
+    const CancelEvent = CancelReq.logs.filter(
+      (log) => log.event == "WithdrawReplace"
+    )[0];
+
+    assert.equal(CancelEvent.args.withdrawnTokens.toString(), cancelAmount.toString());
+    assert.equal(CancelEvent.args.withdrawnGriefingCollateral.toString(), griefingCollateral.toString());
+    //await deployHelper.printVault(this.OneBtc, this.vaultId);
+
+  });  
 });

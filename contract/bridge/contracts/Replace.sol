@@ -96,7 +96,7 @@ abstract contract Replace is VaultRegistry, Request {
         // a request with amount=0 is valid, as long the _total_ is above DUST. This might
         // be the case if the vault just wants to increase the griefing collateral, for example.
         uint256 dustValue = 0;
-        require(totalToBeReplaced >= dustValue, "Amount below dust amount");
+        require(totalToBeReplaced > dustValue, "Amount below dust amount");
 
         // check that that the total griefing collateral is sufficient to back the total to-be-replaced amount
         require(
@@ -118,13 +118,14 @@ abstract contract Replace is VaultRegistry, Request {
     function _withdrawReplace(address oldVaultId, uint256 btcAmount) internal {
         require(msg.sender == oldVaultId, "Sender should be old vault owner");
         // TODO: SECURITY CHECK (The oldVault MUST NOT be banned)
+        // already checked by requestReplace, unless we care about that small window.
 
         (uint256 withdrawnTokens, uint256 toWithdrawCollateral) = VaultRegistry
             .decreaseToBeReplacedTokens(oldVaultId, btcAmount);
 
         ICollateral.releaseCollateral(oldVaultId, toWithdrawCollateral);
 
-        require(withdrawnTokens == 0, "Withdraw tokens is zero");
+        require(withdrawnTokens != 0, "Withdraw tokens is zero");
 
         emit WithdrawReplace(oldVaultId, withdrawnTokens, toWithdrawCollateral);
     }
