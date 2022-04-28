@@ -15,9 +15,9 @@ contract VaultReward is Initializable {
     uint256 lockPeriod;
     uint256 lockExpireAt;
     uint256 rewardClaimAt;
-    uint256 collateralUpdatedAt;
     uint256 accClaimableRewards;
     uint256 accRewardPerShare;
+    uint256 accRewardPerSharelUpdatedAt;
     uint256 collateralDebt;
   }
 
@@ -79,8 +79,9 @@ contract VaultReward is Initializable {
       vault.lockPeriod = _lockPeriod;
       vault.lockExpireAt = block.timestamp.add(lockPeriodInSec);
       vault.rewardClaimAt = block.timestamp;
-      vault.collateralUpdatedAt = block.timestamp;
       vault.accClaimableRewards = 0;
+      vault.accRewardPerShare = 0;
+      vault.accRewardPerSharelUpdatedAt = block.timestamp;
       vault.collateralDebt = 0;
     } else {    // locked vault
       vault.lockPeriod = vault.lockPeriod.add(_lockPeriod);
