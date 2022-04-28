@@ -92,8 +92,8 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
     }
 
     function lockAdditionalCollateralFromVaultReward(address _vaultId) external override payable onlyVaultReward {
-        require(block.timestamp < IVaultReward(vaultReward).getVaultLockExpireAt(msg.sender), "Vault was expired");
-        
+        require(block.timestamp < IVaultReward(vaultReward).getVaultLockExpireAt(_vaultId), "Vault was expired");
+
         _lockAdditionalCollateral(_vaultId, msg.value);
     }
 
