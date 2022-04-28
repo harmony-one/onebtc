@@ -90,13 +90,15 @@ contract("VaultReward unit test", (accounts) => {
     let currentTimestamp = await getBlockTimestamp(tx);
 
     // check vault info
-    const { lockStartAt, lockPeriod, lockExpireAt, rewardClaimAt, collateralUpdatedAt, accClaimableRewards } = await this.VaultReward.lockedVaults(this.vaultId);
+    const { lockStartAt, lockPeriod, lockExpireAt, rewardClaimAt, accClaimableRewards,  accRewardPerShare, accRewardPerSharelUpdatedAt, collateralDebt } = await this.VaultReward.lockedVaults(this.vaultId);
     assert.equal(lockStartAt, currentTimestamp);
     assert.equal(lockPeriod, vaultLockPeriod)
     assert.equal(lockExpireAt, currentTimestamp + (60*60*24*30*vaultLockPeriod));
     assert.equal(rewardClaimAt, currentTimestamp);
-    assert.equal(collateralUpdatedAt, currentTimestamp);
     assert.equal(accClaimableRewards, 0);
+    assert.equal(accRewardPerShare, 0);
+    assert.equal(accRewardPerSharelUpdatedAt, currentTimestamp);
+    assert.equal(collateralDebt, 0);
   });
 
   it("Error on withdrawal if the vault lock period is not expired", async function() {
@@ -121,7 +123,7 @@ contract("VaultReward unit test", (accounts) => {
 
   it("updateVaultAccClaimableRewards on the second extendVaultLockPeriod", async function() {
     // get the current vault info
-    const { lockStartAt: oldLockStartAt, lockPeriod: oldLockPeriod, lockExpireAt: oldLockExpireAt, rewardClaimAt: oldRewardClaimAt, collateralUpdatedAt: oldCollateralUpdatedAt, accClaimableRewards: oldAccClaimableRewards } = await this.VaultReward.lockedVaults(this.vaultId);
+    const { lockStartAt: oldLockStartAt, lockPeriod: oldLockPeriod, lockExpireAt: oldLockExpireAt, rewardClaimAt: oldRewardClaimAt, accClaimableRewards: oldAccClaimableRewards } = await this.VaultReward.lockedVaults(this.vaultId);
 
     // increase time
     await web3.miner.incTime(Number(3600 * 24 * 14)); // 14 day
@@ -135,7 +137,7 @@ contract("VaultReward unit test", (accounts) => {
     let currentTimestamp = await getBlockTimestamp(tx);
 
     // get vault info
-    const { lockStartAt, lockPeriod, lockExpireAt, rewardClaimAt, collateralUpdatedAt, accClaimableRewards } = await this.VaultReward.lockedVaults(this.vaultId);
+    const { lockStartAt, lockPeriod, lockExpireAt, rewardClaimAt, accClaimableRewards,  accRewardPerShare, accRewardPerSharelUpdatedAt, collateralDebt } = await this.VaultReward.lockedVaults(this.vaultId);
 
     // get expectations
     const vault = await this.OneBtc.getVault(this.vaultId);
@@ -147,7 +149,6 @@ contract("VaultReward unit test", (accounts) => {
     assert.equal(Number(lockPeriod), Number(oldLockPeriod) + Number(vaultLockPeriod))
     assert.equal(Number(lockExpireAt), Number(oldLockExpireAt) + (60*60*24*30*vaultLockPeriod));
     assert.closeTo(Number(rewardClaimAt), currentTimestamp, 1);
-    assert.equal(Number(collateralUpdatedAt), oldCollateralUpdatedAt);
     assert.closeTo(Number(accClaimableRewards), accClaimableRewardsExpectation, 10);
   });
 
