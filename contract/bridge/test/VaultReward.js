@@ -97,7 +97,7 @@ contract("VaultReward unit test", (accounts) => {
     assert.equal(rewardClaimAt, currentTimestamp);
     assert.equal(accClaimableRewards, 0);
     assert.equal(accRewardPerShare, 0);
-    assert.equal(accRewardPerShareUpdatedAt, currentTimestamp);
+    assert.equal(accRewardPerShareUpdatedAt, 0);
     assert.equal(collateralDebt, 0);
   });
 
