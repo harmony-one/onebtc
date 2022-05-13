@@ -15,16 +15,27 @@ contract VaultReward is Initializable {
     uint256 lockPeriod;
     uint256 lockExpireAt;
     uint256 rewardClaimAt;
-    uint256 accClaimableRewards;  // total rewards for vault + stakers
-    uint256 accRewardPerShare;
+    uint256 accClaimableRewards;  // Total reward amount for (vault + all stakers)
+    uint256 accRewardPerShare;  // Accumulcated ONEs per share times 1e24
     uint256 accRewardPerShareUpdatedAt; // not used
-    uint256 collateralDebt;
+    uint256 collateralDebt; // Sum of all stakers' (excluding vault itself) collateral
   }
 
   struct VaultStaker {
-    uint256 balance;
+    uint256 balance;  // Staker's collateral amount
     uint256 accClaimableRewards;
-    uint256 rewardDebt;
+    uint256 rewardDebt; // Reward debt
+    //
+    // We do some fancy math here. Basically, any point in time, the amount of ONEs
+    // entitled to a user but is pending to be distributed is:
+    //
+    //   pending reward = (staker.balance * LockedVault.accRewardPerShare) - staker.rewardDebt
+    //
+    // Whenever a user stakes to a vault by locking his collateral. Here's what happens:
+    //   1. The LockedVault's `accRewardPerShare` (and `rewardClaimAt`) gets updated.
+    //   2. The pending reward of the staker is added to his `accClaimableRewards`
+    //   3. User's `balance` gets updated.
+    //   4. User's `rewardDebt` gets updated.
   }
 
   address public oneBtc;
@@ -32,6 +43,8 @@ contract VaultReward is Initializable {
   mapping(address => LockedVault) public lockedVaults;  // Vault -> LockedVault
   mapping(address => mapping(address => VaultStaker)) public vaultStakers;  // Vault -> User -> VaultStaker
   mapping(address => address[]) public userStakedVaultList;  // User -> Vault list
+
+  uint256 private constant ACC_ONE_PRECISION = 1e24;
 
   event ExtendVaultLockPeriod(address indexed vaultId, uint256 oldLockPeriod, uint256 newLockPeriod);
   event ClaimRewards(address indexed vaultId, address indexed staker, address indexed to, uint256 amount, uint256 claimAt);
@@ -69,9 +82,6 @@ contract VaultReward is Initializable {
     // check if the lockPeriod is valid
     require(_lockPeriod == 3 || _lockPeriod == 6 || _lockPeriod == 12, "Lock period should be one of 3, 6, 12");
 
-    // update vault accClaimableRewards
-    _updateVaultStaker(_vaultId, _vaultId, 0);
-
     // get vault
     LockedVault storage vault = lockedVaults[_vaultId];
 
@@ -82,11 +92,21 @@ contract VaultReward is Initializable {
     uint256 secPerDay = 60 * 60 * 24;
     uint256 lockPeriodInSec = secPerDay.mul(30).mul(_lockPeriod);
     if (vault.lockExpireAt < block.timestamp) {   // new or expired vault
+      // update vault accClaimableRewards
+      (,, uint256 collateral,,,,,, uint256 liquidatedCollateral) = IVaultRegistry(oneBtc).getVault(_vaultId);
+      uint256 vaultUsedCollateral = collateral.sub(liquidatedCollateral);
+      _updateVaultStaker(_vaultId, _vaultId, vaultUsedCollateral);
+
+      // update lockedVault info
       vault.lockStartAt = block.timestamp;
       vault.lockPeriod = _lockPeriod;
       vault.lockExpireAt = block.timestamp.add(lockPeriodInSec);
       vault.rewardClaimAt = block.timestamp;
     } else {    // locked vault
+      // update accClaimableRewards
+      _updateVaultStaker(_vaultId, _vaultId, 0);
+
+      // update lockedVault info
       vault.lockPeriod = vault.lockPeriod.add(_lockPeriod);
       vault.lockExpireAt = vault.lockExpireAt.add(lockPeriodInSec);
     }
@@ -267,13 +287,13 @@ contract VaultReward is Initializable {
     // update vault accRewardPerShare
     if (vaultUsedCollateral > 0) {
       uint256 vaultClaimableRewardsChange = claimableRewards.sub(oldVaultAccClaimableRewards);
-      uint256 rewardPerShare = vaultClaimableRewardsChange.div(vaultUsedCollateral);
+      uint256 rewardPerShare = vaultClaimableRewardsChange.mul(ACC_ONE_PRECISION).div(vaultUsedCollateral);
       vault.accRewardPerShare = vault.accRewardPerShare.add(rewardPerShare);
     }
 
     // update vaultStakers accClaimableRewards
     if (vaultStaker.balance > 0) {
-      uint256 pending = (vaultStaker.balance.mul(vault.accRewardPerShare)).sub(vaultStaker.rewardDebt);
+      uint256 pending = (vaultStaker.balance.mul(vault.accRewardPerShare).div(ACC_ONE_PRECISION)).sub(vaultStaker.rewardDebt);
       if (_vaultId == _staker) {
         vaultStaker.accClaimableRewards = vaultStaker.accClaimableRewards.add(pending); // update vault accClaimableRewards
       } else {
@@ -286,7 +306,7 @@ contract VaultReward is Initializable {
 
     // update vaultStaker's balance and rewardDebt
     vaultStaker.balance = vaultStaker.balance.add(_amount);
-    vaultStaker.rewardDebt = vault.accRewardPerShare.mul(vaultStaker.balance);
+    vaultStaker.rewardDebt = vault.accRewardPerShare.mul(vaultStaker.balance).div(ACC_ONE_PRECISION);
   }
 
   function getVaultLockExpireAt(address _vaultId) external view returns (uint256) {
