@@ -102,9 +102,6 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
         // lock additional collateral to vault
         _lockAdditionalCollateral(_vaultId, msg.sender, msg.value);
 
-        // increase the vault staker balance
-        IVaultReward(vaultReward).increaseVaultStakerBalance(_vaultId, msg.sender, msg.value);
-
         // increase the vault collateral debt if staker is not the same as the vault
         IVaultReward(vaultReward).increaseVaultCollateralDebt(_vaultId, msg.sender, msg.value);
     }
@@ -115,16 +112,13 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
         // lock additional collateral to vault
         _lockAdditionalCollateral(_vaultId, _staker, msg.value);
 
-        // increase the vault staker balance
-        IVaultReward(vaultReward).increaseVaultStakerBalance(_vaultId, _staker, msg.value);
-
         // increase the vault collateral debt if staker is not the same as the vault
         IVaultReward(vaultReward).increaseVaultCollateralDebt(_vaultId, _staker, msg.value);
     }
 
     function _lockAdditionalCollateral(address _vaultId, address _user, uint256 _lockAmount) private {
         if (block.timestamp < IVaultReward(vaultReward).getVaultLockExpireAt(_vaultId)) {
-            IVaultReward(vaultReward).updateVaultStaker(_vaultId, _user, msg.value);
+            IVaultReward(vaultReward).updateVaultStaker(_vaultId, _user, _lockAmount);
         }
 
         Vault storage vault = vaults[_vaultId];
