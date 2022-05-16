@@ -102,7 +102,7 @@ contract("VaultReward unit test", (accounts) => {
   });
 
   it("Error on withdrawal if the vault lock period is not expired", async function() {
-    await expectRevert(this.OneBtc.withdrawCollateral(this.initialCollateral, { from: this.vaultId }), 'Vault lock period is not expired');
+    await expectRevert(this.OneBtc.withdrawCollateralByVault(this.initialCollateral, { from: this.vaultId }), 'Vault lock period is not expired');
   });
 
   it("Errer on extendVaultLockPeriod with mismatched msg.sender", async function() {
@@ -231,7 +231,7 @@ contract("VaultReward unit test", (accounts) => {
     });
 
     // claim rewards
-    const receipt = await this.VaultReward.claimRewards(this.vaultId, { from: this.vaultId });
+    const receipt = await this.VaultReward.claimVaultRewards(this.vaultId, this.vaultId, { from: this.vaultId });
     const gasUsed = receipt.receipt.gasUsed;
     const tx = await web3.eth.getTransaction(receipt.tx);
     const gasPrice = tx.gasPrice;
@@ -264,7 +264,7 @@ contract("VaultReward unit test", (accounts) => {
     });
     
     // claim rewards and lock it again
-    const receipt = await this.VaultReward.claimRewardsAndLock(this.vaultId, { from: this.vaultId });
+    const receipt = await this.VaultReward.claimVaultRewardsAndLock(this.vaultId, { from: this.vaultId });
     const gasUsed = receipt.receipt.gasUsed;
     const tx = await web3.eth.getTransaction(receipt.tx);
     const gasPrice = tx.gasPrice;
@@ -295,7 +295,7 @@ contract("VaultReward unit test", (accounts) => {
     let oldVaultCollateral = vault[2].sub(vault[8]);
 
     // withdraw all collateral and claimable rewards
-    const receipt = await this.OneBtc.withdrawCollateral(oldVaultCollateral, { from: this.vaultId });
+    const receipt = await this.OneBtc.withdrawCollateralByVault(oldVaultCollateral, { from: this.vaultId });
     const gasUsed = receipt.receipt.gasUsed;
     const tx = await web3.eth.getTransaction(receipt.tx);
     const gasPrice = tx.gasPrice;
