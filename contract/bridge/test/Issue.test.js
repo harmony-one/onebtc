@@ -1,9 +1,11 @@
 const BN = require("bn.js");
 const { expectRevert } = require("@openzeppelin/test-helpers");
 const { web3 } = require("@openzeppelin/test-helpers/src/setup");
+const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 
 const OneBtc = artifacts.require("OneBtc");
 const RelayMock = artifacts.require("RelayMock");
+const ExchangeRateOracleWrapper = artifacts.require("ExchangeRateOracleWrapper");
 const { issueTxMock } = require("./mock/btcTxMock");
 
 const bitcoin = require("bitcoinjs-lib");
@@ -27,8 +29,16 @@ web3.extend({
 
 contract("Issue unit test", (accounts) => {
   before(async function () {
-    const IRelay = await RelayMock.new();
-    this.OneBtc = await OneBtc.new(IRelay.address);
+    this.RelayMock = await RelayMock.new();
+    this.ExchangeRateOracleWrapper = await deployProxy(ExchangeRateOracleWrapper);
+    this.OneBtc = await deployProxy(OneBtc, [this.RelayMock.address, this.ExchangeRateOracleWrapper.address]);
+
+    // set BTC/ONE exchange rate
+    await this.ExchangeRateOracleWrapper.setExchangeRate(10); // 1 OneBtc = 10 ONE
+
+    // increase time to be enable exchange rate
+    await web3.miner.incTime(Number(1001)); // MAX_DELAY = 1000
+    await web3.miner.mine();
 
     this.vaultId = accounts[1];
     this.issueRequester = accounts[2];
@@ -37,21 +47,24 @@ contract("Issue unit test", (accounts) => {
     this.OneBtcBalanceVault = 0;
   });
 
-  it("Error on requestIssue with the exceeding vault limit", async function () {
-    const IssueAmount = Math.floor(10 * 1e8 * 100 / 150) + 1; // threshold = 150
+  it("Error on requestIssue with the insufficient griefing collateral", async function () {
+    const IssueAmount = 1 * 1e8;  // 1 OneBtc
+    const Collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(IssueAmount);
+    const collateralForIssued = Collateral * 150 / 100;
+    const griefingCollateral = collateralForIssued * 5 / 1000;
 
     await expectRevert(this.OneBtc.requestIssue(IssueAmount, this.vaultId, {
       from: this.issueRequester,
-      value: IssueAmount,
-    }), 'ExceedingVaultLimit');
+      value: griefingCollateral * 0.99,
+    }), 'Insufficient griefing collateral');
   });
 
-  it("Register Vault with 10 Wei Collateral", async function () {
+  it("Register Vault with 10 ONE Collateral", async function () {
     const VaultEcPair = bitcoin.ECPair.makeRandom({ compressed: false });
     const pubX = bn(VaultEcPair.publicKey.slice(1, 33));
     const pubY = bn(VaultEcPair.publicKey.slice(33, 65));
 
-    const collateral = 10 * 1e8;
+    const collateral = 10 * 1e18;  // 10 ONE
     await this.OneBtc.registerVault(pubX, pubY, {
       from: this.vaultId,
       value: collateral,
@@ -62,23 +75,30 @@ contract("Issue unit test", (accounts) => {
     assert.equal(collateral, vault.collateral.toString());
   });
 
-  it("Error on requestIssue with the insufficient collateral", async function () {
-    const IssueAmount = 1 * 1e8;
+  it("Error on requestIssue with the exceeding vault limit", async function () {
+    const IssueAmount = 1 * 1e8;  // 1 OneBtc
+    const Collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(IssueAmount);
+    const collateralForIssued = Collateral * 150 / 100;
+    const griefingCollateral = collateralForIssued * 5 / 1000;
 
-    await expectRevert(this.OneBtc.requestIssue(IssueAmount+1, this.vaultId, {
+    await expectRevert(this.OneBtc.requestIssue(IssueAmount, this.vaultId, {
       from: this.issueRequester,
-      value: IssueAmount,
-    }), 'InsufficientCollateral');
+      value: griefingCollateral,
+    }), 'Amount requested exceeds vault limit');
   });
 
-  it("Issue 1 BTC", async function () {
-    const IssueAmount = 1 * 1e8;
+  it("Issue 0.1 OneBtc", async function () {
+    const IssueAmount = 0.1 * 1e8;  // 0.1 OneBtc
+    const Collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(IssueAmount);
+    const collateralForIssued = Collateral * 150 / 100;
+    const griefingCollateral = collateralForIssued * 5 / 1000;
+
     const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {
       from: this.issueRequester,
-      value: IssueAmount,
+      value: griefingCollateral,
     });
     const IssueEvent = IssueReq.logs.filter(
-      (log) => log.event == "IssueRequest"
+      (log) => log.event == "IssueRequested"
     )[0];
     const issueId = IssueEvent.args.issueId;
     const btcAddress = IssueEvent.args.btcAddress;
@@ -92,13 +112,15 @@ contract("Issue unit test", (accounts) => {
     const heightAndIndex = (btcBlockNumberMock << 32) | btcTxIndexMock;
     const headerMock = Buffer.alloc(0);
     const proofMock = Buffer.alloc(0);
+    const outputIndexMock = 0;
     const ExecuteReq = await this.OneBtc.executeIssue(
       this.issueRequester,
       issueId,
       proofMock,
       btcTx.toBuffer(),
       heightAndIndex,
-      headerMock
+      headerMock,
+      outputIndexMock
     );
 
     this.OneBtcBalance = await this.OneBtc.balanceOf(this.issueRequester);
@@ -107,7 +129,7 @@ contract("Issue unit test", (accounts) => {
     assert.equal(this.OneBtcBalanceVault.toString(), IssueEvent.args.fee.toString());
 
     const ExecuteEvent = ExecuteReq.logs.filter(
-      (log) => log.event == "IssueComplete"
+      (log) => log.event == "IssueCompleted"
     )[0];
     assert.equal(ExecuteEvent.args.issuedId.toString(), issueId.toString());
 
@@ -118,24 +140,29 @@ contract("Issue unit test", (accounts) => {
       proofMock,
       btcTx.toBuffer(),
       heightAndIndex,
-      headerMock
-    ), 'request is completed');
+      headerMock,
+      outputIndexMock
+    ), 'Request is already completed');
 
     // should not cancel the request which has been already completed
     await expectRevert(this.OneBtc.cancelIssue(
       this.issueRequester,
       issueId
-    ), 'request is completed');
+    ), 'Request is already completed');
   });
 
   it("Error on requester is not a executor of issue call", async function () {
-    const IssueAmount = 1 * 1e8;
+    const IssueAmount = 0.1 * 1e8;  // 0.1 OneBtc
+    const Collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(IssueAmount);
+    const collateralForIssued = Collateral * 150 / 100;
+    const griefingCollateral = collateralForIssued * 5 / 1000;
+
     const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {
       from: this.issueRequester,
-      value: IssueAmount,
+      value: griefingCollateral,
     });
     const IssueEvent = IssueReq.logs.filter(
-      (log) => log.event == "IssueRequest"
+      (log) => log.event == "IssueRequested"
     )[0];
     const issueId = IssueEvent.args.issueId;
     const btcAddress = IssueEvent.args.btcAddress;
@@ -149,6 +176,7 @@ contract("Issue unit test", (accounts) => {
     const heightAndIndex = (btcBlockNumberMock << 32) | btcTxIndexMock;
     const headerMock = Buffer.alloc(0);
     const proofMock = Buffer.alloc(0);
+    const outputIndexMock = 0;
 
     await expectRevert(this.OneBtc.executeIssue(
       this.issueRequester,
@@ -156,18 +184,23 @@ contract("Issue unit test", (accounts) => {
       proofMock,
       btcTx.toBuffer(),
       heightAndIndex,
-      headerMock
-    ), 'InvalidExecutor');
+      headerMock,
+      outputIndexMock
+    ), 'Invalid executor');
   });
   
   it("Slash in case the transferred BTC amount is smaller than the requested OneBTC amount", async function () {
-    const IssueAmount = 1 * 1e8;
+    const IssueAmount = 0.1 * 1e8;  // 0.1 OneBtc
+    const Collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(IssueAmount);
+    const collateralForIssued = Collateral * 150 / 100;
+    const griefingCollateral = collateralForIssued * 5 / 1000;
+
     const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {
       from: this.issueRequester,
-      value: IssueAmount,
+      value: griefingCollateral,
     });
     const IssueEvent = IssueReq.logs.filter(
-      (log) => log.event == "IssueRequest"
+      (log) => log.event == "IssueRequested"
     )[0];
     const issueId = IssueEvent.args.issueId;
     const btcAddress = IssueEvent.args.btcAddress;
@@ -181,6 +214,7 @@ contract("Issue unit test", (accounts) => {
     const heightAndIndex = (btcBlockNumberMock << 32) | btcTxIndexMock;
     const headerMock = Buffer.alloc(0);
     const proofMock = Buffer.alloc(0);
+    const outputIndexMock = 0;
     const ExecuteReq = await this.OneBtc.executeIssue(
       this.issueRequester,
       issueId,
@@ -188,6 +222,7 @@ contract("Issue unit test", (accounts) => {
       btcTx.toBuffer(),
       heightAndIndex,
       headerMock,
+      outputIndexMock,
       {
         from: this.issueRequester
       }
@@ -195,7 +230,7 @@ contract("Issue unit test", (accounts) => {
     const ExecuteEvent = ExecuteReq.logs.filter(
       (log) => log.event == "SlashCollateral"
     )[0];
-    assert.equal(ExecuteEvent.args.amount, IssueAmount - (IssueAmount / 4));
+    assert.equal(ExecuteEvent.args.amount.toString(), griefingCollateral - (griefingCollateral / 4));
 
     const beforeOneBtcBalance = this.OneBtcBalance;
     const beforeOneBtcBalanceVault = this.OneBtcBalanceVault;
@@ -206,13 +241,17 @@ contract("Issue unit test", (accounts) => {
   });
 
   it("Error on cancelIssue with the invalid cancel period", async function () {
-    const IssueAmount = 1 * 1e8;
+    const IssueAmount = 0.1 * 1e8;  // 0.1 OneBtc
+    const Collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(IssueAmount);
+    const collateralForIssued = Collateral * 150 / 100;
+    const griefingCollateral = collateralForIssued * 5 / 1000;
+
     const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {
       from: this.issueRequester,
-      value: IssueAmount,
+      value: griefingCollateral,
     });
     const IssueEvent = IssueReq.logs.filter(
-      (log) => log.event == "IssueRequest"
+      (log) => log.event == "IssueRequested"
     )[0];
     const issueId = IssueEvent.args.issueId;
     const btcAddress = IssueEvent.args.btcAddress;
@@ -221,17 +260,21 @@ contract("Issue unit test", (accounts) => {
       0
     );
 
-    await expectRevert(this.OneBtc.cancelIssue(this.issueRequester, issueId), 'TimeNotExpired');
+    await expectRevert(this.OneBtc.cancelIssue(this.issueRequester, issueId), 'Time not expired');
   });
 
   it("Cancel issue", async function () {
-    const IssueAmount = 1 * 1e8;
+    const IssueAmount = 0.1 * 1e8;  // 0.1 OneBtc
+    const Collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(IssueAmount);
+    const collateralForIssued = Collateral * 150 / 100;
+    const griefingCollateral = collateralForIssued * 5 / 1000;
+
     const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {
       from: this.issueRequester,
-      value: IssueAmount,
+      value: griefingCollateral,
     });
     const IssueEvent = IssueReq.logs.filter(
-      (log) => log.event == "IssueRequest"
+      (log) => log.event == "IssueRequested"
     )[0];
     const issueId = IssueEvent.args.issueId;
     const btcAddress = IssueEvent.args.btcAddress;
@@ -246,7 +289,7 @@ contract("Issue unit test", (accounts) => {
 
     const CancelReq = await this.OneBtc.cancelIssue(this.issueRequester, issueId);
     const CancelEvent = CancelReq.logs.filter(
-      (log) => log.event == "IssueCancel"
+      (log) => log.event == "IssueCanceled"
     )[0];
     assert.equal(CancelEvent.args.issuedId.toString(), issueId.toString());
   });

@@ -1,29 +1,45 @@
+const BN = require("bn.js");
+const { expectRevert } = require("@openzeppelin/test-helpers");
+const { web3 } = require("@openzeppelin/test-helpers/src/setup");
+const { deployProxy } = require("@openzeppelin/truffle-upgrades");
+
 const OneBtc = artifacts.require("OneBtc");
 const RelayMock = artifacts.require("RelayMock");
-
-const { expectRevert } = require("@openzeppelin/test-helpers");
-const bitcoin = require('bitcoinjs-lib');
+const ExchangeRateOracleWrapper = artifacts.require("ExchangeRateOracleWrapper");
 const { issueTxMock } = require('./mock/btcTxMock');
+
+const bitcoin = require('bitcoinjs-lib');
 const bn=b=>BigInt(`0x${b.toString('hex')}`);
 
 web3.extend({
-    property: 'miner',
-    methods: [{
-        name: 'incTime',
-        call: 'evm_increaseTime',
-        params: 1
-    },{
-        name: 'mine',
-        call: 'evm_mine',
-        params: 0
-    }]
-});
+    property: "miner",
+    methods: [
+      {
+        name: "incTime",
+        call: "evm_increaseTime",
+        params: 1,
+      },
+      {
+        name: "mine",
+        call: "evm_mine",
+        params: 0,
+      },
+    ],
+  });
 
 contract("issue/redeem test", accounts => {
     before(async function() {
-        this.name="name";
-        const IRelay = await RelayMock.new();
-        this.OneBtc = await OneBtc.new(IRelay.address);
+        this.RelayMock = await RelayMock.new();
+        this.ExchangeRateOracleWrapper = await deployProxy(ExchangeRateOracleWrapper);
+        this.OneBtc = await deployProxy(OneBtc, [this.RelayMock.address, this.ExchangeRateOracleWrapper.address]);
+
+        // set BTC/ONE exchange rate
+        await this.ExchangeRateOracleWrapper.setExchangeRate(10); // 1 OneBtc = 10 ONE
+
+        // increase time to be enable exchange rate
+        await web3.miner.incTime(Number(1001)); // MAX_DELAY = 1000
+        await web3.miner.mine();
+        
         this.VaultEcPair = bitcoin.ECPair.makeRandom({compressed:false});
         this.vaultId = accounts[1];
         this.issueRequester = accounts[2];
@@ -43,9 +59,13 @@ contract("issue/redeem test", accounts => {
         assert.equal(collateral, vault.collateral.toString());
     });
     it("issue test", async function() {
-        const IssueAmount = 0.01*1e8;
-        const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {from: this.issueRequester, value:IssueAmount});
-        const IssueEvent = IssueReq.logs.filter(log=>log.event == 'IssueRequest')[0];
+        const IssueAmount = 0.5 * 1e8;  // 0.5 OneBtc
+        const Collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(IssueAmount);
+        const collateralForIssued = Collateral * 150 / 100;
+        const griefingCollateral = collateralForIssued * 5 / 1000;
+
+        const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {from: this.issueRequester, value:griefingCollateral});
+        const IssueEvent = IssueReq.logs.filter(log=>log.event == 'IssueRequested')[0];
         const issueId = IssueEvent.args.issueId;
         const btcAddress = IssueEvent.args.btcAddress;
         const btcBase58 = bitcoin.address.toBase58Check(Buffer.from(btcAddress.slice(2), 'hex'), 0);
@@ -55,17 +75,19 @@ contract("issue/redeem test", accounts => {
         const heightAndIndex = btcBlockNumberMock<<32|btcTxIndexMock;
         const headerMock = Buffer.alloc(0);
         const proofMock = Buffer.alloc(0);
-        await this.OneBtc.executeIssue(this.issueRequester, issueId, proofMock, btcTx.toBuffer(), heightAndIndex, headerMock);
+        const outputIndexMock = 0;
+        await this.OneBtc.executeIssue(this.issueRequester, issueId, proofMock, btcTx.toBuffer(), heightAndIndex, headerMock, outputIndexMock);
         const OneBtcBalance = await this.OneBtc.balanceOf(this.issueRequester);
         const OneBtcBalanceVault = await this.OneBtc.balanceOf(this.vaultId);
         assert.equal(OneBtcBalance.toString(), IssueEvent.args.amount.toString());
         assert.equal(OneBtcBalanceVault.toString(), IssueEvent.args.fee.toString());
     });
     it("redeem test", async function() {
-        const RedeemAmount = 0.001*1e8;
-        await this.OneBtc.transfer(this.redeemRequester, RedeemAmount, {from: this.issueRequester});
+        const RedeemAmount = 0.1 * 1e8;
+        await this.OneBtc.transfer(this.redeemRequester, RedeemAmount, { from: this.issueRequester });
+
         const RedeemReq = await this.OneBtc.requestRedeem(RedeemAmount, this.redeemBtcAddress, this.vaultId, {from: this.redeemRequester});
-        const RedeemEvent = RedeemReq.logs.filter(log=>log.event == 'RedeemRequest')[0];
+        const RedeemEvent = RedeemReq.logs.filter(log=>log.event == 'RedeemRequested')[0];
         const redeemId = RedeemEvent.args.redeemId;
         
         const btcAmount = RedeemEvent.args.amount;
@@ -73,35 +95,40 @@ contract("issue/redeem test", accounts => {
         const btcBase58 = bitcoin.address.toBase58Check(Buffer.from(btcAddress.slice(2), 'hex'), 0);
         const btcTx = issueTxMock(redeemId, btcBase58, Number(btcAmount));
         const btcBlockNumberMock  = 1000;
-        const btcTxIndexMock = 2;
-        const heightAndIndex = btcBlockNumberMock<<32|btcTxIndexMock;
+        btcTxIndexMock = 2;
+        btcTxHeightMock = btcBlockNumberMock << 32;
         const headerMock = Buffer.alloc(0);
         const proofMock = Buffer.alloc(0);
-        const execRedeem = await this.OneBtc.executeRedeem(this.redeemRequester, redeemId, proofMock, btcTx.toBuffer(), heightAndIndex, headerMock);
-        const redeemEvent = execRedeem.logs.filter(log=>log.event == 'RedeemComplete')[0];
+        const execRedeem = await this.OneBtc.executeRedeem(this.redeemRequester, redeemId, proofMock, btcTx.toBuffer(), btcTxIndexMock, btcTxHeightMock, headerMock);
+        const redeemEvent = execRedeem.logs.filter(log=>log.event == 'RedeemCompleted')[0];
         assert.equal(redeemEvent.args.requester, this.redeemRequester);
     });
-    it("cancle issue request test", async function() {
-        const IssueAmount = 0.01*1e8;
-        const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {from: this.issueRequester, value:IssueAmount});
-        const IssueEvent = IssueReq.logs.filter(log=>log.event == 'IssueRequest')[0];
+    it("cancel issue request test", async function() {
+        const IssueAmount = 0.1 * 1e8;  // 0.1 OneBtc
+        const Collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(IssueAmount);
+        const collateralForIssued = Collateral * 150 / 100;
+        const griefingCollateral = collateralForIssued * 5 / 1000;
+
+        const IssueReq = await this.OneBtc.requestIssue(IssueAmount, this.vaultId, {from: this.issueRequester, value:griefingCollateral});
+        const IssueEvent = IssueReq.logs.filter(log=>log.event == 'IssueRequested')[0];
         const issueId = IssueEvent.args.issueId;
         const request = await this.OneBtc.issueRequests(this.issueRequester, issueId);
-        await expectRevert(this.OneBtc.cancelIssue(this.issueRequester, issueId), 'TimeNotExpired');
+        await expectRevert(this.OneBtc.cancelIssue(this.issueRequester, issueId), 'Time not expired');
         await web3.miner.incTime(Number(request.period)+1);
         await this.OneBtc.cancelIssue(this.issueRequester, issueId);
     });
     it("cancle redeem request test", async function() {
-        const RedeemAmount = 0.001*1e8;
+        const RedeemAmount = 0.1*1e8;  // 0.1 OneBtc
         await this.OneBtc.transfer(this.redeemRequester, RedeemAmount, {from: this.issueRequester});
         const RedeemReq = await this.OneBtc.requestRedeem(RedeemAmount, this.redeemBtcAddress, this.vaultId, {from: this.redeemRequester});
-        const RedeemEvent = RedeemReq.logs.filter(log=>log.event == 'RedeemRequest')[0];
+        const RedeemEvent = RedeemReq.logs.filter(log=>log.event == 'RedeemRequested')[0];
         const redeemId = RedeemEvent.args.redeemId;
 
         const request = await this.OneBtc.redeemRequests(this.redeemRequester, redeemId);
         
-        await expectRevert(this.OneBtc.cancelRedeem(this.redeemRequester, redeemId), 'TimeNotExpired');
+        const reimburse = true;
+        await expectRevert(this.OneBtc.cancelRedeem(this.redeemRequester, redeemId, reimburse), 'Time not expired');
         await web3.miner.incTime(Number(request.period)+1);
-        await this.OneBtc.cancelRedeem(this.redeemRequester, redeemId);
+        await this.OneBtc.cancelRedeem(this.redeemRequester, redeemId, reimburse);
     });
 });

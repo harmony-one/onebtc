@@ -8,7 +8,14 @@ async function main() {
     console.log("VaultReward deployed to:", vaultReward.address);
 
     // Set VaultReward address to OneBtc
-    const OneBtc = await ethers.getContractFactory("OneBtc");
+    const OneBtc = await ethers.getContractFactory(
+        "OneBtc",
+        {
+            libraries: {
+                VaultRegistryLib: process.env.VAULT_REGISTRY_LIB
+            }
+        }
+    );
     const oneBtc = await OneBtc.attach(
         process.env.ONE_BTC
     );
