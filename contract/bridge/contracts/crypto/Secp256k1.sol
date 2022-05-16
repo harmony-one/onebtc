@@ -25,7 +25,7 @@ library Secp256k1 {
         uint256 scale,
         uint256 Px,
         uint256 Py
-    ) external pure returns (uint256, uint256) {
+    ) internal pure returns (uint256, uint256) {
         require(scale % NN != 0, "invalid scale");
         return EllipticCurve.ecMul(scale, Px, Py, AA, PP);
     }
