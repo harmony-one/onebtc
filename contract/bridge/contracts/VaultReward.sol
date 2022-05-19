@@ -223,7 +223,7 @@ contract VaultReward is Initializable {
     uint256 vaultAPR;
     if (lockPeriod == 3) {
       vaultAPR = 5;
-    } else if (lockPeriod >= 6) {
+    } else if (lockPeriod >= 6 && lockPeriod < 12) {
       vaultAPR = 10;
     } else if (lockPeriod >= 12) {
       vaultAPR = 15;
