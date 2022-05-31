@@ -110,11 +110,11 @@ contract("Replace unit test", (accounts) => {
 
   it("Request Replace", async function () {
 
-    const eligibleBTCReplace = await this.OneBtc.requestableToBeReplacedTokens(this.vaultId);
+    const eligibleBTCReplace = await this.OneBtc.requestableToBeReplacedTokens(this.vaultId); // 0.5 BTC
 
     const collateral = await this.ExchangeRateOracleWrapper.wrappedToCollateral(eligibleBTCReplace);
     const griefingCollateral = (collateral * 5 / 100).toString(); // 5%
-
+    //console.log("Replace BTC=", eligibleBTCReplace.toString(), "grief=", griefingCollateral);
     const req = await this.OneBtc.requestReplace(
       this.vaultId,
       eligibleBTCReplace,
@@ -138,12 +138,12 @@ contract("Replace unit test", (accounts) => {
 
   });
 
-  it("Register NEW Vault with 10 Wei Collateral", async function () {
+  it("Register NEW Vault with 5 Ether Collateral", async function () {
     const VaultEcPair = bitcoin.ECPair.makeRandom({ compressed: false });
     const pubX = bn(VaultEcPair.publicKey.slice(1, 33));
     const pubY = bn(VaultEcPair.publicKey.slice(33, 65));
 
-    const collateral = web3.utils.toWei("10");
+    const collateral = web3.utils.toWei("5");
     await this.OneBtc.registerVault(pubX, pubY, {
       from: this.newVaultId,
       value: collateral,
@@ -155,8 +155,8 @@ contract("Replace unit test", (accounts) => {
   });
 
   it("Accept Replace", async function () {
-    const btcAmount = 0.001 * 1e8;
-    const collateral = 0.01 * 1e8;
+    const btcAmount = 0.5 * 1e8;
+    const collateral = web3.utils.toWei("5");
 
     const VaultEcPair = bitcoin.ECPair.makeRandom({ compressed: false });
     const pubX = bn(VaultEcPair.publicKey.slice(1, 33));
@@ -185,7 +185,7 @@ contract("Replace unit test", (accounts) => {
   });
 
   it("Execute Replace", async function () {
-    const btcAmount = 0.001 * 1e8;
+    const btcAmount = 0.5 * 1e8;
     const replaceId = this.replaceId;
     const btcAddress = this.replaceBtcAddress;
 
@@ -200,6 +200,8 @@ contract("Replace unit test", (accounts) => {
     const headerMock = Buffer.alloc(0);
     const proofMock = Buffer.alloc(0);
 
+    // await deployHelper.printVault(this.OneBtc, this.vaultId);
+
     const req = await this.OneBtc.executeReplace(
       replaceId,
       proofMock,
@@ -209,16 +211,29 @@ contract("Replace unit test", (accounts) => {
       headerMock
     );
 
-    const reqEvent = req.logs.filter((log) => log.event == "ExecuteReplace")[0];
+    // await deployHelper.printVault(this.OneBtc, this.vaultId);
+    // await deployHelper.printVault(this.OneBtc, this.newVaultId);
+    // await deployHelper.printVault(this.OneBtc, this.vaultId);
 
-    assert.equal(this.vaultId.toString(), reqEvent.args.oldVault.toString());
-    assert.equal(this.newVaultId.toString(), reqEvent.args.newVault.toString());
+    // get back your 10 ONE collateral back from oldvault
+    const collateral = web3.utils.toWei("10");
+    var reqW = await this.OneBtc.withdrawCollateral(collateral, { from: this.vaultId });
+    // await deployHelper.printVault(this.OneBtc, this.vaultId);
+    const vaultCollateralBal = await this.OneBtc.CollateralBalances(this.vaultId);
+    const WithdrawEvent = reqW.logs.filter((log) => log.event == "WithdrawCollateralEvent")[0];
+    assert.equal(vaultCollateralBal.toString(), '0');
+    assert.equal(WithdrawEvent.args.amount, collateral);
+
+    const reqEvent = req.logs.filter((log) => log.event == "ExecuteReplace")[0];
+    assert.equal(this.vaultId, reqEvent.args.oldVault);
+    assert.equal(this.newVaultId, reqEvent.args.newVault);
     assert.equal(this.replaceId.toString(), reqEvent.args.replaceId.toString());
   });
 
 
   it("Cancel Replace", async function () {
     await web3.miner.revert(this.snapshotId);
+    
     //deployHelper.printVault(this.OneBtc, this.vaultId);
 
     const cancelAmount = 0.5 * 1e8;
@@ -230,8 +245,8 @@ contract("Replace unit test", (accounts) => {
       (log) => log.event == "WithdrawReplace"
     )[0];
 
-    assert.equal(CancelEvent.args.withdrawnTokens.toString(), cancelAmount.toString());
-    assert.equal(CancelEvent.args.withdrawnGriefingCollateral.toString(), griefingCollateral.toString());
+    assert.equal(CancelEvent.args.withdrawnTokens, cancelAmount);
+    assert.equal(CancelEvent.args.withdrawnGriefingCollateral, griefingCollateral);
     //await deployHelper.printVault(this.OneBtc, this.vaultId);
 
   });  

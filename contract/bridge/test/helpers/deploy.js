@@ -38,6 +38,11 @@ async function deployOneBTC() {
 
 async function printVault(contract, vaultId) {
     const vaultInfo = await contract.vaults(vaultId);
+    const collateralBalance = await contract.CollateralBalances(vaultId);
+    const collateralUsed = await contract.CollateralUsed(vaultId);
+
+    console.log("VaultInfo - " + vaultId)
+    console.log("Collateral: ", collateralBalance.toString() ," used=", collateralUsed.toString());
     for(var k in vaultInfo) {
         isNaN(k) && console.log(k, vaultInfo[k].toString())
     }

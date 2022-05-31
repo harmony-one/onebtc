@@ -144,6 +144,8 @@ abstract contract Replace is VaultRegistry, Request {
             "Old vault must not be equal to new vault"
         );
 
+        require(msg.value == collateral, "incorrect amount sent");
+        
         // TODO: The newVault’s free balance MUST be enough to lock collateral.
         // TODO: SECURITY CHECK (The oldVault, newVault MUST NOT be banned)
 
@@ -181,6 +183,7 @@ abstract contract Replace is VaultRegistry, Request {
 
         // increase new-vault's to-be-issued tokens - this will fail if there is insufficient collateral
         VaultRegistry.tryIncreaseToBeIssuedTokens(newVaultId, redeemableTokens);
+        ICollateral.useCollateralInc(newVaultId, VaultRegistry.collateralForIssued(redeemableTokens));
 
         uint256 replaceId = uint256(
             keccak256(abi.encodePacked(oldVaultId, blockhash(block.number - 1)))
@@ -256,8 +259,14 @@ abstract contract Replace is VaultRegistry, Request {
             replace.collateral
         );
 
+        VaultRegistry.decreaseToBeRedeemedTokens(
+            oldVaultId,
+            replace.amount
+        );
+
         // if the old vault has not been liquidated, give it back its griefing collateral
         ICollateral.releaseCollateral(oldVaultId, replace.griefingCollateral);
+        ICollateral.useCollateralDec(oldVaultId, VaultRegistry.collateralForIssued(replace.amount));
 
         // Emit ExecuteReplace event.
         emit ExecuteReplace(replaceId, oldVaultId, newVaultId);

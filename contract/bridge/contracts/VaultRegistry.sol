@@ -35,6 +35,7 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
     event RedeemTokens(address indexed vaultId, uint256 amount);
     event IncreaseToBeReplacedTokens(address indexed vaultId, uint256 amount);
     event DecreaseToBeReplacedTokens(address indexed vaultId, uint256 amount);
+    event WithdrawCollateralEvent(address indexed vaultId, uint256 amount);
     event ReplaceTokens(
         address indexed oldVaultId,
         address indexed newVaultId,
@@ -121,6 +122,8 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
         );
         vault.collateral = vault.collateral.sub(amount);
         ICollateral.releaseCollateral(msg.sender, amount);
+
+        emit WithdrawCollateralEvent(msg.sender, amount);
     }
 
     function _updateVaultAccClaimableRewards(address _vaultId) internal {
@@ -158,6 +161,11 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
         vault.toBeRedeemed = vault.toBeRedeemed.add(amount);
         emit IncreaseToBeRedeemedTokens(vaultId, amount);
         return true;
+    }
+
+    function decreaseToBeRedeemedTokens(address vaultId, uint256 amount) internal {
+        Vault storage vault = vaults[vaultId];
+        vault.toBeRedeemed = vault.toBeRedeemed.sub(amount);
     }
 
     function redeemableTokens(address vaultId) internal returns (uint256) {
@@ -284,6 +292,7 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
 
         oldVault.issued = oldVault.issued.sub(tokens);
         newVault.issued = newVault.issued.add(tokens);
+        decreaseToBeIssuedTokens(newVaultId, tokens);
 
         emit ReplaceTokens(oldVaultId, newVaultId, tokens, collateral);
     }
