@@ -158,116 +158,118 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         ERC20Upgradeable._mint(receiver, amount);
     }
 
-    // function requestReplace(
-    //     address payable oldVaultId,
-    //     uint256 btcAmount,
-    //     uint256 griefingCollateral
-    // ) external payable {
-    //     require(false, "Feature temporarily disabled");
-    //     // Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
-    // }
+    function requestReplace(
+        address payable oldVaultId,
+        uint256 btcAmount,
+        uint256 griefingCollateral
+    ) external payable {
+        Replace._requestReplace(oldVaultId, btcAmount, griefingCollateral);
+    }
 
-    // function acceptReplace(
-    //     address oldVaultId,
-    //     address newVaultId,
-    //     uint256 btcAmount,
-    //     uint256 collateral,
-    //     uint256 btcPublicKeyX,
-    //     uint256 btcPublicKeyY
-    // ) external payable {
-    //     require(false, "Feature temporarily disabled");
-    //     // Replace._acceptReplace(
-    //     //     oldVaultId,
-    //     //     newVaultId,
-    //     //     btcAmount,
-    //     //     collateral,
-    //     //     btcPublicKeyX,
-    //     //     btcPublicKeyY
-    //     // );
-    // }
+    function acceptReplace(
+        address oldVaultId,
+        address newVaultId,
+        uint256 btcAmount,
+        uint256 collateral,
+        uint256 btcPublicKeyX,
+        uint256 btcPublicKeyY
+    ) external payable {
+        Replace._acceptReplace(
+            oldVaultId,
+            newVaultId,
+            btcAmount,
+            collateral,
+            btcPublicKeyX,
+            btcPublicKeyY
+        );
+    }
 
-    // function executeReplace(
-    //     uint256 replaceId,
-    //     bytes calldata merkleProof,
-    //     bytes calldata rawTx, // avoid compiler error: stack too deep
-    //     //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
-    //     uint32 height,
-    //     uint256 index,
-    //     bytes calldata header
-    // ) external {
-    //     require(false, "Feature temporarily disabled");
-    //     // bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
-    //     // Replace._executeReplace(replaceId, _vout);
-    // }
+    function cancelReplace(address payable oldVaultId,
+        uint256 btcAmount) external {
+        Replace._withdrawReplace(oldVaultId, btcAmount);
+    }
 
-    /**
-     * @dev Report vault misbehavior by providing fraud proof (malicious bitcoin transaction and the corresponding transaction inclusion proof). Fully slashes the vault.
-     */
-    function reportVaultTheft(
-        address vaultId,
-        bytes calldata rawTx,
+    function executeReplace(
+        uint256 replaceId,
+        bytes calldata merkleProof,
+        bytes calldata rawTx, // avoid compiler error: stack too deep
+        //bytes calldata _version, bytes calldata _vin, bytes calldata _vout, bytes calldata _locktime,
         uint32 height,
         uint256 index,
-        bytes calldata merkleProof,
         bytes calldata header
     ) external {
-        require(
-            relay.isApprovedStakedRelayer(msg.sender),
-            "Sender is not authorized"
-        );
-
-        bytes32 txId = rawTx.hash256();
-
-        // check if already reported
-        bytes32 reportKey = keccak256(abi.encodePacked(vaultId, txId));
-        require(
-            theftReports[reportKey] == false,
-            "This txId has already been logged as a theft by the given vault"
-        );
-
-        // verify transaction inclusion using header and merkle proof
-        relay.verifyTx(height, index, txId, header, merkleProof, 1, true);
-
-        // all looks good, liquidate vault
-        address reporterId = msg.sender;
-        liquidateVault(vaultId, reporterId);
-
-        theftReports[reportKey] = true;
-        emit ReportVaultTheft(vaultId);
+        bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
+        Replace._executeReplace(replaceId, _vout);
     }
+
+    // /**
+    //  * @dev Report vault misbehavior by providing fraud proof (malicious bitcoin transaction and the corresponding transaction inclusion proof). Fully slashes the vault.
+    //  */
+    // function reportVaultTheft(
+    //     address vaultId,
+    //     bytes calldata rawTx,
+    //     uint32 height,
+    //     uint256 index,
+    //     bytes calldata merkleProof,
+    //     bytes calldata header
+    // ) external {
+    //     require(
+    //         relay.isApprovedStakedRelayer(msg.sender),
+    //         "Sender is not authorized"
+    //     );
+
+    //     bytes32 txId = rawTx.hash256();
+
+    //     // check if already reported
+    //     bytes32 reportKey = keccak256(abi.encodePacked(vaultId, txId));
+    //     require(
+    //         theftReports[reportKey] == false,
+    //         "This txId has already been logged as a theft by the given vault"
+    //     );
+
+    //     // verify transaction inclusion using header and merkle proof
+    //     relay.verifyTx(height, index, txId, header, merkleProof, 1, true);
+
+    //     // all looks good, liquidate vault
+    //     address reporterId = msg.sender;
+    //     liquidateVault(vaultId, reporterId);
+
+    //     theftReports[reportKey] = true;
+    //     emit ReportVaultTheft(vaultId);
+    // }
 
     /**
      * @dev Reports vault double payment providing two fraud proof (malicious bitcoin transaction and the corresponding transaction inclusion proof). Fully slashes the vault.
      */
-    function reportVaultDoublePayment(
-        address vaultId,
-        bytes calldata rawTxs,
-        uint64[] memory heightAndIndexs,
-        bytes calldata merkleProofs,
-        bytes calldata headers
-    ) external {
-        require(
-            relay.isApprovedStakedRelayer(msg.sender),
-            "Sender is not authorized"
-        );
-        // separate the two sets and check that
-        // txns must be unique
+    // function reportVaultDoublePayment(
+    //     address vaultId,
+    //     bytes calldata rawTxs,
+    //     uint64[] memory heightAndIndexs,
+    //     bytes calldata merkleProofs,
+    //     bytes calldata headers
+    // ) external {
+    //     require(
+    //         relay.isApprovedStakedRelayer(msg.sender),
+    //         "Sender is not authorized"
+    //     );
+    //     // separate the two sets and check that
+    //     // txns must be unique
 
-        // verify transaction inclusion using header and merkle proof for both
+    //     // verify transaction inclusion using header and merkle proof for both
 
-        bytes32 leftTxId;
-        bytes32 rightTxId;
+    //     bytes32 leftTxId;
+    //     bytes32 rightTxId;
 
-        // extract the two txns
-        // TransactionUtils.extractTx(rawTxns)
+    //     // extract the two txns
+    //     // TransactionUtils.extractTx(rawTxns)
 
-        // verify that the OP_RETURN matches, amounts are not relevant
-        // TxValidate.extractOpReturnOnly();
+    //     // verify that the OP_RETURN matches, amounts are not relevant
+    //     // TxValidate.extractOpReturnOnly();
 
-        // all looks good, liquidate vault
-        address reporterId = msg.sender;
-        liquidateVault(vaultId, reporterId);
+    //     // all looks good, liquidate vault
+    //     address reporterId = msg.sender;
+    //     liquidateVault(vaultId, reporterId);
 
-        emit VaultDoublePayment(vaultId, leftTxId, rightTxId);
-    }
+    //     emit VaultDoublePayment(vaultId, leftTxId, rightTxId);
+    // }
 }

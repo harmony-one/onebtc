@@ -35,6 +35,7 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
     event RedeemTokens(address indexed vaultId, uint256 amount);
     event IncreaseToBeReplacedTokens(address indexed vaultId, uint256 amount);
     event DecreaseToBeReplacedTokens(address indexed vaultId, uint256 amount);
+    event WithdrawCollateralEvent(address indexed vaultId, uint256 amount);
     event ReplaceTokens(
         address indexed oldVaultId,
         address indexed newVaultId,
@@ -121,6 +122,8 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
         );
         vault.collateral = vault.collateral.sub(amount);
         ICollateral.releaseCollateral(msg.sender, amount);
+
+        emit WithdrawCollateralEvent(msg.sender, amount);
     }
 
     function _updateVaultAccClaimableRewards(address _vaultId) internal {
@@ -158,6 +161,11 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
         vault.toBeRedeemed = vault.toBeRedeemed.add(amount);
         emit IncreaseToBeRedeemedTokens(vaultId, amount);
         return true;
+    }
+
+    function decreaseToBeRedeemedTokens(address vaultId, uint256 amount) internal {
+        Vault storage vault = vaults[vaultId];
+        vault.toBeRedeemed = vault.toBeRedeemed.sub(amount);
     }
 
     function redeemableTokens(address vaultId) internal returns (uint256) {
@@ -204,95 +212,89 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
         return collateral.mul(numerator).div(denominator);
     }
 
-    // function requestableToBeReplacedTokens(address vaultId)
-    //     internal
-    //     returns (uint256 amount)
-    // {
-    //     Vault memory vault = vaults[vaultId];
-    //     requireVaultExistence(vault.btcPublicKeyX);
+    function requestableToBeReplacedTokens(address vaultId)
+        public view
+        returns (uint256 amount)
+    {
+        Vault memory vault = vaults[vaultId];
+        require(vault.btcPublicKeyX != 0, "Vault does not exist");
 
-    //     uint256 requestableIncrease = vault.issued.sub(vault.toBeRedeemed).sub(
-    //         vault.toBeReplaced
-    //     );
+        uint256 requestableIncrease = vault.issued.sub(vault.toBeRedeemed).sub(
+            vault.toBeReplaced
+        );
 
-    //     return requestableIncrease;
-    // }
+        return requestableIncrease;
+    }
 
-    // function tryIncreaseToBeReplacedTokens(
-    //     address vaultId,
-    //     uint256 tokens,
-    //     uint256 collateral
-    // ) internal returns (uint256, uint256) {
-    //     Vault storage vault = vaults[vaultId];
-
-    //     uint256 requestableIncrease = requestableToBeReplacedTokens(vaultId);
-
-    //     require(
-    //         tokens <= requestableIncrease,
-    //         "Could not increase to-be-replaced tokens because it is more than issued amount"
-    //     );
-
-    //     vault.toBeReplaced = vault.toBeReplaced.add(tokens);
-    //     vault.replaceCollateral = vault.replaceCollateral.add(collateral);
-
-    //     emit IncreaseToBeReplacedTokens(vaultId, tokens);
-
-    //     return (vault.toBeReplaced, vault.replaceCollateral);
-    // }
-
-    // function decreaseToBeReplacedTokens(address vaultId, uint256 tokens)
-    //     internal
-    //     returns (uint256, uint256)
-    // {
-    //     Vault storage vault = vaults[vaultId];
-    //     requireVaultExistence(vault.btcPublicKeyX);
-
-    //     uint256 usedTokens = MathUpgradeable.min(vault.toBeReplaced, tokens);
-
-    //     uint256 calculatedCollateral = calculateCollateral(
-    //         vault.replaceCollateral,
-    //         usedTokens,
-    //         vault.toBeReplaced
-    //     );
-    //     uint256 usedCollateral = MathUpgradeable.min(
-    //         vault.replaceCollateral,
-    //         calculatedCollateral
-    //     );
-
-    //     vault.toBeReplaced = vault.toBeReplaced.sub(usedTokens);
-    //     vault.replaceCollateral = vault.replaceCollateral.sub(usedCollateral);
-
-    //     emit DecreaseToBeReplacedTokens(vaultId, usedTokens);
-
-    //     return (usedTokens, usedCollateral);
-    // }
-
-    // function replaceTokens(
-    //     address oldVaultId,
-    //     address newVaultId,
-    //     uint256 tokens,
-    //     uint256 collateral
-    // ) internal {
-    //     Vault storage oldVault = vaults[oldVaultId];
-    //     Vault storage newVault = vaults[newVaultId];
-
-    //     requireVaultExistence(oldVault.btcPublicKeyX);
-    //     requireVaultExistence(newVault.btcPublicKeyX);
-
-    //     // TODO: add liquidation functionality
-    //     // if old_vault.data.is_liquidated()
-
-    //     oldVault.issued = oldVault.issued.sub(tokens);
-    //     newVault.issued = newVault.issued.add(tokens);
-
-    //     emit ReplaceTokens(oldVaultId, newVaultId, tokens, collateral);
-    // }
-
-    function tryDepositCollateral(address vaultId, uint256 amount) internal {
+    function tryIncreaseToBeReplacedTokens(
+        address vaultId,
+        uint256 tokens,
+        uint256 collateral
+    ) internal returns (uint256, uint256) {
         Vault storage vault = vaults[vaultId];
-        requireVaultExistence(vault.btcPublicKeyX);
 
-        ICollateral.lockCollateral(vaultId, amount);
+        uint256 requestableIncrease = requestableToBeReplacedTokens(vaultId);
+
+        require(
+            tokens <= requestableIncrease,
+            "Could not increase to-be-replaced tokens because it is more than issued amount"
+        );
+
+        vault.toBeReplaced = vault.toBeReplaced.add(tokens);
+        vault.replaceCollateral = vault.replaceCollateral.add(collateral);
+
+        emit IncreaseToBeReplacedTokens(vaultId, tokens);
+
+        return (vault.toBeReplaced, vault.replaceCollateral);
+    }
+
+    function decreaseToBeReplacedTokens(address vaultId, uint256 btcAmount)
+        internal
+        returns (uint256, uint256)
+    {
+        Vault storage vault = vaults[vaultId];
+        require(vault.btcPublicKeyX != 0, "Vault does not exist");
+
+        uint256 usedTokens = MathUpgradeable.min(vault.toBeReplaced, btcAmount);
+
+        uint256 calculatedCollateral = calculateCollateral(
+            vault.replaceCollateral,
+            usedTokens,
+            vault.toBeReplaced
+        );
+        uint256 usedCollateral = MathUpgradeable.min(
+            vault.replaceCollateral,
+            calculatedCollateral
+        );
+
+        vault.toBeReplaced = vault.toBeReplaced.sub(usedTokens);
+        vault.replaceCollateral = vault.replaceCollateral.sub(usedCollateral);
+
+        emit DecreaseToBeReplacedTokens(vaultId, usedTokens);
+
+        return (usedTokens, usedCollateral);
+    }
+
+    function replaceTokens(
+        address oldVaultId,
+        address newVaultId,
+        uint256 tokens,
+        uint256 collateral
+    ) internal {
+        Vault storage oldVault = vaults[oldVaultId];
+        Vault storage newVault = vaults[newVaultId];
+
+        requireVaultExistence(oldVault.btcPublicKeyX);
+        requireVaultExistence(newVault.btcPublicKeyX);
+
+        // TODO: add liquidation functionality
+        // if old_vault.data.is_liquidated()
+
+        oldVault.issued = oldVault.issued.sub(tokens);
+        newVault.issued = newVault.issued.add(tokens);
+        decreaseToBeIssuedTokens(newVaultId, tokens);
+
+        emit ReplaceTokens(oldVaultId, newVaultId, tokens, collateral);
     }
 
     function slashForToBeRedeemed(address vaultId, uint256 amount) private {
