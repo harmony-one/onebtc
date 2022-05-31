@@ -297,13 +297,6 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
         emit ReplaceTokens(oldVaultId, newVaultId, tokens, collateral);
     }
 
-    function tryDepositCollateral(address vaultId, uint256 amount) internal {
-        Vault storage vault = vaults[vaultId];
-        requireVaultExistence(vault.btcPublicKeyX);
-
-        ICollateral.lockCollateral(vaultId, amount);
-    }
-
     function slashForToBeRedeemed(address vaultId, uint256 amount) private {
         Vault storage vault = vaults[vaultId];
         uint256 collateral = MathUpgradeable.min(vault.collateral, amount);

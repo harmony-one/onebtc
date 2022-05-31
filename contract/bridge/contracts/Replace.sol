@@ -170,10 +170,8 @@ abstract contract Replace is VaultRegistry, Request {
             btcAmount
         );
 
-        VaultRegistry.tryDepositCollateral(
-            newVaultId,
-            actualNewVaultCollateral
-        );
+        // lock on new vault
+        VaultRegistry.lockAdditionalCollateral();
 
         // increase old-vault's to-be-redeemed tokens - this should never fail
         VaultRegistry.tryIncreaseToBeRedeemedTokens(
