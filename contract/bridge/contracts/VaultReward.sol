@@ -41,8 +41,9 @@ contract VaultReward is Initializable {
   address public oneBtc;
   address public vaultReserve;
   mapping(address => LockedVault) public lockedVaults;  // Vault -> LockedVault
-  mapping(address => mapping(address => VaultStaker)) public vaultStakers;  // Vault -> User -> VaultStaker
-  mapping(address => address[]) public userStakedVaultList;  // User -> Vault list
+  mapping(address => mapping(address => VaultStaker)) public vaultStakers;  // Vault -> Staker -> VaultStaker
+  mapping(address => address[]) public userStakedVaultList;  // Staker -> Vault list
+  mapping(address => VaultStaker[]) public vaultStakerList; // Vault -> VaultStaker list
 
   uint256 private constant ACC_ONE_PRECISION = 1e24;
 
@@ -91,11 +92,19 @@ contract VaultReward is Initializable {
     // update the vault lock info
     uint256 secPerDay = 60 * 60 * 24;
     uint256 lockPeriodInSec = secPerDay.mul(30).mul(_lockPeriod);
-    if (vault.lockExpireAt < block.timestamp) {   // new or expired vault
+    if (vault.lockExpireAt == 0) {  // new vault
       // update vault accClaimableRewards
       (,, uint256 collateral,,,,,, uint256 liquidatedCollateral) = IVaultRegistry(oneBtc).getVault(_vaultId);
       uint256 vaultUsedCollateral = collateral.sub(liquidatedCollateral);
-      _updateVaultStaker(_vaultId, _vaultId, vaultUsedCollateral);
+      _updateVaultStaker(_vaultId, _vaultId, vaultUsedCollateral, true);
+
+      // update lockedVault info
+      vault.lockStartAt = block.timestamp;
+      vault.lockPeriod = _lockPeriod;
+      vault.lockExpireAt = block.timestamp.add(lockPeriodInSec);
+      vault.rewardClaimAt = block.timestamp;
+    } else if (vault.lockExpireAt > 0 && vault.lockExpireAt < block.timestamp) {   // expired vault
+      _updateVaultStaker(_vaultId, _vaultId, 0, true);
 
       // update lockedVault info
       vault.lockStartAt = block.timestamp;
@@ -104,7 +113,7 @@ contract VaultReward is Initializable {
       vault.rewardClaimAt = block.timestamp;
     } else {    // locked vault
       // update accClaimableRewards
-      _updateVaultStaker(_vaultId, _vaultId, 0);
+      _updateVaultStaker(_vaultId, _vaultId, 0, true);
 
       // update lockedVault info
       vault.lockPeriod = vault.lockPeriod.add(_lockPeriod);
@@ -115,27 +124,25 @@ contract VaultReward is Initializable {
   }
 
   function _updateVaultAccClaimableRewards(address _vaultId) internal returns (uint256 claimableRewards, uint256 rewardClaimAt) {
-    if (block.timestamp <= lockedVaults[_vaultId].lockExpireAt) {
-      // get vault
-      LockedVault storage vault = lockedVaults[_vaultId];
+    // get vault
+    LockedVault storage vault = lockedVaults[_vaultId];
 
-      // store the old accClaimableRewards
-      uint256 oldVaultAccClaimableRewards = vault.accClaimableRewards;
+    // store the old accClaimableRewards
+    uint256 oldVaultAccClaimableRewards = vault.accClaimableRewards;
 
-      // update vaultAccClaimableRewards
-      (claimableRewards, rewardClaimAt) = getClaimableRewards(_vaultId);
-      vault.accClaimableRewards = claimableRewards;
-      vault.rewardClaimAt = rewardClaimAt;
+    // update vaultAccClaimableRewards
+    (claimableRewards, rewardClaimAt) = getVaultTotalClaimableRewards(_vaultId);
+    vault.accClaimableRewards = claimableRewards;
+    vault.rewardClaimAt = rewardClaimAt;
 
-      emit UpdateVaultAccClaimableRewards(_vaultId, oldVaultAccClaimableRewards, vault.accClaimableRewards, rewardClaimAt);
-    }
+    emit UpdateVaultAccClaimableRewards(_vaultId, oldVaultAccClaimableRewards, vault.accClaimableRewards, rewardClaimAt);
   }
 
   function claimVaultRewards(address _vaultId, address payable _to) external {
     require(_vaultId == msg.sender, "Only vault owner");
 
     // update vault staker info
-    _updateVaultStaker(_vaultId, _vaultId, 0);
+    _updateVaultStaker(_vaultId, _vaultId, 0, true);
 
     // claim rewards
     _claimRewards(_vaultId, _vaultId, _to);
@@ -145,7 +152,7 @@ contract VaultReward is Initializable {
     require(_vaultId != msg.sender, "claim by vault");
 
     // update vault staker info
-    _updateVaultStaker(_vaultId, msg.sender, 0);
+    _updateVaultStaker(_vaultId, msg.sender, 0, true);
 
     // claim rewards
     _claimRewards(_vaultId, msg.sender, _to);
@@ -165,7 +172,7 @@ contract VaultReward is Initializable {
     require(_vaultId == msg.sender, "Only vault owner");
 
     // update vault staker info
-    _updateVaultStaker(_vaultId, _vaultId, 0);
+    _updateVaultStaker(_vaultId, _vaultId, 0, true);
 
     // claim rewards
     (uint256 claimableRewards, uint256 claimAt) = _claimRewards(_vaultId, _vaultId, address(this));
@@ -180,7 +187,7 @@ contract VaultReward is Initializable {
     require(_vaultId != msg.sender, "claim by vault");
 
     // update vault staker info
-    _updateVaultStaker(_vaultId, msg.sender, 0);
+    _updateVaultStaker(_vaultId, msg.sender, 0, true);
 
     // claim rewards
     (uint256 claimableRewards, uint256 claimAt) = _claimRewards(_vaultId, msg.sender, address(this));
@@ -210,7 +217,7 @@ contract VaultReward is Initializable {
     return (claimableRewards, vault.rewardClaimAt);
   }
 
-  function getClaimableRewards(address _vaultId) public view vaultExist(_vaultId) returns (uint256 claimableRewards, uint256 rewardClaimAt) {
+  function getVaultTotalClaimableRewards(address _vaultId) public view vaultExist(_vaultId) returns (uint256 claimableRewards, uint256 rewardClaimAt) {
     // get vault collateral
     (,, uint256 collateral,,,,,, uint256 liquidatedCollateral) = IVaultRegistry(oneBtc).getVault(_vaultId);
     uint256 vaultUsedCollateral = collateral.sub(liquidatedCollateral);
@@ -252,11 +259,11 @@ contract VaultReward is Initializable {
     }
   }
 
-  function updateVaultStaker(address _vaultId, address _staker, uint256 _amount) external onlyOneBtc {
-    _updateVaultStaker(_vaultId, _staker, _amount);
+  function updateVaultStaker(address _vaultId, address _staker, uint256 _amount, bool _isDeposit) external onlyOneBtc {
+    _updateVaultStaker(_vaultId, _staker, _amount, _isDeposit);
   }
 
-  function _updateVaultStaker(address _vaultId, address _staker, uint256 _amount) internal {
+  function _updateVaultStaker(address _vaultId, address _staker, uint256 _amount, bool _isDeposit) internal {
     LockedVault storage vault = lockedVaults[_vaultId];
     VaultStaker storage vaultStaker = vaultStakers[_vaultId][_staker];
 
@@ -267,17 +274,19 @@ contract VaultReward is Initializable {
     (uint256 claimableRewards,) = _updateVaultAccClaimableRewards(_vaultId);
 
     // update userStakedVaultList
-    bool isNewVault = true;
-    for (uint256 i; i < userStakedVaultList[_staker].length; i++) {
-      // check if vaultId is the new vault
-      if (userStakedVaultList[_staker][i] == _vaultId) {
-        isNewVault = false;
-        break;
+    {
+      bool isNewVault = true;
+      for (uint256 i; i < userStakedVaultList[_staker].length; i++) {
+        // check if vaultId is the new vault
+        if (userStakedVaultList[_staker][i] == _vaultId) {
+          isNewVault = false;
+          break;
+        }
       }
-    }
-    if (isNewVault) {
-      // add the new vaultId to userStakedVaultList
-      userStakedVaultList[_staker].push(_vaultId);
+      if (isNewVault) {
+        // add the new vaultId to userStakedVaultList
+        userStakedVaultList[_staker].push(_vaultId);
+      }
     }
 
     // get vault collateral
@@ -305,8 +314,50 @@ contract VaultReward is Initializable {
     }
 
     // update vaultStaker's balance and rewardDebt
-    vaultStaker.balance = vaultStaker.balance.add(_amount);
+    if (_isDeposit) {
+      vaultStaker.balance = vaultStaker.balance.add(_amount);
+    } else {
+      vaultStaker.balance = vaultStaker.balance.sub(_amount);
+    }
     vaultStaker.rewardDebt = vault.accRewardPerShare.mul(vaultStaker.balance).div(ACC_ONE_PRECISION);
+  }
+
+  function getStakerClaimableRewards(address _vaultId, address _staker) public view vaultExist(_vaultId) returns (uint256 claimableRewards) {
+    LockedVault memory vault = lockedVaults[_vaultId];
+    VaultStaker memory vaultStaker = vaultStakers[_vaultId][_staker];
+
+    // store the old vaultAccClaimableRewards
+    uint256 oldVaultAccClaimableRewards = vault.accClaimableRewards;
+
+    // update vaultAccClaimableRewards
+    (uint256 vaultClaimableRewards,) = getVaultTotalClaimableRewards(_vaultId);
+
+    // get vault collateral
+    (,, uint256 collateral,,,,,, uint256 liquidatedCollateral) = IVaultRegistry(oneBtc).getVault(_vaultId);
+    uint256 vaultUsedCollateral = collateral.sub(liquidatedCollateral);
+
+    // update vault accRewardPerShare
+    uint256 vaultAccRewardPerShare;
+    if (vaultUsedCollateral > 0) {
+      uint256 vaultClaimableRewardsChange = vaultClaimableRewards.sub(oldVaultAccClaimableRewards);
+      uint256 rewardPerShare = vaultClaimableRewardsChange.mul(ACC_ONE_PRECISION).div(vaultUsedCollateral);
+      vaultAccRewardPerShare = vault.accRewardPerShare.add(rewardPerShare);
+    }
+
+    // get vaultStakers accClaimableRewards
+    if (vaultStaker.balance > 0) {
+      uint256 pending = (vaultStaker.balance.mul(vaultAccRewardPerShare).div(ACC_ONE_PRECISION)).sub(vaultStaker.rewardDebt);
+      if (_vaultId == _staker) {
+        claimableRewards = vaultStaker.accClaimableRewards.add(pending); // update vault accClaimableRewards
+      } else {
+        if (_vaultId == _staker) {
+          claimableRewards = vaultStaker.accClaimableRewards.add(pending);
+        } else {
+          uint256 feeForVault = pending.mul(2).div(100);  // 2% fee to vault, 98% to staker
+          claimableRewards = vaultStaker.accClaimableRewards.add(pending).sub(feeForVault);  // update staker accClaimableRewards
+        }
+      }
+    }
   }
 
   function getVaultLockExpireAt(address _vaultId) external view returns (uint256) {
@@ -355,5 +406,10 @@ contract VaultReward is Initializable {
 
   function decreaseVaultStakerBalance(address _vaultId, address _staker, uint256 _amount) external onlyOneBtc {
     vaultStakers[_vaultId][_staker].balance = vaultStakers[_vaultId][_staker].balance.sub(_amount);
+  }
+
+  function toUint256(int256 value) internal pure returns (uint256) {
+    require(value >= 0, "SafeCast: value must be positive");
+    return uint256(value);
   }
 }
