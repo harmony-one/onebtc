@@ -11,7 +11,7 @@ interface IVaultReward {
 
   function decreaseVaultCollateralDebt(address _vaultId, address _staker, uint256 _amount) external;
 
-  function updateVaultStaker(address _vaultId, address _staker, uint256 _amount) external;
+  function updateVaultStaker(address _vaultId, address _staker, uint256 _amount, bool _isDeposit) external;
 
   function getVaultCollateralDebt(address _vaultId) external view returns (uint256);
 
