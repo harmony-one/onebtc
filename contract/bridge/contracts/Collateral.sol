@@ -10,6 +10,8 @@ abstract contract ICollateral {
     event LockCollateral(address sender, uint256 amount);
     event ReleaseCollateral(address sender, uint256 amount);
     event SlashCollateral(address sender, address receiver, uint256 amount);
+    event TEST1(uint256 test1);
+    event TEST2(uint256 test2);
 
     mapping(address => uint256) public CollateralBalances;
     mapping(address => uint256) public CollateralUsed; // for vaults
@@ -42,6 +44,13 @@ abstract contract ICollateral {
     function releaseCollateral(address sender, uint256 amount) internal {
         release(sender, sender, amount);
         emit ReleaseCollateral(sender, amount);
+    }
+
+    function releaseStakerCollateral(address vault, address staker, uint256 amount) internal {
+        CollateralBalances[vault] = CollateralBalances[vault].sub(amount);
+        address payable _to = address(uint160(staker));
+        (bool sent, ) = _to.call{value: amount}("");
+        require(sent, "Transfer failed.");
     }
 
     function slashCollateral(
