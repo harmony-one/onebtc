@@ -43,8 +43,7 @@ contract VaultReward is Initializable {
   mapping(address => LockedVault) public lockedVaults;  // Vault -> LockedVault
   mapping(address => mapping(address => VaultStaker)) public vaultStakers;  // Vault -> Staker -> VaultStaker
   mapping(address => address[]) public userStakedVaultList;  // Staker -> Vault list
-  mapping(address => VaultStaker[]) public vaultStakerList; // Vault -> VaultStaker list
-
+  // upgrade contract
   uint256 private constant ACC_ONE_PRECISION = 1e24;
 
   event ExtendVaultLockPeriod(address indexed vaultId, uint256 oldLockPeriod, uint256 newLockPeriod);
