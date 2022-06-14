@@ -96,7 +96,7 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
     }
 
     function stakeAdditionalCollateralToVault(address _vaultId) external payable {
-        require(block.timestamp < IVaultReward(vaultReward).getVaultLockExpireAt(_vaultId), "Vault was expired");
+        requireVaultActive(_vaultId);
         require(_vaultId != msg.sender, "Staking by vault");
         
         // lock additional collateral to vault
@@ -107,7 +107,7 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
     }
 
     function stakeAdditionalCollateralFromStakerReward(address _vaultId, address _staker) external override payable onlyVaultReward {
-        require(block.timestamp < IVaultReward(vaultReward).getVaultLockExpireAt(_vaultId), "Vault was expired");
+        requireVaultActive(_vaultId);
         
         // lock additional collateral to vault
         _lockAdditionalCollateral(_vaultId, _staker, msg.value);
@@ -128,10 +128,9 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
     }
 
     function withdrawCollateralByVault(uint256 amount) external {
-        require(IVaultReward(vaultReward).getVaultLockExpireAt(msg.sender) < block.timestamp, "Vault lock period is not expired");
+        _beforeWithdrawCollateral(msg.sender);
         
         Vault storage vault = vaults[msg.sender];
-        requireVaultExistence(vault.btcPublicKeyX);
 
         // get vault reward debt
         uint256 collateralDebt = IVaultReward(vaultReward).getVaultCollateralDebt(msg.sender);
@@ -156,19 +155,16 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
     }
 
     function withdrawCollateralByStaker(address _vaultId, uint256 _amount) external {
-        require(IVaultReward(vaultReward).getVaultLockExpireAt(_vaultId) < block.timestamp, "Vault lock period is not expired");
+        _beforeWithdrawCollateral(_vaultId);
         require(_vaultId != msg.sender, "Withdrawal by vault");
         
         Vault storage vault = vaults[_vaultId];
-        requireVaultExistence(vault.btcPublicKeyX);
 
         // get vault staker balance
         uint256 vaultStakerBalance = IVaultReward(vaultReward).getVaultStakerBalance(_vaultId, msg.sender);
 
         // update vault staker
         IVaultReward(vaultReward).updateVaultStaker(_vaultId, msg.sender, _amount, false);
-
-        uint256 test = IVaultReward(vaultReward).getVaultStakerBalance(_vaultId, msg.sender);
 
         // is allowed to withdraw collateral
         require(
@@ -184,6 +180,15 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
 
         // Transfer collateral to staker
         ICollateral.releaseStakerCollateral(_vaultId, msg.sender, _amount);
+    }
+
+    function requireVaultActive(address _vaultId) private {
+        require(block.timestamp < IVaultReward(vaultReward).getVaultLockExpireAt(_vaultId), "Vault was expired");
+    }
+
+    function _beforeWithdrawCollateral(address _vaultId) internal {
+        require(IVaultReward(vaultReward).getVaultLockExpireAt(_vaultId) < block.timestamp, "Vault lock period is not expired");
+        requireVaultExistence(vaults[_vaultId].btcPublicKeyX);
     }
 
     function decreaseToBeIssuedTokens(address vaultId, uint256 amount)
@@ -219,8 +224,7 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
     }
 
     function redeemableTokens(address vaultId) internal returns (uint256) {
-        Vault memory vault = vaults[vaultId];
-        return vault.issued.sub(vault.toBeRedeemed);
+        return vaults[vaultId].issued.sub(vaults[vaultId].toBeRedeemed);
     }
 
     function redeemTokens(address vaultId, uint256 amount) internal {
