@@ -1,4 +1,5 @@
 const VaultRegistryTestWrapper = artifacts.require("VaultRegistryTestWrapper");
+const VaultRegistryLib = artifacts.require("VaultRegistryLib");
 const bitcoin = require("bitcoinjs-lib");
 const bn = (b) => BigInt(`0x${b.toString("hex")}`);
 
@@ -20,6 +21,9 @@ web3.extend({
 
 contract("VaultRegistry unit test", (accounts) => {
   before(async function () {
+    this.VaultRegistryLib = await VaultRegistryLib.new();
+    VaultRegistryTestWrapper.link("VaultRegistryLib", this.VaultRegistryLib.address)
+
     this.VaultRegistry = await VaultRegistryTestWrapper.new();
 
     this.vaultId = accounts[1];
@@ -39,7 +43,7 @@ contract("VaultRegistry unit test", (accounts) => {
 
     this.initCollateral = web3.utils.toWei("10");
 
-    const req = await this.VaultRegistry.registerVault(pubX, pubY, {
+    const req = await this.VaultRegistry.testRegisterVault(pubX, pubY, {
       from: this.vaultId,
       value: this.initCollateral,
     });
@@ -223,21 +227,21 @@ contract("VaultRegistry unit test", (accounts) => {
     assert.equal(amount, event.args.amount);
   });
 
-  it("RequestableToBeReplacedTokens", async function () {
-    const vault = await this.VaultRegistry.vaults(this.vaultId);
-    const issuedAmount = await vault.issued;
-    const toBeRedeemedAmount = await vault.toBeRedeemed;
-    const amount = issuedAmount.sub(toBeRedeemedAmount);
+  // it("RequestableToBeReplacedTokens", async function () {
+  //   const vault = await this.VaultRegistry.vaults(this.vaultId);
+  //   const issuedAmount = await vault.issued;
+  //   const toBeRedeemedAmount = await vault.toBeRedeemed;
+  //   const amount = issuedAmount.sub(toBeRedeemedAmount);
 
-    const req = await this.VaultRegistry.testRequestableToBeReplacedTokens(
-      this.vaultId
-    );
+  //   const req = await this.VaultRegistry.testRequestableToBeReplacedTokens(
+  //     this.vaultId
+  //   );
 
-    const event = req.logs.filter(
-      (log) => log.event == "RequestableToBeReplacedTokens"
-    )[0];
+  //   const event = req.logs.filter(
+  //     (log) => log.event == "RequestableToBeReplacedTokens"
+  //   )[0];
 
-    assert.equal(event.args.vaultId, this.vaultId);
-    assert.equal(event.args.amount.toString(), amount.toString());
-  });
+  //   assert.equal(event.args.vaultId, this.vaultId);
+  //   assert.equal(event.args.amount.toString(), amount.toString());
+  // });
 });
