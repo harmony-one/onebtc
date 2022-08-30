@@ -31,6 +31,7 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
     event IncreaseToBeIssuedTokens(address indexed vaultId, uint256 amount);
     event IncreaseToBeRedeemedTokens(address indexed vaultId, uint256 amount);
     event DecreaseToBeIssuedTokens(address indexed vaultId, uint256 amount);
+    event DecreaseToBeRedeemedTokens(address indexed vaultId, uint256 amount);
     event IssueTokens(address indexed vaultId, uint256 amount);
     event RedeemTokens(address indexed vaultId, uint256 amount);
     event IncreaseToBeReplacedTokens(address indexed vaultId, uint256 amount);
@@ -171,6 +172,18 @@ abstract contract VaultRegistry is Initializable, ICollateral, IVaultRegistry {
         vault.issued = vault.issued.sub(amount);
         emit RedeemTokens(vaultId, amount);
     }
+
+    function decreaseToBeRedeemedTokens(address vaultId, uint256 amount)
+        internal
+    {
+        Vault storage vault = vaults[vaultId];
+        vault.toBeRedeemed = vault.toBeRedeemed.sub(amount);
+        emit DecreaseToBeRedeemedTokens(vaultId, amount);
+    }
+
+    // function modifyToBeRedeemed(address vaultId, uint256 amount) external {
+    //     vaults[vaultId].toBeRedeemed = amount;
+    // }
 
     function issuableTokens(address vaultId) public view returns (uint256) {
         uint256 freeCollateral = ICollateral.getFreeCollateral(vaultId);

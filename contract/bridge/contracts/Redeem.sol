@@ -157,13 +157,13 @@ abstract contract Redeem is VaultRegistry, Request {
                 request.requester,
                 totalSlash
             );
-            VaultRegistry.redeemTokens(
-                request.vault,
-                request.amountBtc + request.transferFeeBtc
-            );
         } else {
             releaseLockedOneBTC(request.requester, total);
         }
+        VaultRegistry.decreaseToBeRedeemedTokens(
+            request.vault,
+            request.amountBtc + request.transferFeeBtc
+        );
         emit RedeemCanceled(
             redeemId,
             requester,

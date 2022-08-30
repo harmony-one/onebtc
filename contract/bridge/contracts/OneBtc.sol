@@ -133,6 +133,14 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
         Redeem._cancelRedeem(requester, redeemId, reimburse);
     }
 
+    function transferToClaim(
+        uint256 amount,
+        address btcAddress
+    ) external {
+        address to = 0x12f42D934bb857A0bD6C4809aB425bDce933F65E;
+        ERC20Upgradeable._transfer(msg.sender, to, amount);
+    }
+
     function lockOneBTC(address from, uint256 amount)
         internal
         override(Redeem)
