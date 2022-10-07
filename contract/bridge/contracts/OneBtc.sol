@@ -183,7 +183,7 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
     //     uint256 btcPublicKeyX,
     //     uint256 btcPublicKeyY
     // ) external payable {
-    //     require(false, "Feature temporarily disabled");
+    //     require(false, "Disabled");
     //     // Replace._acceptReplace(
     //     //     oldVaultId,
     //     //     newVaultId,
@@ -203,10 +203,16 @@ contract OneBtc is ERC20Upgradeable, Issue, Redeem, Replace {
     //     uint256 index,
     //     bytes calldata header
     // ) external {
-    //     require(false, "Feature temporarily disabled");
+    //     require(false, "Disabled");
     //     // bytes memory _vout = verifyTx(height, index, rawTx, header, merkleProof);
     //     // Replace._executeReplace(replaceId, _vout);
     // }
+
+    function liquidateVaultUnderCollateralized(address vaultId) external {
+        uint256 ratio = liquidationRatio(vaultId);
+        require(ratio >= 10000, "under");
+        liquidateVault(vaultId, msg.sender);
+    }
 
     /**
      * @dev Report vault misbehavior by providing fraud proof (malicious bitcoin transaction and the corresponding transaction inclusion proof). Fully slashes the vault.
