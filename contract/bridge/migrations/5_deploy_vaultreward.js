@@ -9,4 +9,12 @@ module.exports = async function(deployer) {
 
     const c = await deployProxy(VaultReward, [IOneBtc.address, IVaultReserve.address], { deployer } );
     console.log('VaultReward deployed at ', c.address)
+
+    // set VaultReward contract address on OneBtc
+    await IOneBtc.setVaultRewardAddress(c.address);
+    console.log('VaultReward contract address was set on OneBtc successfully');
+
+    // set VaultReward contract address on VaultReserve
+    await IVaultReserve.setVaultReward(c.address);
+    console.log('VaultReward contract address was set on VaultReserve successfully');
 };
