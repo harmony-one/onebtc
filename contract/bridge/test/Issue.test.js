@@ -29,9 +29,8 @@ web3.extend({
 
 contract("Issue unit test", (accounts) => {
   before(async function () {
-    this.RelayMock = await RelayMock.new();
-    this.ExchangeRateOracleWrapper = await deployProxy(ExchangeRateOracleWrapper);
-    this.OneBtc = await deployProxy(OneBtc, [this.RelayMock.address, this.ExchangeRateOracleWrapper.address]);
+    this.OneBtc = await OneBtc.deployed()
+    this.ExchangeRateOracleWrapper = await ExchangeRateOracleWrapper.deployed();
 
     // set BTC/ONE exchange rate
     await this.ExchangeRateOracleWrapper.setExchangeRate(10); // 1 OneBtc = 10 ONE

@@ -16,6 +16,10 @@ contract VaultReserve is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
 
   address public vaultReward;
 
+  event Deposit(address indexed by, uint256 value);
+  event Withdraw(address indexed by, address indexed to, uint256 value);
+  event EmergencyWithdraw(address indexed by, address indexed to, uint256 value);
+
   modifier onlyVaultReward() {
     require(msg.sender == vaultReward, "only VaultReward");
     _;
@@ -23,6 +27,8 @@ contract VaultReserve is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
 
   receive() external payable {
     totalDepositAmount = totalDepositAmount.add(msg.value);
+
+    emit Deposit(msg.sender, msg.value);
   }
 
   function initialize() external {
@@ -33,6 +39,8 @@ contract VaultReserve is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
 
   function depositReward() public payable {
     totalDepositAmount = totalDepositAmount.add(msg.value);
+
+    emit Deposit(msg.sender, msg.value);
   }
 
   function withdrawReward(address payable _to, uint256 _amount) external onlyVaultReward nonReentrant whenNotPaused {
@@ -41,6 +49,8 @@ contract VaultReserve is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
     // transfer rewards
     (bool sent,) = payable(_to).call{value: _amount}("");
     require(sent, "Failed to send ONE");
+
+    emit Withdraw(msg.sender, _to, _amount);
   }
 
   function emergencyWithdraw(address payable _to, uint256 _amount) external onlyOwner {
@@ -49,6 +59,8 @@ contract VaultReserve is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
     // transfer rewards
     (bool sent,) = _to.call{value: _amount}("");
     require(sent, "Failed to send ONE");
+
+    emit EmergencyWithdraw(msg.sender, _to, _amount);
   }
 
   function getReserveAmount() external view returns (uint256) {

@@ -1,6 +1,11 @@
-const VaultRegistryTestWrapper = artifacts.require("VaultRegistryTestWrapper");
+const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 const bitcoin = require("bitcoinjs-lib");
 const bn = (b) => BigInt(`0x${b.toString("hex")}`);
+
+const VaultRegistryLib = artifacts.require("VaultRegistryLib");
+const VaultRegistryTestWrapper = artifacts.require("VaultRegistryTestWrapper");
+const VaultReserve = artifacts.require("VaultReserve");
+const VaultReward = artifacts.require("VaultReward");
 
 web3.extend({
   property: "miner",
@@ -20,7 +25,16 @@ web3.extend({
 
 contract("VaultRegistry unit test", (accounts) => {
   before(async function () {
+    // deploy VaultRegistryTestWrapper contract directly without migration scipts
+    this.VaultRegistryLib = await VaultRegistryLib.deployed();
+    VaultRegistryTestWrapper.link(VaultRegistryLib, this.VaultRegistryLib.address)
     this.VaultRegistry = await VaultRegistryTestWrapper.new();
+
+    // deploy contracts
+    this.VaultReserve = await deployProxy(VaultReserve, []);
+    this.VaultReward = await deployProxy(VaultReward, [this.VaultRegistry.address, this.VaultReserve.address]);
+
+    await this.VaultRegistry.setVaultRewardAddress(this.VaultReward.address);
 
     this.vaultId = accounts[1];
     this.issueRequester = accounts[2];
@@ -223,21 +237,21 @@ contract("VaultRegistry unit test", (accounts) => {
     assert.equal(amount, event.args.amount);
   });
 
-  it("RequestableToBeReplacedTokens", async function () {
-    const vault = await this.VaultRegistry.vaults(this.vaultId);
-    const issuedAmount = await vault.issued;
-    const toBeRedeemedAmount = await vault.toBeRedeemed;
-    const amount = issuedAmount.sub(toBeRedeemedAmount);
+  // it("RequestableToBeReplacedTokens", async function () {
+  //   const vault = await this.VaultRegistry.vaults(this.vaultId);
+  //   const issuedAmount = await vault.issued;
+  //   const toBeRedeemedAmount = await vault.toBeRedeemed;
+  //   const amount = issuedAmount.sub(toBeRedeemedAmount);
 
-    const req = await this.VaultRegistry.testRequestableToBeReplacedTokens(
-      this.vaultId
-    );
+  //   const req = await this.VaultRegistry.testRequestableToBeReplacedTokens(
+  //     this.vaultId
+  //   );
 
-    const event = req.logs.filter(
-      (log) => log.event == "RequestableToBeReplacedTokens"
-    )[0];
+  //   const event = req.logs.filter(
+  //     (log) => log.event == "RequestableToBeReplacedTokens"
+  //   )[0];
 
-    assert.equal(event.args.vaultId, this.vaultId);
-    assert.equal(event.args.amount.toString(), amount.toString());
-  });
+  //   assert.equal(event.args.vaultId, this.vaultId);
+  //   assert.equal(event.args.amount.toString(), amount.toString());
+  // });
 });

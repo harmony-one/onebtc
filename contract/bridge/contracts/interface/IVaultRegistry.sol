@@ -19,4 +19,6 @@ interface IVaultRegistry {
   function getVault(address) external view returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256);
 
   function lockAdditionalCollateralFromVaultReward(address _vaultId) external payable;
+
+  function stakeAdditionalCollateralFromStakerReward(address _vaultId, address _staker) external payable;
 }
