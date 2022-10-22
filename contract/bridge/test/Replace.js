@@ -4,8 +4,11 @@ const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 
 const OneBtc = artifacts.require("OneBtc");
+const VaultRegistryLib = artifacts.require("VaultRegistryLib");
 const RelayMock = artifacts.require("RelayMock");
 const ExchangeRateOracleWrapper = artifacts.require("ExchangeRateOracleWrapper");
+const VaultReserve = artifacts.require("VaultReserve");
+const VaultReward = artifacts.require("VaultReward");
 const { issueTxMock } = require("./mock/btcTxMock");
 
 const bitcoin = require("bitcoinjs-lib");
@@ -29,9 +32,23 @@ web3.extend({
 
 contract("Replace unit test", (accounts) => {
   before(async function () {
+    const deployer = accounts[0];
+
     this.RelayMock = await RelayMock.new();
     this.ExchangeRateOracleWrapper = await deployProxy(ExchangeRateOracleWrapper);
-    this.OneBtc = await deployProxy(OneBtc, [this.RelayMock.address, this.ExchangeRateOracleWrapper.address]);
+
+    this.VaultRegistryLib = await VaultRegistryLib.new();
+    await deployer.link(this.VaultRegistryLib, OneBtc);
+
+    this.OneBtc = await deployProxy(OneBtc, [this.RelayMock.address, this.ExchangeRateOracleWrapper.address], { unsafeAllowLinkedLibraries: true } );
+    this.VaultReserve = await deployProxy(VaultReserve, []);
+    this.VaultReward = await deployProxy(VaultReward, [this.OneBtc.address, this.VaultReserve.address]);
+
+    // set VaultReward contract address to OneBtc contract
+    await this.OneBtc.setVaultRewardAddress(this.VaultReward.address);
+
+    // set VaultReward contract address to VaultReserve contract
+    await this.VaultReserve.setVaultReward(this.VaultReward.address);
 
     // set BTC/ONE exchange rate
     await this.ExchangeRateOracleWrapper.setExchangeRate(10); // 1 OneBtc = 10 ONE

@@ -2,12 +2,27 @@
 pragma solidity 0.6.12;
 
 import {VaultRegistry} from "../VaultRegistry.sol";
+import {ICollateral} from "../Collateral.sol";
+import "../lib/VaultRegistryLib.sol";
 
 contract VaultRegistryTestWrapper is VaultRegistry {
     event RedeemableTokens(address vaultId, uint256 amount);
     event RequestableToBeReplacedTokens(address vaultId, uint256 amount);
 
     address lastDepositAddress;
+
+    function testRegisterVault(uint256 btcPublicKeyX, uint256 btcPublicKeyY)
+        external
+        payable
+    {
+        address vaultId = msg.sender;
+        VaultRegistryLib.registerVault(vaults[vaultId], btcPublicKeyX, btcPublicKeyY);
+        Vault storage vault = vaults[vaultId];
+        uint256 _lockAmount = msg.value;
+        vault.collateral = vault.collateral.add(_lockAmount);
+        ICollateral.lockCollateral(vaultId, _lockAmount);
+        emit RegisterVault(vaultId, msg.value, btcPublicKeyX, btcPublicKeyY);
+    }
 
     function getLastDepositAddress() public view returns (address) {
         return lastDepositAddress;
