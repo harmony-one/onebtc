@@ -1,4 +1,2 @@
 [workspace]
-members = [
-    "bitcoin"
-]
+members = ["bitcoin", "runtime", "web3"]
