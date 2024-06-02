@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
+
 import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 import {BTCUtils} from "@interlay/bitcoin-spv-sol/contracts/BTCUtils.sol";
 import {BytesLib} from "@interlay/bitcoin-spv-sol/contracts/BytesLib.sol";
@@ -16,7 +17,7 @@ library TxValidate {
         address recipientBtcAddress,
         uint256 opReturnId,
         uint256 outputIndex
-    ) internal pure returns (uint256) {
+    ) external pure returns (uint256) {
         uint256 btcAmount;
         address btcAddress;
 

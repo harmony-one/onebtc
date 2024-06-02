@@ -3,9 +3,7 @@ const { expectRevert } = require("@openzeppelin/test-helpers");
 const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 
-const OneBtc = artifacts.require("OneBtc");
-const RelayMock = artifacts.require("RelayMock");
-const ExchangeRateOracleWrapper = artifacts.require("ExchangeRateOracleWrapper");
+const deployHelper = require("./helpers/deploy");
 const { issueTxMock } = require("./mock/btcTxMock");
 
 const bitcoin = require("bitcoinjs-lib");
@@ -29,9 +27,7 @@ web3.extend({
 
 contract("Redeem unit test", (accounts) => {
   before(async function () {
-    this.RelayMock = await RelayMock.new();
-    this.ExchangeRateOracleWrapper = await deployProxy(ExchangeRateOracleWrapper);
-    this.OneBtc = await deployProxy(OneBtc, [this.RelayMock.address, this.ExchangeRateOracleWrapper.address]);
+    ({oneBtc: this.OneBtc, relayMock: this.RelayMock, exchangeRateOracleWrapper: this.ExchangeRateOracleWrapper} = await deployHelper.deployOneBTC());
 
     // set BTC/ONE exchange rate
     await this.ExchangeRateOracleWrapper.setExchangeRate(10); // 1 OneBtc = 10 ONE

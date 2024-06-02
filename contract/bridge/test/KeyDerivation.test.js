@@ -1,5 +1,6 @@
 const bitcoin = require('bitcoinjs-lib');
 const ecc = require('tiny-secp256k1');
+const Secp256k1 = artifacts.require("Secp256k1");
 
 const BitcoinKeyDerivationMock = artifacts.require("BitcoinKeyDerivationMock");
 
@@ -26,6 +27,9 @@ function derivate(priD, id) {
 
 contract("BitcoinKeyDerivation:On-Chain Key Derivation Scheme", accounts => {
     it("key derivate", async () => {
+        const Secp256k1Lib = await Secp256k1.new();
+        BitcoinKeyDerivationMock.link("Secp256k1", Secp256k1Lib.address);
+
         const keyDervation = await BitcoinKeyDerivationMock.new();
         for(let i = 0; i < 100; i++) {
             const ecPair = bitcoin.ECPair.makeRandom({compressed:false});

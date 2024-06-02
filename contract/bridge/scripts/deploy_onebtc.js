@@ -7,7 +7,9 @@ async function main() {
         process.env.HMY_RELAY_CONTRACT
     );
 
-    const OneBtc = await ethers.getContractFactory("OneBtc");
+    const BtcLib = await ethers.getContractFactory("Secp256k1");
+    const btcLib = await BtcLib.deploy();
+    const OneBtc = await ethers.getContractFactory("OneBtc", {libraries: {"Secp256k1": btcLib.address}});
     const oneBtc = await OneBtc.deploy();
     await oneBtc.initialize(relay.address);
 
